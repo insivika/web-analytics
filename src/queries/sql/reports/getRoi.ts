@@ -106,7 +106,8 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
 
   const rows = buildMonths(months, {
     spend: spend.byMonth,
-    visitors,
+    visitors: visitors.visitors,
+    appUsers: visitors.appUsers,
     trials,
     // All Stripe history, so "new customer" means first payment ever.
     stripe: txns.filter(t => t.source === 'stripe'),
@@ -145,6 +146,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     updatedAt: latestSync(sources),
     stale: staleSources(sources, now),
     spendFxGaps: spend.fxGaps,
+    botCountries: getBotCountries(),
     projection: { history: projectionHistory, customerValue, plans, retention },
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
@@ -266,21 +268,65 @@ async function getCustomerValue(websiteId: string): Promise<CustomerValue> {
   return { firstMonth: n(r.firstMonth), firstYear: n(r.firstYear) };
 }
 
+/**
+ * Website sessions per month, by where they landed:
+ * - visitors: people landing on marketing pages (potential new customers)
+ * - appUsers: logged-in sessions that start in the web app (dashboard, login,
+ *   onboarding): existing trial users and customers using the product
+ * - bots: sessions from countries that send only crawler traffic (one page,
+ *   no signups); see ROI_BOT_COUNTRIES
+ */
 async function getMonthlyVisitors(websiteId: string, hostname: string, from: Date) {
   const rows = await prisma.rawQuery(
     `
-    select to_char(created_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month,
-      count(distinct session_id)::int as n
-    from website_event
-    where website_id = {{websiteId::uuid}}
-      and hostname = {{hostname}}
-      and created_at >= {{from}}
+    with first_view as (
+      select distinct on (e.session_id) e.session_id, e.url_path, e.created_at, s.country
+      from website_event e
+      join session s on s.session_id = e.session_id
+      where e.website_id = {{websiteId::uuid}}
+        and e.hostname = {{hostname}}
+        and e.event_type = 1
+        and e.created_at >= {{from}}
+      order by e.session_id, e.created_at
+    ),
+    classified as (
+      select to_char(created_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month,
+        (url_path like '/dashboard%' or url_path like '/auth%' or url_path like '/onboarding%') as app,
+        coalesce(country, '') = any(string_to_array({{botCountries}}, ',')) as bot
+      from first_view
+    )
+    select month,
+      count(*) filter (where not app and not bot)::int as visitors,
+      count(*) filter (where app)::int as "appUsers",
+      count(*) filter (where bot and not app)::int as bots
+    from classified
     group by 1
     `,
-    { websiteId, hostname, from },
+    { websiteId, hostname, from, botCountries: getBotCountries().join(',') },
     'getRoiMonthlyVisitors',
   );
-  return new Map<string, number>(rows.map((r: any) => [r.month, Number(r.n)]));
+  const visitors = new Map<string, number>();
+  const appUsers = new Map<string, number>();
+  const bots = new Map<string, number>();
+  for (const r of rows as any[]) {
+    visitors.set(r.month, Number(r.visitors));
+    appUsers.set(r.month, Number(r.appUsers));
+    bots.set(r.month, Number(r.bots));
+  }
+  return { visitors, appUsers, bots };
+}
+
+/**
+ * Countries whose website traffic is crawlers, not people: one-page sessions
+ * with no signups (Singapore and China data centres). Override with
+ * ROI_BOT_COUNTRIES, a comma-separated list of country codes.
+ */
+export function getBotCountries() {
+  const raw = process.env.ROI_BOT_COUNTRIES ?? 'SG,CN';
+  return raw
+    .split(',')
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
 }
 
 // Prices change rarely; cache them briefly per server instance.

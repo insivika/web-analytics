@@ -49,7 +49,10 @@ export interface AppStoreMonth {
 
 export interface MonthInputs {
   spend: Map<string, { meta: number; google: number }>;
+  /** Real marketing visitors: no bots, no logged-in app sessions. */
   visitors: Map<string, number>;
+  /** Logged-in sessions in the web app (existing users), shown separately. */
+  appUsers?: Map<string, number>;
   trials: Map<string, number>;
   stripe: StripeTxn[];
   appStores: Map<string, AppStoreMonth> | null;
@@ -61,6 +64,7 @@ export interface MonthRow {
   spendGoogle: number;
   spend: number;
   visitors: number;
+  appUsers: number;
   trials: number;
   newCustomers: number;
   moneyStripe: number;
@@ -108,6 +112,7 @@ export function buildMonths(months: string[], input: MonthInputs, tz = ROI_TIMEZ
       spendGoogle: round2(spend.google),
       spend: total,
       visitors: input.visitors.get(month) ?? 0,
+      appUsers: input.appUsers?.get(month) ?? 0,
       trials: input.trials.get(month) ?? 0,
       newCustomers: (newStripe.get(month) ?? 0) + (app?.newCustomers ?? 0),
       moneyStripe,
@@ -132,6 +137,7 @@ export function sumMonths(rows: MonthRow[]): PeriodTotals {
   const spend = sum('spend');
   const newCustomers = rows.reduce((s, r) => s + r.newCustomers, 0);
   const visitors = rows.reduce((s, r) => s + r.visitors, 0);
+  const appUsers = rows.reduce((s, r) => s + r.appUsers, 0);
   const trials = rows.reduce((s, r) => s + r.trials, 0);
   return {
     months: rows.map(r => r.month),
@@ -139,6 +145,7 @@ export function sumMonths(rows: MonthRow[]): PeriodTotals {
     spendGoogle: sum('spendGoogle'),
     spend,
     visitors,
+    appUsers,
     trials,
     newCustomers,
     moneyStripe: sum('moneyStripe'),

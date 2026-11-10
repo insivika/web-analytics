@@ -1,6 +1,7 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiAppUsers: { id: 'label.roi-app-users', defaultMessage: 'Web app users' },
   roiNetNextMonth: { id: 'label.roi-net-next-month', defaultMessage: 'Net income next month' },
   roiNetMonth12: { id: 'label.roi-net-month-12', defaultMessage: 'Net income in month 12' },
   roiExtra12: { id: 'label.roi-extra-12', defaultMessage: 'Extra net income over 12 months' },
@@ -663,7 +664,7 @@ export const messages = defineMessages({
   roiFunnelNote: {
     id: 'message.roi-funnel-note',
     defaultMessage:
-      'Visitors are sessions on {hostname}. A new paying customer is someone whose first payment fell in this period.',
+      'Visitors are people who land on the marketing pages of {hostname}. Bot traffic (sessions from {bots}) and logged-in sessions in the web app are left out; web app users are shown separately in the table. A new paying customer is someone whose first payment fell in this period.',
   },
   roiSoFar: { id: 'message.roi-so-far', defaultMessage: '{month} (so far)' },
   roiFooter: {

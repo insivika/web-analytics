@@ -396,7 +396,10 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                     : formatMessage(messages.roiCostPerCustomer, {
                         amount: usd(p.costPerCustomer),
                       })}{' '}
-                  {formatMessage(messages.roiFunnelNote, { hostname: data.hostname })}
+                  {formatMessage(messages.roiFunnelNote, {
+                    hostname: data.hostname,
+                    bots: (data.botCountries ?? []).join(', '),
+                  })}
                 </Text>
               </Column>
             </Panel>
@@ -404,9 +407,9 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
             <Panel title={formatMessage(labels.roiAllMonths)}>
               <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
                 <Grid
-                  columns="minmax(150px,1.3fr) repeat(8, minmax(80px,1fr))"
+                  columns="minmax(150px,1.3fr) repeat(9, minmax(80px,1fr))"
                   gap="3"
-                  style={{ minWidth: 880 }}
+                  style={{ minWidth: 960 }}
                 >
                   {(
                     [
@@ -417,6 +420,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                       [labels.roiGoogle, ROI_COLORS.google, true],
                       [labels.roiNetIncome, null, false],
                       [labels.roiVisitors, null, false],
+                      [labels.roiAppUsers, null, false],
                       [labels.roiTrials, null, false],
                       [labels.roiNewPaying, null, false],
                     ] as [any, string | null, boolean][]
@@ -453,6 +457,9 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                             {usd(r.netIncome)}
                           </Text>
                           <Text align="right">{int(r.visitors)}</Text>
+                          <Text align="right" color="muted">
+                            {int(r.appUsers ?? 0)}
+                          </Text>
                           <Text align="right">{int(r.trials)}</Text>
                           <Text align="right">{int(r.newCustomers)}</Text>
                         </Fragment>

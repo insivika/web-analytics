@@ -479,7 +479,7 @@
   "message.roi-cost-per-customer": "{amount} of ad spend per new paying customer.",
   "message.roi-flows-note": "Solid lines are money coming in, dashed lines are money going to ads. The shaded area is {period}. * = month so far.",
   "message.roi-footer": "Money in is everything Stripe, the App Store and Google Play paid out, after fees, commission, tax and refunds. Ad spend is Meta and Google as billed. Months are UTC calendar months.",
-  "message.roi-funnel-note": "Visitors are sessions on {hostname}. A new paying customer is someone whose first payment fell in this period.",
+  "message.roi-funnel-note": "Visitors are people who land on the marketing pages of {hostname}. Bot traffic (sessions from {bots}) and logged-in sessions in the web app are left out; web app users are shown separately in the table. A new paying customer is someone whose first payment fell in this period.",
   "message.roi-fx-gaps-warning": "{n} ad spend rows have no exchange rate and count as $0.",
   "message.roi-net-income-for": "Net income, {period}",
   "message.roi-net-note": "Money in minus ad spend for each month. Brighter bars are {period}.",
@@ -575,5 +575,6 @@
   "message.roi-per-month-new": "{n} new paying customers a month",
   "message.roi-month-n": "Month {n}",
   "message.roi-at-spend": "At {spend} a month",
-  "message.roi-outlook-how": "How this works: ad dollars buy website visits at what a click cost before ({months}: Meta {meta}, Google {google}). Every visit, from ads or not, becomes a paying customer at your past rate. Today's money in, from all your current customers, stays flat. Extra customers keep paying: {yearly}% choose yearly and pay {yearlyPrice} up front; the rest pay {monthly} a month, and like your past monthly customers {m6}% are still paying after 6 months and {m12}% after 12. Yearly renewals fall after month 12 ({renewal}% of {renewalN} past yearly customers renewed)."
+  "message.roi-outlook-how": "How this works: ad dollars buy website visits at what a click cost before ({months}: Meta {meta}, Google {google}). Every visit, from ads or not, becomes a paying customer at your past rate. Today's money in, from all your current customers, stays flat. Extra customers keep paying: {yearly}% choose yearly and pay {yearlyPrice} up front; the rest pay {monthly} a month, and like your past monthly customers {m6}% are still paying after 6 months and {m12}% after 12. Yearly renewals fall after month 12 ({renewal}% of {renewalN} past yearly customers renewed).",
+  "label.roi-app-users": "Web app users"
 }

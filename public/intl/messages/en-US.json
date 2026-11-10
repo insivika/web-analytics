@@ -3494,7 +3494,7 @@
   "message.roi-funnel-note": [
     {
       "type": 0,
-      "value": "Visitors are sessions on "
+      "value": "Visitors are people who land on the marketing pages of "
     },
     {
       "type": 1,
@@ -3502,7 +3502,15 @@
     },
     {
       "type": 0,
-      "value": ". A new paying customer is someone whose first payment fell in this period."
+      "value": ". Bot traffic (sessions from "
+    },
+    {
+      "type": 1,
+      "value": "bots"
+    },
+    {
+      "type": 0,
+      "value": ") and logged-in sessions in the web app are left out; web app users are shown separately in the table. A new paying customer is someone whose first payment fell in this period."
     }
   ],
   "message.roi-fx-gaps-warning": [
@@ -4775,6 +4783,12 @@
     {
       "type": 0,
       "value": " past yearly customers renewed)."
+    }
+  ],
+  "label.roi-app-users": [
+    {
+      "type": 0,
+      "value": "Web app users"
     }
   ]
 }

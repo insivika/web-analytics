@@ -163,6 +163,20 @@ describe('monthly ROI', () => {
     });
   });
 
+  test('web app users are kept apart from visitors', () => {
+    const rows = buildMonths(months, {
+      ...input,
+      appUsers: new Map([
+        ['2026-10', 503],
+        ['2026-11', 112],
+      ]),
+    });
+    expect(rows[1]).toMatchObject({ visitors: 2648, appUsers: 503 });
+    expect(sumMonths(rows)).toMatchObject({ visitors: 3616, appUsers: 615 });
+    // Leaving them out of the input means zero, not missing.
+    expect(buildMonths(months, input)[1].appUsers).toBe(0);
+  });
+
   test('months are UTC, matching RevenueCat', () => {
     // 9 PM in Chicago on Oct 31 is already November in UTC.
     expect(monthOf('2026-11-01T02:00:00Z')).toBe('2026-11');
