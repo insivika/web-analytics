@@ -11,7 +11,7 @@ import { badRequest, json, unauthorized } from '@/lib/response';
 
 // Receives daily ad-level cost from the Google Ads Script (scripts/google-ads/).
 // Auth: `x-ads-secret: $GOOGLE_ADS_SCRIPT_SECRET`. No user session involved.
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   if (

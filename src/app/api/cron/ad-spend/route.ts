@@ -9,7 +9,7 @@ import { json, unauthorized } from '@/lib/response';
 
 // Nightly Vercel Cron: Meta spend for the last 7 days (picks up late adjustments)
 // and FX rates for revenue currencies. Vercel sends `Authorization: Bearer $CRON_SECRET`.
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const REVENUE_CURRENCIES = ['AUD', 'CAD', 'GBP', 'EUR', 'NZD'];
 

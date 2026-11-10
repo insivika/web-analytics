@@ -69,8 +69,18 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
   const sync = useUpdateQuery(`/websites/${websiteId}/roi/sync`);
   const fmtDate = (d: string | Date | null) => (d ? formatDate(new Date(d), 'PP p', locale) : '—');
 
-  const runSync = (days: number) =>
-    sync.mutateAsync({ source: 'meta', days }, { onSuccess: () => sync.touch('roi') });
+  const runSync = async (days: number) => {
+    // Long backfills run as 30-day chunks so each request stays within function limits.
+    for (let offset = 0; offset < days; offset += 30) {
+      const result = await sync.mutateAsync({
+        source: 'meta',
+        days: Math.min(30, days - offset),
+        offsetDays: offset,
+      });
+      if (result?.status === 'error') break;
+    }
+    sync.touch('roi');
+  };
 
   const s = data?.summary;
   const w = data?.roiWindow ?? 90;

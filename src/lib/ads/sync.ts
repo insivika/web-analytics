@@ -24,12 +24,20 @@ export const MAX_BACKFILL_DAYS = 180;
 export const todayInReportingTz = (now = new Date()) =>
   formatInTimeZone(now, REPORTING_TIMEZONE, 'yyyy-MM-dd');
 
-/** [today - days + 1, today] in the reporting time zone. */
-export function getSyncRange(days: number, now = new Date()) {
-  const until = todayInReportingTz(now);
+/**
+ * [today - offset - days + 1, today - offset] in the reporting time zone. The
+ * offset lets a long backfill run as several short requests (Vercel function
+ * time limits).
+ */
+export function getSyncRange(days: number, now = new Date(), offsetDays = 0) {
+  const offset = Math.min(Math.max(Math.round(offsetDays), 0), MAX_BACKFILL_DAYS);
+  const until = addDays(todayInReportingTz(now), -offset);
   const n = Math.min(Math.max(Math.round(days), 1), MAX_BACKFILL_DAYS);
   return { since: addDays(until, -(n - 1)), until };
 }
+
+/** Backfills run in chunks of this many days, one request each. */
+export const BACKFILL_CHUNK_DAYS = 30;
 
 /** The Umami website that ad spend belongs to (Cash Flow Calendar). */
 export function getAdsWebsiteId() {
@@ -72,8 +80,9 @@ export interface SyncResult {
 export async function syncMetaSpend(
   websiteId: string,
   days = META_DAILY_LOOKBACK_DAYS,
+  offsetDays = 0,
 ): Promise<SyncResult> {
-  const { since, until } = getSyncRange(days);
+  const { since, until } = getSyncRange(days, new Date(), offsetDays);
   const run = await startSyncRun(websiteId, 'meta', since, until);
   const token = process.env.META_ACCESS_TOKEN;
   const accounts = parseAccountIds(process.env.META_AD_ACCOUNT_IDS);

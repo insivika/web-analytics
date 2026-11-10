@@ -5,7 +5,8 @@ import { badRequest, json, unauthorized } from '@/lib/response';
 import { canUpdateWebsite } from '@/permissions';
 
 // "Sync now" / backfill from the ROI page. days=7 for a refresh, up to 180 for a backfill.
-export const maxDuration = 300;
+// 60s keeps this within Vercel Hobby limits; long backfills run as 30-day chunks.
+export const maxDuration = 60;
 
 export async function POST(
   request: Request,
@@ -14,6 +15,7 @@ export async function POST(
   const schema = z.object({
     source: z.enum(['meta', 'fx']).default('meta'),
     days: z.coerce.number().int().min(1).max(MAX_BACKFILL_DAYS).default(7),
+    offsetDays: z.coerce.number().int().min(0).max(MAX_BACKFILL_DAYS).default(0),
   });
 
   const { auth, body, error } = await parseRequest(request, schema);
@@ -36,7 +38,7 @@ export async function POST(
 
   const result =
     body.source === 'meta'
-      ? await syncMetaSpend(websiteId, body.days)
+      ? await syncMetaSpend(websiteId, body.days, body.offsetDays)
       : await syncFxRates(websiteId, ['AUD', 'CAD', 'GBP', 'EUR', 'NZD'], body.days);
 
   return json(result);
