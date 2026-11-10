@@ -322,3 +322,100 @@ export function defaultInputs(base: ProjectionBase, plans: PlanEconomics): Proje
     pricier: 0,
   };
 }
+
+export interface Retention {
+  /** Share of monthly customers still paying in month k+1 (monthly[0] = 1). */
+  monthly: number[];
+  /** Share of yearly customers who paid a second year; null with too little history. */
+  yearlyRenewal: number | null;
+  yearlyRenewalSample: number;
+}
+
+/** Below this many customers a month's share is too noisy; the curve stops dropping there. */
+const MIN_RETENTION_SAMPLE = 10;
+
+/** Turns the retention query's rows into a smooth, never-rising curve. */
+export function buildRetention(
+  rows: { kind: string; age: number; eligible: number; paying: number }[],
+): Retention {
+  const monthly: number[] = [1];
+  for (let age = 2; age <= 12; age++) {
+    const r = rows.find(x => x.kind === 'monthly' && Number(x.age) === age);
+    const prev = monthly[monthly.length - 1];
+    const share =
+      r && Number(r.eligible) >= MIN_RETENTION_SAMPLE
+        ? Number(r.paying) / Number(r.eligible)
+        : prev;
+    monthly.push(Math.min(prev, share));
+  }
+  const y = rows.find(x => x.kind === 'yearly');
+  const sample = Number(y?.eligible ?? 0);
+  return {
+    monthly: monthly.map(v => Math.round(v * 1000) / 1000),
+    yearlyRenewal: sample > 0 ? Math.round((Number(y.paying) / sample) * 1000) / 1000 : null,
+    yearlyRenewalSample: sample,
+  };
+}
+
+export const OUTLOOK_MONTHS = 12;
+
+export interface OutlookMonth {
+  month: number;
+  /** Net income if ad spend stays as it is today. */
+  today: number;
+  /** Net income at the slider spend, with every month's extra customers still paying. */
+  projected: number;
+  /** Extra customers (from the change in spend) still paying that month. */
+  extraPaying: number;
+}
+
+export interface Outlook {
+  months: OutlookMonth[];
+  /** Change in new paying customers per month from the slider spend. */
+  extraCustomersPerMonth: number;
+  /** Sum over the outlook of projected minus today. */
+  extraNetIncome: number;
+  /** First month in which the running total of extra net income is above zero. */
+  paybackMonth: number | null;
+}
+
+/**
+ * Net income for each of the next 12 months. Today's money in (existing and
+ * organic customers) stays flat. Each month the slider spend adds a batch of
+ * extra customers on top of today's: yearly ones pay up front (renewals fall
+ * after month 12), monthly ones keep paying, dropping off along the real curve.
+ */
+export function outlook(base: ProjectionBase, i: ProjectionInputs, retention: Retention): Outlook {
+  const p = project(base, i);
+  const extra = p.projected.newCustomers - p.today.newCustomers;
+  const extraSpend = p.spend - (base.metaSpend + base.googleSpend);
+  const yearly = i.yearlyPrice * i.keepRate;
+  const monthly = i.monthlyPrice * i.keepRate;
+  const curve = (age: number) =>
+    retention.monthly[Math.min(age, retention.monthly.length) - 1] ?? 0;
+
+  const months: OutlookMonth[] = [];
+  let running = 0;
+  let paybackMonth: number | null = null;
+  for (let t = 1; t <= OUTLOOK_MONTHS; t++) {
+    let revenue = 0;
+    let paying = 0;
+    // Batch started in month c is (t - c + 1) months old in month t.
+    for (let c = 1; c <= t; c++) {
+      const age = t - c + 1;
+      const monthlyStill = extra * (1 - i.yearlyShare) * curve(age);
+      revenue += monthlyStill * monthly + (age === 1 ? extra * i.yearlyShare * yearly : 0);
+      paying += monthlyStill + extra * i.yearlyShare;
+    }
+    const change = revenue - extraSpend;
+    running += change;
+    if (paybackMonth === null && running > 0 && extraSpend > 0) paybackMonth = t;
+    months.push({
+      month: t,
+      today: p.todayNetIncome,
+      projected: p.todayNetIncome + change,
+      extraPaying: paying,
+    });
+  }
+  return { months, extraCustomersPerMonth: extra, extraNetIncome: running, paybackMonth };
+}

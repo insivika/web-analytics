@@ -371,7 +371,11 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
             </Panel>
 
             {data.projection && (
-              <RoiProjection history={data.projection.history} plans={data.projection.plans} />
+              <RoiProjection
+                history={data.projection.history}
+                plans={data.projection.plans}
+                retention={data.projection.retention}
+              />
             )}
 
             <Panel title={formatMessage(labels.roiFunnelTitle)}>

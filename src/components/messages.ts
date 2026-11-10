@@ -1,13 +1,19 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
-  roiMoneyInPerMonth: { id: 'label.roi-money-in-per-month', defaultMessage: 'Money in per month' },
+  roiNetNextMonth: { id: 'label.roi-net-next-month', defaultMessage: 'Net income next month' },
+  roiNetMonth12: { id: 'label.roi-net-month-12', defaultMessage: 'Net income in month 12' },
+  roiExtra12: { id: 'label.roi-extra-12', defaultMessage: 'Extra net income over 12 months' },
+  roiExtraPaying12: {
+    id: 'label.roi-extra-paying-12',
+    defaultMessage: 'Extra paying customers by month 12',
+  },
+  roiAtTodaySpend: { id: 'label.roi-at-today-spend', defaultMessage: "At today's ad spend" },
   roiWhatIf: { id: 'label.roi-what-if', defaultMessage: 'What if you spent more on ads?' },
   roiBasedOn: { id: 'label.roi-based-on', defaultMessage: 'Based on the last' },
   roiReset: { id: 'label.roi-reset', defaultMessage: 'Reset' },
   roiMetaPerMonth: { id: 'label.roi-meta-per-month', defaultMessage: 'Meta ads per month' },
   roiGooglePerMonth: { id: 'label.roi-google-per-month', defaultMessage: 'Google ads per month' },
-  roiNetPerMonth: { id: 'label.roi-net-per-month', defaultMessage: 'Net income per month' },
   roiThisMonth: { id: 'label.roi-this-month', defaultMessage: 'This month' },
   roiLastMonth: { id: 'label.roi-last-month', defaultMessage: 'Last month' },
   roiLast3Months: { id: 'label.roi-last-3-months', defaultMessage: 'Last 3 months' },
@@ -578,15 +584,30 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiPaybackIn: { id: 'message.roi-payback-in', defaultMessage: 'Pays for itself by month {n}' },
+  roiPaybackNone: {
+    id: 'message.roi-payback-none',
+    defaultMessage: "Doesn't pay for itself within 12 months",
+  },
+  roiVsTodaySpend: {
+    id: 'message.roi-vs-today-spend',
+    defaultMessage: "Compared with today's ad spend",
+  },
+  roiPerMonthNew: {
+    id: 'message.roi-per-month-new',
+    defaultMessage: '{n} new paying customers a month',
+  },
+  roiMonthN: { id: 'message.roi-month-n', defaultMessage: 'Month {n}' },
+  roiAtSpend: { id: 'message.roi-at-spend', defaultMessage: 'At {spend} a month' },
+  roiOutlookHow: {
+    id: 'message.roi-outlook-how',
+    defaultMessage:
+      "How this works: ad dollars buy website visits at what a click cost before ({months}: Meta {meta}, Google {google}). Every visit, from ads or not, becomes a paying customer at your past rate. Today's money in, from all your current customers, stays flat. Extra customers keep paying: {yearly}% choose yearly and pay {yearlyPrice} up front; the rest pay {monthly} a month, and like your past monthly customers {m6}% are still paying after 6 months and {m12}% after 12. Yearly renewals fall after month 12 ({renewal}% of {renewalN} past yearly customers renewed).",
+  },
   roiProjSimple: {
     id: 'message.roi-proj-simple',
     defaultMessage:
       'At {spend} a month in ads, about {visitors} people would visit the website each month. In the past, 1 in {n} visitors became a paying customer, so that would be about {customers} new paying customers a month.',
-  },
-  roiProjHow: {
-    id: 'message.roi-proj-how',
-    defaultMessage:
-      "How this works: ad dollars buy website visits at what a click cost before ({months}: Meta {meta}, Google {google}). Every visit, from ads or not, becomes a paying customer at your past rate. A new customer pays about {value} in their first month at today's prices (Stripe {monthly} a month or {yearlyPrice} a year; {yearly}% choose yearly).",
   },
   roiMonthsN: {
     id: 'message.roi-months-n',

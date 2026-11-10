@@ -5,8 +5,8 @@ import { Panel } from '@/components/common/Panel';
 import { useLocale, useMessages } from '@/components/hooks';
 import { formatDate } from '@/lib/date';
 import {
-  customerValue,
   defaultInputs,
+  outlook,
   type PlanEconomics,
   PROJECTION_WINDOWS,
   type ProjectionInputs,
@@ -14,8 +14,9 @@ import {
   type ProjectionWindow,
   project,
   projectionBase,
+  type Retention,
 } from '@/lib/roiProjection';
-import { ROI_COLORS } from './RoiCharts';
+import { OutlookChart, ROI_COLORS } from './RoiCharts';
 
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 const int = (n: number) => Math.round(n).toLocaleString('en-US');
@@ -105,16 +106,19 @@ function Result({
 }
 
 /**
- * "What if" for ad spend, kept simple: ad dollars buy website visits at what a
- * visit cost before, and every visit turns into paying customers at the past
- * overall rate. No attempt to say which customers came from ads.
+ * "What if" for ad spend: ad dollars buy website visits at what a visit cost
+ * before, and every visit turns into paying customers at the past overall rate
+ * (no ad attribution). The 12-month outlook keeps today's money in flat and lets
+ * each month's extra customers keep paying along the real drop-off curve.
  */
 export function RoiProjection({
   history,
   plans,
+  retention,
 }: {
   history: ProjectionMonth[];
   plans: PlanEconomics;
+  retention: Retention;
 }) {
   const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
@@ -129,6 +133,9 @@ export function RoiProjection({
   if (!history.length) return null;
 
   const p = project(base, inputs);
+  const o = outlook(base, inputs, retention);
+  const first = o.months[0];
+  const last = o.months[o.months.length - 1];
   const vsToday = (n: number, f: (n: number) => string) =>
     formatMessage(messages.roiVsToday, { delta: signed(n, f) });
   const monthName = (m: string) => formatDate(new Date(`${m}-01T12:00:00`), 'MMM yyyy', locale);
@@ -177,29 +184,47 @@ export function RoiProjection({
           />
         </Column>
 
-        <Grid columns="repeat(auto-fit, minmax(160px, 1fr))" gap="3">
+        <Grid columns="repeat(auto-fit, minmax(170px, 1fr))" gap="3">
           <Result
-            label={formatMessage(labels.roiVisitors)}
-            value={int(p.projected.visitors)}
-            delta={vsToday(p.projected.visitors - p.today.visitors, int)}
+            label={formatMessage(labels.roiNetNextMonth)}
+            value={usd(first.projected)}
+            delta={vsToday(first.projected - first.today, usd)}
+            tone={first.projected >= 0 ? 'good' : 'bad'}
           />
           <Result
-            label={formatMessage(labels.roiNewPayingCustomers)}
-            value={one(p.projected.newCustomers)}
-            delta={vsToday(p.projected.newCustomers - p.today.newCustomers, one)}
+            label={formatMessage(labels.roiNetMonth12)}
+            value={usd(last.projected)}
+            delta={vsToday(last.projected - last.today, usd)}
+            tone={last.projected >= 0 ? 'good' : 'bad'}
           />
           <Result
-            label={formatMessage(labels.roiMoneyInPerMonth)}
-            value={usd(p.moneyIn)}
-            delta={vsToday(p.moneyIn - p.todayMoneyIn, usd)}
+            label={formatMessage(labels.roiExtra12)}
+            value={signed(o.extraNetIncome, usd)}
+            delta={
+              o.paybackMonth
+                ? formatMessage(messages.roiPaybackIn, { n: o.paybackMonth })
+                : p.spend > base.metaSpend + base.googleSpend
+                  ? formatMessage(messages.roiPaybackNone)
+                  : formatMessage(messages.roiVsTodaySpend)
+            }
+            tone={o.extraNetIncome >= 0 ? 'good' : 'bad'}
           />
           <Result
-            label={formatMessage(labels.roiNetPerMonth)}
-            value={usd(p.netIncome)}
-            delta={vsToday(p.netIncome - p.todayNetIncome, usd)}
-            tone={p.netIncome >= 0 ? 'good' : 'bad'}
+            label={formatMessage(labels.roiExtraPaying12)}
+            value={signed(last.extraPaying, one)}
+            delta={formatMessage(messages.roiPerMonthNew, {
+              n: signed(o.extraCustomersPerMonth, one),
+            })}
           />
         </Grid>
+
+        <OutlookChart
+          labels={o.months.map(m => formatMessage(messages.roiMonthN, { n: m.month }))}
+          today={o.months.map(m => Math.round(m.today))}
+          projected={o.months.map(m => Math.round(m.projected))}
+          todayLabel={formatMessage(labels.roiAtTodaySpend)}
+          projectedLabel={formatMessage(messages.roiAtSpend, { spend: usd(p.spend) })}
+        />
 
         <Text size="3">
           {formatMessage(messages.roiProjSimple, {
@@ -220,14 +245,18 @@ export function RoiProjection({
           </Text>
         )}
         <Text color="muted" size="1">
-          {formatMessage(messages.roiProjHow, {
+          {formatMessage(messages.roiOutlookHow, {
             meta: money(base.metaCpc),
             google: money(base.googleCpc),
             months: monthsLabel,
-            value: usd(customerValue(inputs).firstMonth),
-            monthly: money(plans.sources.stripeMonthly),
-            yearlyPrice: money(plans.sources.stripeYearly),
+            monthly: money(inputs.monthlyPrice),
+            yearlyPrice: money(inputs.yearlyPrice),
             yearly: Math.round(inputs.yearlyShare * 100),
+            m6: Math.round((retention.monthly[5] ?? 0) * 100),
+            m12: Math.round((retention.monthly[11] ?? 0) * 100),
+            renewal:
+              retention.yearlyRenewal === null ? '—' : Math.round(retention.yearlyRenewal * 100),
+            renewalN: retention.yearlyRenewalSample,
           })}
         </Text>
       </Column>

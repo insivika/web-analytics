@@ -15,10 +15,12 @@ import {
   YEARLY_MIN_USD,
 } from '@/lib/roi';
 import {
+  buildRetention,
   type CustomerValue,
   type PlanEconomics,
   type ProjectionMonth,
   planEconomics,
+  type Retention,
 } from '@/lib/roiProjection';
 import { resolveTrialStarts, type TrialSettings } from '@/lib/trial';
 import { getSyncStatus } from '@/queries/prisma/adSpend';
@@ -91,7 +93,10 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
       getSyncStatus(websiteId),
       getCustomerValue(websiteId),
     ]);
-  const plans = await getPlans(websiteId, now, appStores);
+  const [plans, retention] = await Promise.all([
+    getPlans(websiteId, now, appStores),
+    getRetention(websiteId),
+  ]);
 
   const trials = new Map<string, number>();
   for (const start of trialStarts.values()) {
@@ -140,7 +145,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     updatedAt: latestSync(sources),
     stale: staleSources(sources, now),
     spendFxGaps: spend.fxGaps,
-    projection: { history: projectionHistory, customerValue, plans },
+    projection: { history: projectionHistory, customerValue, plans, retention },
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
       .map(s => ({ source: s.source, message: s.last?.message ?? '' })),
@@ -388,4 +393,47 @@ async function getStripePlanHistory(websiteId: string) {
     recentMonthlyPaid: n(r.recentMonthlyPaid),
     monthsKept: n(r.monthsKept),
   };
+}
+
+/**
+ * How customers keep paying, from Stripe history:
+ * - monthly[k]: share of monthly-plan customers still paying in their month k+1
+ *   (monthly[0] = 1), each month measured on customers old enough to have reached it
+ * - yearlyRenewal: share of yearly customers who paid a second year
+ */
+async function getRetention(websiteId: string): Promise<Retention> {
+  const rows = await prisma.rawQuery(
+    `
+    with t as (
+      select coalesce(user_id, customer_ref) as k, occurred_at, gross_usd
+      from revenue_txn
+      where website_id = {{websiteId::uuid}} and source = 'stripe'
+        and kind = 'payment' and gross_usd > 0
+    ),
+    f as (select k, min(occurred_at) as first from t where k is not null group by 1),
+    v as (
+      select f.k, f.first, (array_agg(t.gross_usd order by t.occurred_at))[1] as amount,
+        count(*) as payments,
+        bool_or(t.gross_usd >= {{yearlyMin}} and t.occurred_at > f.first + interval '300 days')
+          as renewed
+      from f join t using (k) group by 1, 2
+    ),
+    ages as (select generate_series(1, 12) as age)
+    select 'monthly' as kind, age,
+      count(*) filter (where first <= now() - make_interval(months => age))::int as eligible,
+      count(*) filter (where first <= now() - make_interval(months => age)
+        and payments >= age)::int as paying
+    from ages cross join v where amount < {{yearlyMin}}
+    group by age
+    union all
+    select 'yearly', 13,
+      count(*) filter (where first <= now() - interval '13 months')::int,
+      count(*) filter (where first <= now() - interval '13 months' and renewed)::int
+    from v where amount >= {{yearlyMin}}
+    order by 1, 2
+    `,
+    { websiteId, yearlyMin: YEARLY_MIN_USD },
+    'getRoiRetention',
+  );
+  return buildRetention(rows as any[]);
 }

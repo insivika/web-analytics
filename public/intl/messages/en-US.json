@@ -4313,12 +4313,6 @@
       "value": "Meta ads per month"
     }
   ],
-  "label.roi-net-per-month": [
-    {
-      "type": 0,
-      "value": "Net income per month"
-    }
-  ],
   "label.roi-reset": [
     {
       "type": 0,
@@ -4573,12 +4567,6 @@
       "value": "Current trials · not filtered by signup window"
     }
   ],
-  "label.roi-money-in-per-month": [
-    {
-      "type": 0,
-      "value": "Money in per month"
-    }
-  ],
   "message.roi-proj-simple": [
     {
       "type": 0,
@@ -4617,7 +4605,93 @@
       "value": " new paying customers a month."
     }
   ],
-  "message.roi-proj-how": [
+  "label.roi-net-next-month": [
+    {
+      "type": 0,
+      "value": "Net income next month"
+    }
+  ],
+  "label.roi-net-month-12": [
+    {
+      "type": 0,
+      "value": "Net income in month 12"
+    }
+  ],
+  "label.roi-extra-12": [
+    {
+      "type": 0,
+      "value": "Extra net income over 12 months"
+    }
+  ],
+  "label.roi-extra-paying-12": [
+    {
+      "type": 0,
+      "value": "Extra paying customers by month 12"
+    }
+  ],
+  "label.roi-at-today-spend": [
+    {
+      "type": 0,
+      "value": "At today's ad spend"
+    }
+  ],
+  "message.roi-payback-in": [
+    {
+      "type": 0,
+      "value": "Pays for itself by month "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    }
+  ],
+  "message.roi-payback-none": [
+    {
+      "type": 0,
+      "value": "Doesn't pay for itself within 12 months"
+    }
+  ],
+  "message.roi-vs-today-spend": [
+    {
+      "type": 0,
+      "value": "Compared with today's ad spend"
+    }
+  ],
+  "message.roi-per-month-new": [
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " new paying customers a month"
+    }
+  ],
+  "message.roi-month-n": [
+    {
+      "type": 0,
+      "value": "Month "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    }
+  ],
+  "message.roi-at-spend": [
+    {
+      "type": 0,
+      "value": "At "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " a month"
+    }
+  ],
+  "message.roi-outlook-how": [
     {
       "type": 0,
       "value": "How this works: ad dollars buy website visits at what a click cost before ("
@@ -4644,31 +4718,7 @@
     },
     {
       "type": 0,
-      "value": "). Every visit, from ads or not, becomes a paying customer at your past rate. A new customer pays about "
-    },
-    {
-      "type": 1,
-      "value": "value"
-    },
-    {
-      "type": 0,
-      "value": " in their first month at today's prices (Stripe "
-    },
-    {
-      "type": 1,
-      "value": "monthly"
-    },
-    {
-      "type": 0,
-      "value": " a month or "
-    },
-    {
-      "type": 1,
-      "value": "yearlyPrice"
-    },
-    {
-      "type": 0,
-      "value": " a year; "
+      "value": "). Every visit, from ads or not, becomes a paying customer at your past rate. Today's money in, from all your current customers, stays flat. Extra customers keep paying: "
     },
     {
       "type": 1,
@@ -4676,7 +4726,55 @@
     },
     {
       "type": 0,
-      "value": "% choose yearly)."
+      "value": "% choose yearly and pay "
+    },
+    {
+      "type": 1,
+      "value": "yearlyPrice"
+    },
+    {
+      "type": 0,
+      "value": " up front; the rest pay "
+    },
+    {
+      "type": 1,
+      "value": "monthly"
+    },
+    {
+      "type": 0,
+      "value": " a month, and like your past monthly customers "
+    },
+    {
+      "type": 1,
+      "value": "m6"
+    },
+    {
+      "type": 0,
+      "value": "% are still paying after 6 months and "
+    },
+    {
+      "type": 1,
+      "value": "m12"
+    },
+    {
+      "type": 0,
+      "value": "% after 12. Yearly renewals fall after month 12 ("
+    },
+    {
+      "type": 1,
+      "value": "renewal"
+    },
+    {
+      "type": 0,
+      "value": "% of "
+    },
+    {
+      "type": 1,
+      "value": "renewalN"
+    },
+    {
+      "type": 0,
+      "value": " past yearly customers renewed)."
     }
   ]
 }

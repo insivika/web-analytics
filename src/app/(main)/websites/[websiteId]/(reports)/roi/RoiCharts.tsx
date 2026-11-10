@@ -199,3 +199,66 @@ export function NetChart({
     </div>
   );
 }
+
+/** Next 12 months of net income: today's ad spend vs the slider spend. */
+export function OutlookChart({
+  labels,
+  today,
+  projected,
+  todayLabel,
+  projectedLabel,
+}: {
+  labels: string[];
+  today: number[];
+  projected: number[];
+  todayLabel: string;
+  projectedLabel: string;
+}) {
+  const better = projected[projected.length - 1] >= today[today.length - 1];
+  const color = better ? ROI_COLORS.positive : ROI_COLORS.negative;
+  const canvas = useChart(
+    () => ({
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: projectedLabel,
+            data: projected,
+            borderColor: color,
+            backgroundColor: color,
+            borderWidth: 3,
+            pointRadius: 2,
+            tension: 0.25,
+          },
+          {
+            label: todayLabel,
+            data: today,
+            borderColor: 'rgba(128,128,128,0.8)',
+            backgroundColor: 'rgba(128,128,128,0.8)',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+          },
+        ],
+      },
+      options: {
+        ...(baseOptions as any),
+        animation: { duration: 0 },
+        scales: {
+          ...(baseOptions as any).scales,
+          y: {
+            ...(baseOptions as any).scales.y,
+            suggestedMin: Math.min(0, ...projected, ...today),
+          },
+        },
+      },
+    }),
+    [labels.join(), projected.join(), today.join(), todayLabel, projectedLabel],
+  );
+  return (
+    <div style={{ position: 'relative', height: 240 }}>
+      <canvas ref={canvas} />
+    </div>
+  );
+}

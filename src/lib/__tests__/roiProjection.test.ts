@@ -1,6 +1,8 @@
 import {
+  buildRetention,
   customerValue,
   defaultInputs,
+  outlook,
   type ProjectionMonth,
   paidVisitors,
   planEconomics,
@@ -170,5 +172,67 @@ describe('ad spend projection', () => {
     expect(p.customersFromAds).toBe(0);
     expect(p.costPerCustomerFromAds).toBeNull();
     expect(p.firstYearReturn).toBe(0);
+  });
+});
+
+describe('12-month outlook', () => {
+  const base = projectionBase(history, 3);
+  const retention = buildRetention([
+    { kind: 'monthly', age: 2, eligible: 100, paying: 80 },
+    { kind: 'monthly', age: 3, eligible: 100, paying: 70 },
+    // Too few customers to trust: the curve holds at the last good value.
+    { kind: 'monthly', age: 4, eligible: 5, paying: 5 },
+    { kind: 'monthly', age: 5, eligible: 100, paying: 60 },
+    { kind: 'yearly', age: 13, eligible: 15, paying: 7 },
+  ]);
+
+  test('retention curve starts at 1 and never rises', () => {
+    expect(retention.monthly.slice(0, 5)).toEqual([1, 0.8, 0.7, 0.7, 0.6]);
+    expect(retention.monthly).toHaveLength(12);
+    expect(retention.yearlyRenewal).toBeCloseTo(7 / 15, 3);
+  });
+
+  test("today's spend: the outlook is flat at today's net income", () => {
+    const o = outlook(base, defaultInputs(base, value), retention);
+    expect(o.extraCustomersPerMonth).toBeCloseTo(0, 6);
+    expect(o.months.every(m => Math.abs(m.projected - m.today) < 1e-6)).toBe(true);
+    expect(o.paybackMonth).toBeNull();
+  });
+
+  test('extra customers stack up month over month', () => {
+    const inputs = {
+      ...defaultInputs(base, value),
+      metaSpend: base.metaSpend + 500,
+      yearlyShare: 0,
+      monthlyPrice: 10,
+      keepRate: 1,
+    };
+    const o = outlook(base, inputs, { ...retention, monthly: Array(12).fill(1) });
+    const gain = (m: number) => o.months[m - 1].projected - o.months[m - 1].today;
+    // With no drop-off, month t earns t batches of monthly revenue.
+    expect(gain(2) - gain(1)).toBeCloseTo(o.extraCustomersPerMonth * 10, 6);
+    expect(o.months[11].extraPaying).toBeCloseTo(12 * o.extraCustomersPerMonth, 6);
+  });
+
+  test('payback is the first month the running total turns positive', () => {
+    const inputs = {
+      ...defaultInputs(base, value),
+      googleSpend: base.googleSpend + 100,
+      yearlyShare: 0,
+      monthlyPrice: 200,
+      keepRate: 1,
+    };
+    const o = outlook(base, inputs, { ...retention, monthly: Array(12).fill(1) });
+    let running = 0;
+    let first = 0;
+    for (const m of o.months) {
+      running += m.projected - m.today;
+      if (running > 0) {
+        first = m.month;
+        break;
+      }
+    }
+    expect(first).toBeGreaterThan(0);
+    expect(o.paybackMonth).toBe(first);
   });
 });
