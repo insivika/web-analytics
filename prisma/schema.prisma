@@ -136,6 +136,7 @@ model WebsiteEvent {
   @@index([websiteId, createdAt, referrerDomain])
   @@index([websiteId, createdAt, pageTitle])
   @@index([websiteId, createdAt, eventName])
+  @@index([websiteId, eventName, createdAt])
   @@index([websiteId, createdAt, tag])
   @@index([websiteId, sessionId, createdAt])
   @@index([websiteId, visitId, createdAt])

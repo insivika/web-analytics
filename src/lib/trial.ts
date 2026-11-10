@@ -5,10 +5,16 @@
 // The SQL layer (src/queries/sql/reports/getTrial.ts) only fetches per-user
 // aggregates; everything below is deterministic and unit-tested.
 
-import { startOfWeek } from 'date-fns';
-import { formatInTimeZone, utcToZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
+export const HOUR_MS = 60 * 60 * 1000;
+
+/** Weekly cohort table always shows this many signup weeks. */
+export const COHORT_WEEKS = 8;
+
+/** Daily active points with fewer eligible users than this are shown greyed out. */
+export const MIN_DAILY_ACTIVE_USERS = 10;
 
 export const TRIAL_PLATFORMS = ['ios', 'android', 'web'] as const;
 
@@ -26,11 +32,18 @@ export interface TrialSettings {
   pushAnswerProperty: string;
   pushAnswerValue: string;
   pushGrantedProperty: string;
+  /** A user converts on the first of these events after their trial start... */
   conversionEvents: string[];
+  /** ...that carries this property with this value (empty property = no requirement). */
+  conversionProperty: string;
+  conversionPropertyValue: string;
+  /** Days after trial start in which a conversion counts; 0 = any time. */
+  conversionWindowDays: number;
+  /** A trial counts as completed this many days after it ends (store billing lag). */
+  conversionSettleDays: number;
   statusProperty: string;
+  /** Optional extra rule: a paid subscription status after trial start also converts. */
   paidStatuses: string[];
-  /** Extra days after the trial in which a purchase still counts as converted. */
-  conversionGraceDays: number;
   excludeInternal: boolean;
   internalProperty: string;
   userIdProperty: string;
@@ -61,14 +74,20 @@ export const DEFAULT_TRIAL_SETTINGS: TrialSettings = {
   pushAnswerValue: 'yes',
   pushGrantedProperty: 'granted',
   conversionEvents: ['subscription_started', 'paywall_purchased'],
+  conversionProperty: 'is_trial_conversion',
+  conversionPropertyValue: 'true',
+  conversionWindowDays: 0,
+  conversionSettleDays: 3,
   statusProperty: 'subscription_status',
-  paidStatuses: ['active'],
-  conversionGraceDays: 0,
+  paidStatuses: [],
   excludeInternal: true,
   internalProperty: 'is_internal',
   userIdProperty: 'user_id',
   platformProperty: 'platform',
 };
+
+/** String settings that may be intentionally empty. */
+const OPTIONAL_STRINGS: (keyof TrialSettings)[] = ['conversionProperty', 'conversionPropertyValue'];
 
 const cleanList = (value: unknown): string[] =>
   Array.isArray(value) ? [...new Set(value.map(v => String(v).trim()).filter(Boolean))] : [];
@@ -84,8 +103,10 @@ export function normalizeTrialSettings(value?: Partial<TrialSettings> | null): T
 
     if (current === undefined || current === null) continue;
 
-    if (typeof fallback === 'string' && typeof current === 'string' && current.trim()) {
-      (settings as any)[key] = current.trim();
+    if (typeof fallback === 'string' && typeof current === 'string') {
+      if (current.trim() || OPTIONAL_STRINGS.includes(key)) {
+        (settings as any)[key] = current.trim();
+      }
     } else if (typeof fallback === 'number' && Number.isFinite(Number(current))) {
       (settings as any)[key] = Math.max(0, Math.round(Number(current)));
     } else if (typeof fallback === 'boolean' && typeof current === 'boolean') {
@@ -100,19 +121,30 @@ export function normalizeTrialSettings(value?: Partial<TrialSettings> | null): T
   }
 
   settings.trialLengthDays = Math.min(Math.max(settings.trialLengthDays, 1), 90);
-  settings.conversionGraceDays = Math.min(settings.conversionGraceDays, 90);
+  settings.conversionWindowDays = Math.min(settings.conversionWindowDays, 365);
+  settings.conversionSettleDays = Math.min(settings.conversionSettleDays, 60);
 
   return settings;
 }
 
-/** All event names the report needs per-user activity for. */
-export function getTrialEventNames(settings: TrialSettings): string[] {
+/** Event names that need per-user, per-trial-day activity. */
+export function getTrialActivityEventNames(settings: TrialSettings): string[] {
   return [
     ...new Set([
       settings.activeDayEvent,
       settings.activationEvent,
       ...settings.milestones.flat(),
       ...settings.engagementEvents,
+    ]),
+  ].filter(Boolean);
+}
+
+/** Every event the definitions refer to. */
+export function getTrialDefinitionEvents(settings: TrialSettings): string[] {
+  return [
+    ...new Set([
+      settings.trialStartEvent,
+      ...getTrialActivityEventNames(settings),
       settings.pushEvent,
       ...settings.conversionEvents,
     ]),
@@ -128,6 +160,27 @@ export interface TrialWindow {
 export function getPreviousWindow({ startDate, endDate }: TrialWindow): TrialWindow {
   const length = +endDate - +startDate;
   return { startDate: new Date(+startDate - length), endDate: new Date(+startDate) };
+}
+
+/** Adds days to a yyyy-MM-dd calendar date (pure date math, no timezone). */
+const addCalendarDays = (day: string, days: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+
+/**
+ * The Monday (yyyy-MM-dd) of the week containing `date` in `timezone`. Uses only
+ * the zoned calendar date and ISO weekday, so it doesn't depend on the server's
+ * own timezone.
+ */
+export function getWeekStart(date: Date, timezone = 'UTC'): string {
+  const day = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+  const isoWeekday = Number(formatInTimeZone(date, timezone, 'i'));
+  return addCalendarDays(day, 1 - isoWeekday);
+}
+
+/** Monday 00:00 (in `timezone`) of the oldest week in the weekly cohort table. */
+export function getCohortStart(now: Date, timezone = 'UTC'): Date {
+  const oldest = addCalendarDays(getWeekStart(now, timezone), -7 * (COHORT_WEEKS - 1));
+  return zonedTimeToUtc(`${oldest}T00:00:00`, timezone);
 }
 
 export interface TrialStartOccurrence {
@@ -172,6 +225,7 @@ export interface TrialActivityRow {
   eventName: string;
   day: number;
   count: number;
+  firstAt?: Date | string;
 }
 
 export interface TrialAttributeRow {
@@ -180,7 +234,21 @@ export interface TrialAttributeRow {
   platform: string | null;
   subscriptionStatus: string | null;
   pushOptIn: boolean;
+  /** Had a paid subscription status after trial start (only if paidStatuses is set). */
   paidInWindow: boolean;
+}
+
+/** First qualifying conversion event at or after the user's trial start. */
+export interface TrialConversionRow {
+  userId: string;
+  firstAt: Date | string;
+}
+
+/** When each definition event was first recorded, and how often in the report period. */
+export interface TrialEventStat {
+  eventName: string;
+  firstSeen: Date | string | null;
+  periodCount: number;
 }
 
 export interface TrialUser {
@@ -190,36 +258,44 @@ export interface TrialUser {
   isInternal: boolean;
   /** 1-based current trial day, or null once the trial has ended. */
   currentTrialDay: number | null;
+  /** Trial ended at least `conversionSettleDays` ago, so conversion is final. */
+  trialCompleted: boolean;
   activeDays: number;
   engagementCount: number;
   milestones: boolean[];
+  /** Hours from trial start to first reaching each milestone (null = not reached). */
+  milestoneHours: (number | null)[];
   activated: boolean;
   pushOptIn: boolean;
   converted: boolean;
+  convertedAt: string | null;
   subscriptionStatus: string | null;
 }
 
 interface UserAccumulator {
   activeDaySet: Set<number>;
-  events: Map<string, { count: number; firstDay: number }>;
+  events: Map<string, { count: number; firstAt: number | null }>;
 }
+
+const toTime = (value: Date | string | undefined | null) =>
+  value === undefined || value === null ? null : +new Date(value);
 
 /** Builds one row per trial user from the raw aggregates. */
 export function buildTrialUsers(
   starts: Map<string, Date>,
   activity: TrialActivityRow[],
   attributes: TrialAttributeRow[],
+  conversions: TrialConversionRow[],
   settings: TrialSettings,
   now: Date,
 ): TrialUser[] {
   const length = settings.trialLengthDays;
-  const conversionDays = length + settings.conversionGraceDays;
   const acc = new Map<string, UserAccumulator>();
 
   for (const row of activity) {
     if (!starts.has(row.userId)) continue;
     const day = Number(row.day);
-    if (day < 0 || day >= conversionDays) continue;
+    if (day < 0 || day >= length) continue;
 
     let user = acc.get(row.userId);
     if (!user) {
@@ -227,35 +303,52 @@ export function buildTrialUsers(
       acc.set(row.userId, user);
     }
 
-    const inTrial = day < length;
-
-    if (row.eventName === settings.activeDayEvent && inTrial) {
+    if (row.eventName === settings.activeDayEvent) {
       user.activeDaySet.add(day);
     }
 
-    // Conversion events may land in the grace period; everything else is trial-only.
-    if (!inTrial && !settings.conversionEvents.includes(row.eventName)) continue;
-
     const existing = user.events.get(row.eventName);
     const count = Number(row.count) || 0;
+    // Without an exact timestamp, fall back to the start of that trial day.
+    const firstAt = toTime(row.firstAt) ?? +starts.get(row.userId) + day * DAY_MS;
+
     if (existing) {
       existing.count += count;
-      existing.firstDay = Math.min(existing.firstDay, day);
+      existing.firstAt = Math.min(existing.firstAt ?? firstAt, firstAt);
     } else {
-      user.events.set(row.eventName, { count, firstDay: day });
+      user.events.set(row.eventName, { count, firstAt });
     }
   }
 
   const attrs = new Map(attributes.map(a => [a.userId, a]));
-  const inTrialEvent = (user: UserAccumulator | undefined, name: string) => {
-    const event = user?.events.get(name);
-    return !!event && event.firstDay < length;
-  };
+  const conversionAt = new Map<string, number>();
+  for (const row of conversions) {
+    const time = toTime(row.firstAt);
+    if (time === null) continue;
+    conversionAt.set(row.userId, Math.min(conversionAt.get(row.userId) ?? time, time));
+  }
 
   return [...starts].map(([userId, start]) => {
     const user = acc.get(userId);
     const attr = attrs.get(userId);
-    const elapsedDays = Math.floor((+now - +start) / DAY_MS);
+    const elapsed = +now - +start;
+    const elapsedDays = Math.floor(elapsed / DAY_MS);
+    const firstHours = (names: string[]) => {
+      const times = names
+        .map(name => user?.events.get(name)?.firstAt)
+        .filter((t): t is number => t !== undefined && t !== null);
+      return times.length ? Math.max(0, (Math.min(...times) - +start) / HOUR_MS) : null;
+    };
+
+    // A conversion counts if it happened at or after trial start (and within the
+    // optional window). The SQL layer already applies these rules; re-check here.
+    const convertedTime = conversionAt.get(userId);
+    const conversionValid =
+      convertedTime !== undefined &&
+      convertedTime >= +start &&
+      (settings.conversionWindowDays === 0 ||
+        convertedTime < +start + settings.conversionWindowDays * DAY_MS);
+    const milestoneHours = settings.milestones.map(step => firstHours(step));
 
     return {
       userId,
@@ -263,16 +356,18 @@ export function buildTrialUsers(
       platform: attr?.platform ?? null,
       isInternal: !!attr?.isInternal,
       currentTrialDay: elapsedDays < length ? elapsedDays + 1 : null,
+      trialCompleted: elapsed >= (length + settings.conversionSettleDays) * DAY_MS,
       activeDays: user?.activeDaySet.size ?? 0,
       engagementCount: settings.engagementEvents.reduce(
-        (sum, name) => sum + (inTrialEvent(user, name) ? user.events.get(name).count : 0),
+        (sum, name) => sum + (user?.events.get(name)?.count ?? 0),
         0,
       ),
-      milestones: settings.milestones.map(step => step.some(name => inTrialEvent(user, name))),
-      activated: inTrialEvent(user, settings.activationEvent),
+      milestones: milestoneHours.map(h => h !== null),
+      milestoneHours,
+      activated: !!user?.events.has(settings.activationEvent),
       pushOptIn: !!attr?.pushOptIn,
-      converted:
-        settings.conversionEvents.some(name => user?.events.has(name)) || !!attr?.paidInWindow,
+      converted: conversionValid || !!attr?.paidInWindow,
+      convertedAt: conversionValid ? new Date(convertedTime).toISOString() : null,
       subscriptionStatus: attr?.subscriptionStatus ?? null,
     };
   });
@@ -299,14 +394,20 @@ export interface TrialKpis {
   active2: number;
   active3: number;
   pushOptIn: number;
-  converted: number;
+  /** % converted among completed trials; null when no trial in the group has completed. */
+  converted: number | null;
+  /** Number of completed trials the conversion rate is based on. */
+  completedTrials: number;
 }
+
+export type TrialKpiKey = Exclude<keyof TrialKpis, 'completedTrials'>;
 
 const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
 
 export function computeKpis(users: TrialUser[]): TrialKpis {
   const n = users.length;
   const share = (fn: (u: TrialUser) => boolean) => pct(users.filter(fn).length, n);
+  const completed = users.filter(u => u.trialCompleted);
 
   return {
     starts: n,
@@ -314,18 +415,75 @@ export function computeKpis(users: TrialUser[]): TrialKpis {
     active2: share(u => u.activeDays >= 2),
     active3: share(u => u.activeDays >= 3),
     pushOptIn: share(u => u.pushOptIn),
-    converted: share(u => u.converted),
+    converted: completed.length
+      ? pct(completed.filter(u => u.converted).length, completed.length)
+      : null,
+    completedTrials: completed.length,
+  };
+}
+
+export interface TrialComparison {
+  /** False when the previous window starts before the KPI's events were tracked. */
+  available: boolean;
+  /** Date from which every event the KPI depends on has data; null = never recorded. */
+  trackingStart: string | null;
+}
+
+/**
+ * A KPI can only be compared with the previous window if all events it depends on
+ * were already being recorded when that window started. For a step with
+ * alternatives (e.g. conversion events), the earliest alternative counts.
+ */
+export function computeComparisons(
+  settings: TrialSettings,
+  stats: TrialEventStat[],
+  previousWindow: TrialWindow,
+  /** First time a conversion event carried the required conversion property. */
+  conversionPropertyFirstSeen?: Date | string | null,
+): Record<TrialKpiKey, TrialComparison> {
+  const firstSeen = new Map(
+    stats.filter(s => s.firstSeen).map(s => [s.eventName, +new Date(s.firstSeen)]),
+  );
+  const CONVERSION_PROPERTY = '\u0000conversionProperty';
+  if (conversionPropertyFirstSeen) {
+    firstSeen.set(CONVERSION_PROPERTY, +new Date(conversionPropertyFirstSeen));
+  }
+  const earliest = (names: string[]) => {
+    const times = names.map(n => firstSeen.get(n)).filter((t): t is number => t !== undefined);
+    return times.length ? Math.min(...times) : null;
+  };
+  const compare = (...groups: string[][]): TrialComparison => {
+    const starts = groups.map(earliest);
+    if (starts.some(t => t === null)) return { available: false, trackingStart: null };
+    const trackingStart = Math.max(...(starts as number[]));
+    return {
+      available: +previousWindow.startDate >= trackingStart,
+      trackingStart: new Date(trackingStart).toISOString(),
+    };
+  };
+  const start = [settings.trialStartEvent];
+
+  return {
+    starts: compare(start),
+    activated: compare(start, [settings.activationEvent]),
+    active2: compare(start, [settings.activeDayEvent]),
+    active3: compare(start, [settings.activeDayEvent]),
+    pushOptIn: compare(start, [settings.pushEvent]),
+    // With a required property (e.g. is_trial_conversion), conversions only count
+    // from when that property was first recorded.
+    converted: settings.conversionProperty
+      ? compare(start, settings.conversionEvents, [CONVERSION_PROPERTY])
+      : compare(start, settings.conversionEvents),
   };
 }
 
 export interface TrialFunnelStep {
   events: string[];
+  /** Users who reached this milestone during the trial, in any order. */
   reached: number;
-  reachedInOrder: number;
   pct: number;
-  pctInOrder: number;
-  /** Median 1-based trial day on which the step was first reached. */
-  medianDay: number | null;
+  /** Median hours from trial start until the milestone was first reached. */
+  medianHours: number | null;
 }
 
 const median = (values: number[]) => {
@@ -335,40 +493,17 @@ const median = (values: number[]) => {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-export function computeFunnel(
-  users: TrialUser[],
-  activity: TrialActivityRow[],
-  settings: TrialSettings,
-): TrialFunnelStep[] {
-  const userSet = new Set(users.map(u => u.userId));
-  const firstDays = new Map<string, number>();
-
-  for (const row of activity) {
-    if (!userSet.has(row.userId) || row.day < 0 || row.day >= settings.trialLengthDays) continue;
-    const key = `${row.userId}\u0000${row.eventName}`;
-    const existing = firstDays.get(key);
-    if (existing === undefined || row.day < existing) firstDays.set(key, Number(row.day));
-  }
-
+export function computeFunnel(users: TrialUser[], settings: TrialSettings): TrialFunnelStep[] {
   return settings.milestones.map((events, index) => {
-    const reachedUsers = users.filter(u => u.milestones[index]);
-    const inOrder = users.filter(u => u.milestones.slice(0, index + 1).every(Boolean));
-    const days = reachedUsers
-      .map(u => {
-        const candidates = events
-          .map(name => firstDays.get(`${u.userId}\u0000${name}`))
-          .filter(d => d !== undefined);
-        return candidates.length ? Math.min(...candidates) + 1 : undefined;
-      })
-      .filter(d => d !== undefined);
+    const hours = users
+      .map(u => u.milestoneHours[index])
+      .filter((h): h is number => h !== null && h !== undefined);
 
     return {
       events,
-      reached: reachedUsers.length,
-      reachedInOrder: inOrder.length,
-      pct: pct(reachedUsers.length, users.length),
-      pctInOrder: pct(inOrder.length, users.length),
-      medianDay: median(days),
+      reached: hours.length,
+      pct: pct(hours.length, users.length),
+      medianHours: median(hours),
     };
   });
 }
@@ -376,8 +511,11 @@ export function computeFunnel(
 export interface TrialDailyActivePoint {
   day: number;
   active: number;
+  /** Users whose trial has reached this day (the denominator). */
   eligible: number;
   pct: number;
+  /** Fewer than MIN_DAILY_ACTIVE_USERS eligible users: shown greyed out. */
+  lowSample: boolean;
 }
 
 /**
@@ -411,6 +549,7 @@ export function computeDailyActive(
       active,
       eligible: eligibleUsers.length,
       pct: pct(active, eligibleUsers.length),
+      lowSample: eligibleUsers.length < MIN_DAILY_ACTIVE_USERS,
     };
   });
 }
@@ -427,10 +566,19 @@ export function computeActiveDaysHistogram(users: TrialUser[], settings: TrialSe
 
 export interface TrialCohortRow extends TrialKpis {
   weekStart: string;
+  /** At least one trial in the week hasn't ended yet. */
   inProgress: boolean;
+  /** Every trial in the week has completed, so the conversion rate is final. */
+  conversionFinal: boolean;
+  /** All trials ended, but some are still inside the conversion settle period. */
+  settling: boolean;
 }
 
-/** One row per signup week (weeks start Monday, in the viewer's timezone). */
+/**
+ * The last COHORT_WEEKS signup weeks (weeks start Monday in `timezone`), newest
+ * first, including weeks without trial starts. Conversion is only reported for
+ * weeks in which every trial has completed.
+ */
 export function computeWeeklyCohorts(
   users: TrialUser[],
   settings: TrialSettings,
@@ -438,60 +586,71 @@ export function computeWeeklyCohorts(
   timezone = 'UTC',
 ): TrialCohortRow[] {
   const groups = new Map<string, TrialUser[]>();
+  const currentWeek = getWeekStart(now, timezone);
+
+  for (let i = 0; i < COHORT_WEEKS; i++) {
+    groups.set(addCalendarDays(currentWeek, -7 * i), []);
+  }
 
   for (const user of users) {
-    const zoned = utcToZonedTime(new Date(user.trialStart), timezone);
-    const week = formatInTimeZone(startOfWeek(zoned, { weekStartsOn: 1 }), 'UTC', 'yyyy-MM-dd');
-    if (!groups.has(week)) groups.set(week, []);
-    groups.get(week).push(user);
+    const start = new Date(user.trialStart);
+    if (start > now) continue;
+    groups.get(getWeekStart(start, timezone))?.push(user);
   }
 
   return [...groups]
     .sort(([a], [b]) => (a < b ? 1 : -1))
-    .map(([weekStart, group]) => ({
-      weekStart,
-      ...computeKpis(group),
-      inProgress: group.some(
+    .map(([weekStart, group]) => {
+      const kpis = computeKpis(group);
+      const conversionFinal = group.length > 0 && group.every(u => u.trialCompleted);
+      const inProgress = group.some(
         u => +new Date(u.trialStart) + settings.trialLengthDays * DAY_MS > +now,
-      ),
-    }));
+      );
+
+      return {
+        weekStart,
+        ...kpis,
+        converted: conversionFinal ? kpis.converted : null,
+        conversionFinal,
+        inProgress,
+        settling: group.length > 0 && !inProgress && !conversionFinal,
+      };
+    });
 }
 
-export type TrialNote = { type: 'noData'; event: string; platform?: string };
+export type TrialNote =
+  | { type: 'noData'; event: string }
+  /** The event has rows in the period, but none carry the user id property. */
+  | { type: 'noUserId'; event: string; property: string };
 
-/** Notes for defined events that have no data yet, overall or per platform. */
+/**
+ * A note for each definition event with zero rows in the report period, plus one
+ * when the start event fires but never carries the user id property (so the
+ * report can't find any trial starts).
+ */
 export function computeNotes(
-  users: TrialUser[],
-  activity: TrialActivityRow[],
   settings: TrialSettings,
+  stats: TrialEventStat[],
+  occurrences: TrialStartOccurrence[] = [],
+  period?: TrialWindow,
 ): TrialNote[] {
-  const notes: TrialNote[] = [];
-  const userSet = new Set(users.map(u => u.userId));
-  const seen = new Map<string, Set<string>>();
-  const platforms = new Map(users.map(u => [u.userId, u.platform]));
+  const counts = new Map(stats.map(s => [s.eventName, Number(s.periodCount) || 0]));
+  const notes: TrialNote[] = getTrialDefinitionEvents(settings)
+    .filter(event => !counts.get(event))
+    .map(event => ({ type: 'noData', event }));
 
-  for (const row of activity) {
-    if (!userSet.has(row.userId)) continue;
-    if (!seen.has(row.eventName)) seen.set(row.eventName, new Set());
-    seen.get(row.eventName).add(platforms.get(row.userId) ?? 'unknown');
-  }
+  const startRows = counts.get(settings.trialStartEvent) ?? 0;
+  const startsWithUserId = occurrences.some(({ createdAt }) => {
+    const time = +new Date(createdAt);
+    return !period || (time >= +period.startDate && time < +period.endDate);
+  });
 
-  if (users.length === 0) {
-    return [{ type: 'noData', event: settings.trialStartEvent }];
-  }
-
-  for (const event of getTrialEventNames(settings)) {
-    if (!seen.has(event)) notes.push({ type: 'noData', event });
-  }
-
-  const presentPlatforms = TRIAL_PLATFORMS.filter(p => users.some(u => u.platform === p));
-
-  for (const event of settings.engagementEvents) {
-    const eventPlatforms = seen.get(event);
-    if (!eventPlatforms) continue;
-    for (const platform of presentPlatforms) {
-      if (!eventPlatforms.has(platform)) notes.push({ type: 'noData', event, platform });
-    }
+  if (startRows > 0 && !startsWithUserId) {
+    notes.unshift({
+      type: 'noUserId',
+      event: settings.trialStartEvent,
+      property: settings.userIdProperty,
+    });
   }
 
   return notes;
@@ -503,6 +662,7 @@ export interface TrialReport {
   previousWindow: TrialWindow;
   kpis: TrialKpis;
   previousKpis: TrialKpis;
+  comparisons: Record<TrialKpiKey, TrialComparison>;
   funnel: TrialFunnelStep[];
   dailyActive: TrialDailyActivePoint[];
   histogram: ReturnType<typeof computeActiveDaysHistogram>;
@@ -512,10 +672,29 @@ export interface TrialReport {
   internalUsers: number;
 }
 
+/** "No data yet" notes cover the signup window, but never past now. */
+export function getStatsPeriodEnd(window: TrialWindow, now: Date): Date {
+  return new Date(Math.min(+window.endDate, +now));
+}
+
+/** The range of trial starts the report needs data for. */
+export function getTrialDataRange(window: TrialWindow, now: Date, timezone?: string): TrialWindow {
+  const previous = getPreviousWindow(window);
+  const cohortStart = getCohortStart(now, timezone);
+
+  return {
+    startDate: new Date(Math.min(+previous.startDate, +cohortStart)),
+    endDate: new Date(Math.max(+window.endDate, +now)),
+  };
+}
+
 export function computeTrialReport({
   occurrences,
   activity,
   attributes,
+  conversions,
+  eventStats,
+  conversionPropertyFirstSeen,
   settings,
   window,
   filters,
@@ -525,6 +704,10 @@ export function computeTrialReport({
   occurrences: TrialStartOccurrence[];
   activity: TrialActivityRow[];
   attributes: TrialAttributeRow[];
+  conversions: TrialConversionRow[];
+  eventStats: TrialEventStat[];
+  /** First time a conversion event carried settings.conversionProperty. */
+  conversionPropertyFirstSeen?: Date | string | null;
   settings: TrialSettings;
   window: TrialWindow;
   filters: TrialUserFilters;
@@ -532,21 +715,20 @@ export function computeTrialReport({
   timezone?: string;
 }): TrialReport {
   const previousWindow = getPreviousWindow(window);
-  const allStarts = detectTrialStarts(occurrences, {
-    startDate: previousWindow.startDate,
-    endDate: window.endDate,
-  });
-  const allUsers = buildTrialUsers(allStarts, activity, attributes, settings, now);
+  const allStarts = detectTrialStarts(occurrences, getTrialDataRange(window, now, timezone));
+  const allUsers = filterTrialUsers(
+    buildTrialUsers(allStarts, activity, attributes, conversions, settings, now),
+    { excludeInternal: false, platform: filters.platform },
+  );
 
   const inWindow = (u: TrialUser, w: TrialWindow) =>
     new Date(u.trialStart) >= w.startDate && new Date(u.trialStart) < w.endDate;
+  const excludeInternal = filters.excludeInternal ?? true;
+  const visible = allUsers.filter(u => !(excludeInternal && u.isInternal));
 
   const currentAll = allUsers.filter(u => inWindow(u, window));
-  const current = filterTrialUsers(currentAll, filters);
-  const previous = filterTrialUsers(
-    allUsers.filter(u => inWindow(u, previousWindow)),
-    filters,
-  );
+  const current = visible.filter(u => inWindow(u, window));
+  const previous = visible.filter(u => inWindow(u, previousWindow));
 
   return {
     settings,
@@ -554,12 +736,21 @@ export function computeTrialReport({
     previousWindow,
     kpis: computeKpis(current),
     previousKpis: computeKpis(previous),
-    funnel: computeFunnel(current, activity, settings),
+    comparisons: computeComparisons(
+      settings,
+      eventStats,
+      previousWindow,
+      conversionPropertyFirstSeen,
+    ),
+    funnel: computeFunnel(current, settings),
     dailyActive: computeDailyActive(current, activity, settings, now),
     histogram: computeActiveDaysHistogram(current, settings),
-    cohorts: computeWeeklyCohorts(current, settings, now, timezone),
+    cohorts: computeWeeklyCohorts(visible, settings, now, timezone),
     users: current.sort((a, b) => (a.trialStart < b.trialStart ? 1 : -1)),
-    notes: computeNotes(current, activity, settings),
+    notes: computeNotes(settings, eventStats, occurrences, {
+      startDate: window.startDate,
+      endDate: getStatsPeriodEnd(window, now),
+    }),
     internalUsers: currentAll.filter(u => u.isInternal).length,
   };
 }

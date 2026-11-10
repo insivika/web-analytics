@@ -36,13 +36,16 @@ const TEXT_FIELDS = [
   'userIdProperty',
   'platformProperty',
   'internalProperty',
+  'conversionProperty',
+  'conversionPropertyValue',
 ] as const;
+
+const NUMBER_FIELDS = ['trialLengthDays', 'conversionWindowDays', 'conversionSettleDays'] as const;
 
 export function toFormValues(settings: TrialSettings) {
   return {
     ...settings,
-    trialLengthDays: String(settings.trialLengthDays),
-    conversionGraceDays: String(settings.conversionGraceDays),
+    ...Object.fromEntries(NUMBER_FIELDS.map(key => [key, String(settings[key])])),
     milestones: settings.milestones.map(step => step.join(' | ')).join('\n'),
     ...Object.fromEntries(LIST_FIELDS.map(key => [key, settings[key].join(', ')])),
   };
@@ -51,8 +54,7 @@ export function toFormValues(settings: TrialSettings) {
 export function fromFormValues(values: Record<string, any>): Partial<TrialSettings> {
   return {
     ...Object.fromEntries(TEXT_FIELDS.map(key => [key, String(values[key] ?? '').trim()])),
-    trialLengthDays: Number(values.trialLengthDays),
-    conversionGraceDays: Number(values.conversionGraceDays),
+    ...Object.fromEntries(NUMBER_FIELDS.map(key => [key, Number(values[key])])),
     excludeInternal: !!values.excludeInternal,
     milestones: String(values.milestones ?? '')
       .split('\n')
@@ -132,11 +134,21 @@ function TrialSettingsForm({ websiteId, onClose }: { websiteId: string; onClose:
           <FormField name="conversionEvents" label={formatMessage(labels.conversionEvents)}>
             <TextField autoComplete="off" />
           </FormField>
+          <FormField name="conversionProperty" label={formatMessage(labels.conversionProperty)}>
+            <TextField autoComplete="off" />
+          </FormField>
+          <FormField
+            name="conversionPropertyValue"
+            label={formatMessage(labels.conversionPropertyValue)}
+          >
+            <TextField autoComplete="off" />
+          </FormField>
+          {field('conversionWindowDays', formatMessage(labels.conversionWindowDays))}
+          {field('conversionSettleDays', formatMessage(labels.conversionSettleDays))}
           <FormField name="paidStatuses" label={formatMessage(labels.paidStatuses)}>
             <TextField autoComplete="off" />
           </FormField>
           {field('statusProperty', formatMessage(labels.statusProperty))}
-          {field('conversionGraceDays', formatMessage(labels.conversionGraceDays))}
           {field('pushEvent', formatMessage(labels.pushEvent))}
           {field('pushAnswerProperty', formatMessage(labels.pushAnswerProperty))}
           {field('pushAnswerValue', formatMessage(labels.pushAnswerValue))}

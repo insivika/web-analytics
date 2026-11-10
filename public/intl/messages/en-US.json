@@ -165,6 +165,12 @@
       "value": "Before"
     }
   ],
+  "label.billing-settling": [
+    {
+      "type": 0,
+      "value": "Billing settling"
+    }
+  ],
   "label.boards": [
     {
       "type": 0,
@@ -297,10 +303,16 @@
       "value": "Conversion events"
     }
   ],
-  "label.conversion-grace-days": [
+  "label.conversion-property": [
     {
       "type": 0,
-      "value": "Conversion grace period (days)"
+      "value": "Conversion property (empty = no requirement)"
+    }
+  ],
+  "label.conversion-property-value": [
+    {
+      "type": 0,
+      "value": "Conversion property value"
     }
   ],
   "label.conversion-rate": [
@@ -309,10 +321,36 @@
       "value": "Conversion rate"
     }
   ],
+  "label.conversion-settle-days": [
+    {
+      "type": 0,
+      "value": "Days after trial end until a trial counts as completed"
+    }
+  ],
   "label.conversion-step": [
     {
       "type": 0,
       "value": "Conversion step"
+    }
+  ],
+  "label.conversion-window-days": [
+    {
+      "type": 0,
+      "value": "Conversion window (days after trial start, 0 = any time)"
+    }
+  ],
+  "label.converted-completed-trials": [
+    {
+      "type": 0,
+      "value": "Converted (completed trials, n="
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": ")"
     }
   ],
   "label.converted-to-paid": [
@@ -945,6 +983,20 @@
       "value": "Last seen"
     }
   ],
+  "label.last-signup-weeks": [
+    {
+      "type": 0,
+      "value": "Last "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " signup weeks"
+    }
+  ],
   "label.leave": [
     {
       "type": 0,
@@ -1011,10 +1063,10 @@
       "value": "Maximize"
     }
   ],
-  "label.median-trial-day": [
+  "label.median-time-from-start": [
     {
       "type": 0,
-      "value": "Median trial day"
+      "value": "Median time from trial start"
     }
   ],
   "label.medium": [
@@ -1407,12 +1459,6 @@
     {
       "type": 0,
       "value": "Reached"
-    }
-  ],
-  "label.reached-in-order": [
-    {
-      "type": 0,
-      "value": "Reached in order"
     }
   ],
   "label.realtime": [
@@ -2325,6 +2371,20 @@
       "value": "Invalid domain. Do not include http/https."
     }
   ],
+  "message.low-sample-days": [
+    {
+      "type": 0,
+      "value": "Days with fewer than "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " users are greyed out."
+    }
+  ],
   "message.milestones-hint": [
     {
       "type": 0,
@@ -2359,6 +2419,28 @@
       "value": " is available!"
     }
   ],
+  "message.no-comparison-no-data": [
+    {
+      "type": 0,
+      "value": "No comparison: no data yet"
+    }
+  ],
+  "message.no-comparison-previous-unfinished": [
+    {
+      "type": 0,
+      "value": "No comparison: previous trials not finished yet"
+    }
+  ],
+  "message.no-comparison-tracking-started": [
+    {
+      "type": 0,
+      "value": "No comparison: tracking started "
+    },
+    {
+      "type": 1,
+      "value": "date"
+    }
+  ],
   "message.no-data-available": [
     {
       "type": 0,
@@ -2373,24 +2455,6 @@
     {
       "type": 1,
       "value": "event"
-    }
-  ],
-  "message.no-data-for-event-on-platform": [
-    {
-      "type": 0,
-      "value": "No data yet for "
-    },
-    {
-      "type": 1,
-      "value": "event"
-    },
-    {
-      "type": 0,
-      "value": " on "
-    },
-    {
-      "type": 1,
-      "value": "platform"
     }
   ],
   "message.no-event-data": [
@@ -2421,6 +2485,24 @@
     {
       "type": 0,
       "value": "You have not created any teams."
+    }
+  ],
+  "message.no-user-id-for-event": [
+    {
+      "type": 1,
+      "value": "event"
+    },
+    {
+      "type": 0,
+      "value": " has data but no "
+    },
+    {
+      "type": 1,
+      "value": "property"
+    },
+    {
+      "type": 0,
+      "value": " property, so no trial starts can be found"
     }
   ],
   "message.no-users": [
@@ -2559,6 +2641,12 @@
     {
       "type": 0,
       "value": " from one day before trial start (max 1,000)."
+    }
+  ],
+  "message.trials-not-finished": [
+    {
+      "type": 0,
+      "value": "Trials not finished yet"
     }
   ],
   "message.triggered-event": [

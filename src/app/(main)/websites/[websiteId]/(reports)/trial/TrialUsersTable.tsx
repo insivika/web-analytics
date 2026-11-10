@@ -19,7 +19,6 @@ import { ArrowDown, ArrowUp, Check } from '@/components/icons';
 import { DownloadButton } from '@/components/input/DownloadButton';
 import { formatDate } from '@/lib/date';
 import type { TrialReport, TrialUser } from '@/lib/trial';
-import { SectionNotes } from './TrialSections';
 
 const PAGE_SIZE = 25;
 
@@ -31,6 +30,7 @@ type SortKey =
   | 'activeDays'
   | 'engagementCount'
   | 'pushOptIn'
+  | 'converted'
   | 'subscriptionStatus';
 
 const sortValue = (user: TrialUser, key: SortKey) => {
@@ -75,6 +75,8 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
         ...Object.fromEntries(milestones.map((step, i) => [step.join('|'), u.milestones[i]])),
         push_opt_in: u.pushOptIn,
         converted: u.converted,
+        converted_at: u.convertedAt ?? '',
+        trial_completed: u.trialCompleted,
         subscription_status: u.subscriptionStatus ?? '',
         is_internal: u.isInternal,
       })),
@@ -108,10 +110,7 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
   return (
     <Panel title={formatMessage(labels.trialUsers)} style={{ minWidth: 0 }}>
       <Column gap="3">
-        <Row alignItems="flex-start" gap>
-          <Column flexGrow="1">
-            <SectionNotes report={report} events={report.settings.engagementEvents} />
-          </Column>
+        <Row justifyContent="flex-end">
           <DownloadButton filename="trial-users" data={csv} />
         </Row>
         <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
@@ -169,6 +168,12 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
             ))}
             <DataColumn id="pushOptIn" label={header('pushOptIn', formatMessage(labels.pushOptIn))}>
               {(row: TrialUser) => check(row.pushOptIn)}
+            </DataColumn>
+            <DataColumn
+              id="converted"
+              label={header('converted', formatMessage(labels.convertedToPaid))}
+            >
+              {(row: TrialUser) => check(row.converted)}
             </DataColumn>
             <DataColumn
               id="subscriptionStatus"

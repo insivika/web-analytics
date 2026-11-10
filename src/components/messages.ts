@@ -382,8 +382,6 @@ export const labels = defineMessages({
   trialJourney: { id: 'label.trial-journey', defaultMessage: 'Trial journey' },
   milestone: { id: 'label.milestone', defaultMessage: 'Milestone' },
   reached: { id: 'label.reached', defaultMessage: 'Reached' },
-  reachedInOrder: { id: 'label.reached-in-order', defaultMessage: 'Reached in order' },
-  medianTrialDay: { id: 'label.median-trial-day', defaultMessage: 'Median trial day' },
   dailyActive: { id: 'label.daily-active', defaultMessage: 'Daily active' },
   trialDay: { id: 'label.trial-day', defaultMessage: 'Trial day' },
   activeDays: { id: 'label.active-days', defaultMessage: 'Active days' },
@@ -413,10 +411,6 @@ export const labels = defineMessages({
   conversionEvents: { id: 'label.conversion-events', defaultMessage: 'Conversion events' },
   statusProperty: { id: 'label.status-property', defaultMessage: 'Subscription status property' },
   paidStatuses: { id: 'label.paid-statuses', defaultMessage: 'Paid status values' },
-  conversionGraceDays: {
-    id: 'label.conversion-grace-days',
-    defaultMessage: 'Conversion grace period (days)',
-  },
   internalProperty: { id: 'label.internal-property', defaultMessage: 'Internal user property' },
   userIdProperty: { id: 'label.user-id-property', defaultMessage: 'User ID property' },
   platformProperty: { id: 'label.platform-property', defaultMessage: 'Platform property' },
@@ -424,6 +418,32 @@ export const labels = defineMessages({
     id: 'label.exclude-internal-by-default',
     defaultMessage: 'Exclude internal users by default',
   },
+  conversionProperty: {
+    id: 'label.conversion-property',
+    defaultMessage: 'Conversion property (empty = no requirement)',
+  },
+  conversionPropertyValue: {
+    id: 'label.conversion-property-value',
+    defaultMessage: 'Conversion property value',
+  },
+  conversionWindowDays: {
+    id: 'label.conversion-window-days',
+    defaultMessage: 'Conversion window (days after trial start, 0 = any time)',
+  },
+  conversionSettleDays: {
+    id: 'label.conversion-settle-days',
+    defaultMessage: 'Days after trial end until a trial counts as completed',
+  },
+  convertedCompletedTrials: {
+    id: 'label.converted-completed-trials',
+    defaultMessage: 'Converted (completed trials, n={n})',
+  },
+  medianTimeFromStart: {
+    id: 'label.median-time-from-start',
+    defaultMessage: 'Median time from trial start',
+  },
+  lastSignupWeeks: { id: 'label.last-signup-weeks', defaultMessage: 'Last {x} signup weeks' },
+  billingSettling: { id: 'label.billing-settling', defaultMessage: 'Billing settling' },
 });
 
 export const messages = defineMessages({
@@ -577,10 +597,6 @@ export const messages = defineMessages({
     defaultMessage: 'Server error',
   },
   noDataForEvent: { id: 'message.no-data-for-event', defaultMessage: 'No data yet for {event}' },
-  noDataForEventOnPlatform: {
-    id: 'message.no-data-for-event-on-platform',
-    defaultMessage: 'No data yet for {event} on {platform}',
-  },
   usersWithNoActiveDay: {
     id: 'message.users-with-no-active-day',
     defaultMessage: '{x} users had no active day',
@@ -602,5 +618,29 @@ export const messages = defineMessages({
   trialUserEvents: {
     id: 'message.trial-user-events',
     defaultMessage: 'Events for {userId} from one day before trial start (max 1,000).',
+  },
+  trialsNotFinished: {
+    id: 'message.trials-not-finished',
+    defaultMessage: 'Trials not finished yet',
+  },
+  noComparisonTrackingStarted: {
+    id: 'message.no-comparison-tracking-started',
+    defaultMessage: 'No comparison: tracking started {date}',
+  },
+  noComparisonNoData: {
+    id: 'message.no-comparison-no-data',
+    defaultMessage: 'No comparison: no data yet',
+  },
+  lowSampleDays: {
+    id: 'message.low-sample-days',
+    defaultMessage: 'Days with fewer than {x} users are greyed out.',
+  },
+  noComparisonPreviousUnfinished: {
+    id: 'message.no-comparison-previous-unfinished',
+    defaultMessage: 'No comparison: previous trials not finished yet',
+  },
+  noUserIdForEvent: {
+    id: 'message.no-user-id-for-event',
+    defaultMessage: '{event} has data but no {property} property, so no trial starts can be found',
   },
 });

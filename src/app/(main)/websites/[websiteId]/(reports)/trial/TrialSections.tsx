@@ -6,38 +6,22 @@ import { ChangeLabel } from '@/components/metrics/ChangeLabel';
 import { MetricsBar } from '@/components/metrics/MetricsBar';
 import { formatDate } from '@/lib/date';
 import { formatLongNumber } from '@/lib/format';
-import type { TrialKpis as Kpis, TrialNote, TrialReport } from '@/lib/trial';
+import {
+  COHORT_WEEKS,
+  MIN_DAILY_ACTIVE_USERS,
+  type TrialComparison,
+  type TrialKpiKey,
+  type TrialReport,
+} from '@/lib/trial';
 
-const formatPct = (n: number) => `${Math.round(n)}%`;
+const formatPct = (n: number | null) => (n === null ? '—' : `${Math.round(n)}%`);
 
-/** Short "No data yet for X" notes for the given events. */
-function useNoteText() {
-  const { formatMessage, messages } = useMessages();
-
-  return (note: TrialNote) =>
-    note.platform
-      ? formatMessage(messages.noDataForEventOnPlatform, {
-          event: note.event,
-          platform: note.platform,
-        })
-      : formatMessage(messages.noDataForEvent, { event: note.event });
-}
-
-export function SectionNotes({ report, events }: { report: TrialReport; events: string[] }) {
-  const noteText = useNoteText();
-  const notes = report.notes.filter(n => events.includes(n.event));
-
-  if (!notes.length) return null;
-
-  return (
-    <Column gap="1">
-      {notes.map(note => (
-        <Text key={`${note.event}:${note.platform ?? ''}`} color="muted" size="2">
-          {noteText(note)}
-        </Text>
-      ))}
-    </Column>
-  );
+/** "4 min", "5 h", "2.5 d" — fine-grained early on so day-1 milestones differ. */
+export function formatDuration(hours: number | null) {
+  if (hours === null) return '—';
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
+  if (hours < 48) return `${Math.round(hours)} h`;
+  return `${(hours / 24).toFixed(1)} d`;
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -48,17 +32,30 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** All missing-data notes, in one place at the top of the report. */
 export function TrialNotes({ report }: { report: TrialReport }) {
   const { formatMessage, messages } = useMessages();
-  const noteText = useNoteText();
-  const startNote = report.notes.find(n => n.event === report.settings.trialStartEvent);
+  const showInternal = report.internalUsers > 0 && report.users.every(u => !u.isInternal);
 
-  if (!startNote && !report.internalUsers) return null;
+  if (!report.notes.length && !showInternal) return null;
 
   return (
     <Column gap="1">
-      {startNote && <Text weight="bold">{noteText(startNote)}</Text>}
-      {report.internalUsers > 0 && report.users.every(u => !u.isInternal) && (
+      {report.notes.map(note =>
+        note.type === 'noUserId' ? (
+          <Text key={`${note.type}:${note.event}`} weight="bold" size="2">
+            {formatMessage(messages.noUserIdForEvent, {
+              event: note.event,
+              property: note.property,
+            })}
+          </Text>
+        ) : (
+          <Text key={`${note.type}:${note.event}`} color="muted" size="2">
+            {formatMessage(messages.noDataForEvent, { event: note.event })}
+          </Text>
+        ),
+      )}
+      {showInternal && (
         <Text color="muted" size="2">
           {formatMessage(messages.internalUsersExcluded, { x: report.internalUsers })}
         </Text>
@@ -72,24 +69,65 @@ function KpiCard({
   value,
   previous,
   isPercent,
+  comparison,
+  emptyText,
 }: {
   label: string;
-  value: number;
-  previous: number;
+  value: number | null;
+  previous: number | null;
   isPercent?: boolean;
+  comparison: TrialComparison;
+  emptyText?: string;
 }) {
-  const diff = value - previous;
-  // Rates change in percentage points; counts change relative to the previous window.
-  const change = isPercent ? diff : previous > 0 ? (diff / previous) * 100 : 0;
-  const changeText = isPercent
-    ? `${diff >= 0 ? '+' : ''}${Math.round(diff)} pts`
-    : previous > 0
-      ? `${Math.abs(Math.round(change))}%`
-      : '–';
+  const { formatMessage, messages } = useMessages();
+  const { locale } = useLocale();
+
+  let footer: ReactNode;
+
+  if (value === null) {
+    footer = (
+      <Text color="muted" size="1">
+        {emptyText}
+      </Text>
+    );
+  } else if (!comparison.available) {
+    footer = (
+      <Text color="muted" size="1">
+        {comparison.trackingStart
+          ? formatMessage(messages.noComparisonTrackingStarted, {
+              date: formatDate(new Date(comparison.trackingStart), 'PP', locale),
+            })
+          : formatMessage(messages.noComparisonNoData)}
+      </Text>
+    );
+  } else if (previous === null) {
+    // Tracking covers the previous window, but none of its trials have completed.
+    footer = (
+      <Text color="muted" size="1">
+        {formatMessage(messages.noComparisonPreviousUnfinished)}
+      </Text>
+    );
+  } else {
+    const diff = value - previous;
+    // Rates change in percentage points; counts change relative to the previous window.
+    const change = isPercent ? diff : previous > 0 ? (diff / previous) * 100 : 0;
+    const text = isPercent
+      ? `${diff >= 0 ? '+' : ''}${Math.round(diff)} pts`
+      : previous > 0
+        ? `${Math.abs(Math.round(change))}%`
+        : '—';
+    footer = (
+      <Row>
+        <ChangeLabel value={Math.round(change)} title={text}>
+          {text}
+        </ChangeLabel>
+      </Row>
+    );
+  }
 
   return (
     <Column
-      justifyContent="center"
+      justifyContent="flex-start"
       paddingX="6"
       paddingY="4"
       borderRadius="3"
@@ -97,62 +135,52 @@ function KpiCard({
       border
       gap="1"
     >
-      <Text weight="bold" wrap="nowrap">
-        {label}
-      </Text>
+      <Text weight="bold">{label}</Text>
       <Text size="8" weight="bold" wrap="nowrap">
-        {isPercent ? formatPct(value) : formatLongNumber(value)}
+        {isPercent ? formatPct(value) : value === null ? '—' : formatLongNumber(value)}
       </Text>
-      <Row>
-        <ChangeLabel value={Math.round(change)} title={changeText}>
-          {changeText}
-        </ChangeLabel>
-      </Row>
+      {footer}
     </Column>
   );
 }
 
 export function TrialKpis({ report }: { report: TrialReport }) {
   const { formatMessage, labels, messages } = useMessages();
-  const { kpis, previousKpis, settings } = report;
+  const { kpis, previousKpis, comparisons } = report;
   const windowDays = Math.round(
     (+new Date(report.window.endDate) - +new Date(report.window.startDate)) / 864e5,
   );
 
-  const cards: { key: keyof Kpis; label: string; isPercent?: boolean }[] = [
+  const cards: { key: TrialKpiKey; label: string; isPercent?: boolean; emptyText?: string }[] = [
     { key: 'starts', label: formatMessage(labels.trialStarts) },
     { key: 'activated', label: formatMessage(labels.activated), isPercent: true },
     { key: 'active2', label: formatMessage(labels.activeDaysAtLeast, { x: 2 }), isPercent: true },
     { key: 'active3', label: formatMessage(labels.activeDaysAtLeast, { x: 3 }), isPercent: true },
     { key: 'pushOptIn', label: formatMessage(labels.pushOptIn), isPercent: true },
-    { key: 'converted', label: formatMessage(labels.convertedToPaid), isPercent: true },
+    {
+      key: 'converted',
+      label: formatMessage(labels.convertedCompletedTrials, { n: kpis.completedTrials }),
+      isPercent: true,
+      emptyText: formatMessage(messages.trialsNotFinished),
+    },
   ];
 
   return (
     <Column gap="2">
       <MetricsBar>
-        {cards.map(({ key, label, isPercent }) => (
+        {cards.map(({ key, ...card }) => (
           <KpiCard
             key={key}
-            label={label}
             value={kpis[key]}
             previous={previousKpis[key]}
-            isPercent={isPercent}
+            comparison={comparisons[key]}
+            {...card}
           />
         ))}
       </MetricsBar>
       <Text color="muted" size="1">
         {formatMessage(messages.changeVsPrevious, { x: windowDays })}
       </Text>
-      <SectionNotes
-        report={report}
-        events={[
-          settings.activationEvent,
-          settings.activeDayEvent,
-          settings.pushEvent,
-          ...settings.conversionEvents,
-        ]}
-      />
     </Column>
   );
 }
@@ -162,35 +190,25 @@ export function TrialFunnel({ report }: { report: TrialReport }) {
 
   return (
     <Section title={formatMessage(labels.trialJourney)}>
-      <Grid columns="minmax(180px, 2fr) 3fr auto auto" gap="3" alignItems="center">
+      <Grid columns="minmax(180px, 2fr) 3fr auto" gap="3" alignItems="center">
         <Text color="muted">{formatMessage(labels.milestone)}</Text>
-        <Text color="muted">{formatMessage(labels.reachedInOrder)}</Text>
+        <Text color="muted">{formatMessage(labels.reached)}</Text>
         <Text color="muted" align="right">
-          {formatMessage(labels.reached)}
-        </Text>
-        <Text color="muted" align="right">
-          {formatMessage(labels.medianTrialDay)}
+          {formatMessage(labels.medianTimeFromStart)}
         </Text>
         {report.funnel.map((step, index) => (
           <Fragment key={step.events.join('|')}>
             <Text weight="bold">{`${index + 1}. ${step.events.join(' / ')}`}</Text>
             <Row alignItems="center" gap="3">
-              <ProgressBar
-                value={step.pctInOrder}
-                minValue={0}
-                maxValue={100}
-                style={{ width: '100%' }}
-              />
-              <Text weight="bold" wrap="nowrap" title={String(step.reachedInOrder)}>
-                {formatPct(step.pctInOrder)}
+              <ProgressBar value={step.pct} minValue={0} maxValue={100} style={{ width: '100%' }} />
+              <Text weight="bold" wrap="nowrap">
+                {`${formatPct(step.pct)} (${step.reached})`}
               </Text>
             </Row>
-            <Text align="right" wrap="nowrap">{`${formatPct(step.pct)} (${step.reached})`}</Text>
-            <Text align="right">{step.medianDay ?? '–'}</Text>
+            <Text align="right">{formatDuration(step.medianHours)}</Text>
           </Fragment>
         ))}
       </Grid>
-      <SectionNotes report={report} events={report.settings.milestones.flat()} />
     </Section>
   );
 }
@@ -205,23 +223,32 @@ function VerticalBars({
     max: number;
     title: string;
     text: string;
+    caption?: string;
+    muted?: boolean;
   }[];
 }) {
   return (
-    <Row alignItems="flex-end" gap="2" height="220px" paddingTop="6">
+    <Row alignItems="flex-end" gap="2" height="240px" paddingTop="6">
       {bars.map(bar => (
-        <Column key={bar.key} flexGrow="1" alignItems="center" gap="1" height="100%">
+        <Column
+          key={bar.key}
+          flexGrow="1"
+          alignItems="center"
+          gap="1"
+          height="100%"
+          title={bar.title}
+          style={{ opacity: bar.muted ? 0.45 : 1 }}
+        >
           <Column flexGrow="1" width="100%" justifyContent="flex-end" alignItems="center" gap="1">
             <Text size="1" color="muted" wrap="nowrap">
               {bar.text}
             </Text>
             <Box
-              title={bar.title}
               borderRadius="2"
               width="100%"
               style={{
                 height: `${bar.max > 0 ? Math.max((bar.value / bar.max) * 100, bar.value > 0 ? 2 : 0) : 0}%`,
-                background: 'var(--primary-color)',
+                background: bar.muted ? 'var(--base-color-8)' : 'var(--primary-color)',
                 minHeight: 1,
               }}
             />
@@ -229,6 +256,11 @@ function VerticalBars({
           <Text size="1" color="muted">
             {bar.label}
           </Text>
+          {bar.caption && (
+            <Text size="1" color="muted" wrap="nowrap" style={{ fontSize: 10 }}>
+              {bar.caption}
+            </Text>
+          )}
         </Column>
       ))}
     </Row>
@@ -248,14 +280,18 @@ export function TrialDailyActive({ report }: { report: TrialReport }) {
           label: String(point.day),
           value: point.pct,
           max: 100,
-          text: point.eligible ? formatPct(point.pct) : '–',
+          text: point.eligible ? formatPct(point.pct) : '—',
+          caption: `n=${point.eligible}`,
+          muted: point.lowSample,
           title: formatMessage(messages.activeOfEligible, {
             active: point.active,
             eligible: point.eligible,
           }),
         }))}
       />
-      <SectionNotes report={report} events={[report.settings.activeDayEvent]} />
+      <Text color="muted" size="1">
+        {formatMessage(messages.lowSampleDays, { x: MIN_DAILY_ACTIVE_USERS })}
+      </Text>
     </Section>
   );
 }
@@ -287,9 +323,9 @@ export function TrialActiveDaysHistogram({ report }: { report: TrialReport }) {
 }
 
 export function TrialCohorts({ report }: { report: TrialReport }) {
-  const { formatMessage, labels } = useMessages();
+  const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
-  const columns: { key: keyof Kpis; label: string }[] = [
+  const columns: { key: TrialKpiKey; label: string }[] = [
     { key: 'activated', label: formatMessage(labels.activated) },
     { key: 'active2', label: formatMessage(labels.activeDaysAtLeast, { x: 2 }) },
     { key: 'active3', label: formatMessage(labels.activeDaysAtLeast, { x: 3 }) },
@@ -298,10 +334,12 @@ export function TrialCohorts({ report }: { report: TrialReport }) {
   ];
 
   return (
-    <Section title={formatMessage(labels.weeklyCohorts)}>
+    <Section
+      title={`${formatMessage(labels.weeklyCohorts)} · ${formatMessage(labels.lastSignupWeeks, { x: COHORT_WEEKS })}`}
+    >
       <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
         <Grid
-          columns={`minmax(160px, 1.5fr) repeat(${columns.length + 1}, minmax(90px, 1fr))`}
+          columns={`minmax(170px, 1.5fr) repeat(${columns.length + 1}, minmax(90px, 1fr))`}
           gap="3"
           alignItems="center"
           style={{ minWidth: 760 }}
@@ -326,11 +364,25 @@ export function TrialCohorts({ report }: { report: TrialReport }) {
                     {formatMessage(labels.inProgress)}
                   </Text>
                 )}
+                {row.settling && (
+                  <Text size="1" color="muted" title={formatMessage(messages.trialsNotFinished)}>
+                    {formatMessage(labels.billingSettling)}
+                  </Text>
+                )}
               </Row>
               <Text align="right">{row.starts}</Text>
               {columns.map(c => (
-                <Text key={c.key} align="right">
-                  {formatPct(row[c.key])}
+                <Text
+                  key={c.key}
+                  align="right"
+                  color={row.starts === 0 ? 'muted' : undefined}
+                  title={
+                    c.key === 'converted' && row.starts > 0 && !row.conversionFinal
+                      ? formatMessage(messages.trialsNotFinished)
+                      : undefined
+                  }
+                >
+                  {row.starts === 0 ? '—' : formatPct(row[c.key])}
                 </Text>
               ))}
             </Fragment>
