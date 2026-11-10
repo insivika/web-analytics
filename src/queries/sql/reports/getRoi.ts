@@ -12,6 +12,7 @@ import {
   ROI_TIMEZONE,
   staleSources,
 } from '@/lib/roi';
+import type { CustomerValue, ProjectionMonth } from '@/lib/roiProjection';
 import { resolveTrialStarts, type TrialSettings } from '@/lib/trial';
 import { getSyncStatus } from '@/queries/prisma/adSpend';
 import { getRevenueTxns } from '@/queries/prisma/revenue';
@@ -73,14 +74,16 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
   const fromDate = new Date(`${from}T00:00:00Z`);
   const hostname = getMarketingHostname();
 
-  const [spend, visitors, trialStarts, txns, appStores, syncStatus] = await Promise.all([
-    getMonthlySpend(websiteId, from),
-    getMonthlyVisitors(websiteId, hostname, fromDate),
-    getTrialStarts(websiteId, trialSettings),
-    getRevenueTxns(websiteId),
-    getAppStoresCached(from, now.toISOString().slice(0, 10)),
-    getSyncStatus(websiteId),
-  ]);
+  const [spend, visitors, trialStarts, txns, appStores, syncStatus, customerValue] =
+    await Promise.all([
+      getMonthlySpend(websiteId, from),
+      getMonthlyVisitors(websiteId, hostname, fromDate),
+      getTrialStarts(websiteId, trialSettings),
+      getRevenueTxns(websiteId),
+      getAppStoresCached(from, now.toISOString().slice(0, 10)),
+      getSyncStatus(websiteId),
+      getCustomerValue(websiteId),
+    ]);
 
   const trials = new Map<string, number>();
   for (const start of trialStarts.values()) {
@@ -95,6 +98,23 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     // All Stripe history, so "new customer" means first payment ever.
     stripe: txns.filter(t => t.source === 'stripe'),
     appStores,
+  });
+
+  // History for the "what if" projection: completed months only.
+  const projectionHistory: ProjectionMonth[] = rows.slice(0, -1).map(r => {
+    const ads = spend.website.get(r.month);
+    return {
+      month: r.month,
+      visitors: r.visitors,
+      trials: r.trials,
+      newCustomers: r.newCustomers,
+      moneyIn: r.moneyIn,
+      metaSpend: ads?.metaSpend ?? 0,
+      metaClicks: ads?.metaClicks ?? 0,
+      googleSpend: ads?.googleSpend ?? 0,
+      googleClicks: ads?.googleClicks ?? 0,
+      otherSpend: ads?.otherSpend ?? 0,
+    };
   });
 
   // Sources the page depends on. Google pushes from its own script, so a stopped
@@ -112,6 +132,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     updatedAt: latestSync(sources),
     stale: staleSources(sources, now),
     spendFxGaps: spend.fxGaps,
+    projection: { history: projectionHistory, customerValue },
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
       .map(s => ({ source: s.source, message: s.last?.message ?? '' })),
@@ -136,29 +157,100 @@ async function getAppStoresCached(start: string, end: string) {
   }
 }
 
+// App-install campaigns send clicks to the app stores, not the website.
+const APP_INSTALL_CAMPAIGN = '%install%';
+
 async function getMonthlySpend(websiteId: string, from: string) {
   const rows = await prisma.rawQuery(
     `
-    select to_char(date, 'YYYY-MM') as month, channel, sum(spend_usd)::float as usd,
+    select to_char(date, 'YYYY-MM') as month, channel,
+      coalesce(campaign_name, '') ilike {{install}} as "appInstall",
+      sum(spend_usd)::float as usd, sum(clicks)::int as clicks,
       count(*) filter (where spend_usd is null and spend > 0)::int as gaps
     from ad_spend
     where website_id = {{websiteId::uuid}} and date >= {{from}}::date
-    group by 1, 2
+    group by 1, 2, 3
     `,
-    { websiteId, from },
+    { websiteId, from, install: APP_INSTALL_CAMPAIGN },
     'getRoiMonthlySpend',
   );
   const byMonth = new Map<string, { meta: number; google: number }>();
+  const website = new Map<
+    string,
+    {
+      metaSpend: number;
+      metaClicks: number;
+      googleSpend: number;
+      googleClicks: number;
+      otherSpend: number;
+    }
+  >();
   let fxGaps = 0;
   for (const r of rows as any[]) {
+    const usd = Number(r.usd ?? 0);
+    const clicks = Number(r.clicks ?? 0);
     fxGaps += Number(r.gaps ?? 0);
     const cur = byMonth.get(r.month) ?? { meta: 0, google: 0 };
-    if (r.channel === 'google') cur.google += Number(r.usd ?? 0);
-    else cur.meta += Number(r.usd ?? 0);
+    if (r.channel === 'google') cur.google += usd;
+    else cur.meta += usd;
     byMonth.set(r.month, cur);
+
+    const w = website.get(r.month) ?? {
+      metaSpend: 0,
+      metaClicks: 0,
+      googleSpend: 0,
+      googleClicks: 0,
+      otherSpend: 0,
+    };
+    if (r.appInstall) w.otherSpend += usd;
+    else if (r.channel === 'google') {
+      w.googleSpend += usd;
+      w.googleClicks += clicks;
+    } else {
+      w.metaSpend += usd;
+      w.metaClicks += clicks;
+    }
+    website.set(r.month, w);
   }
   // Rows whose currency had no FX rate add $0; the page reports how many.
-  return { byMonth, fxGaps };
+  return { byMonth, website, fxGaps };
+}
+
+/**
+ * What a new paying customer is worth, from Stripe history: average net revenue
+ * in their first 30 days (customers who started in the last 180 days, so it
+ * reflects current prices) and first 365 days (customers with a full year).
+ */
+async function getCustomerValue(websiteId: string): Promise<CustomerValue> {
+  const rows = await prisma.rawQuery(
+    `
+    with t as (
+      select coalesce(user_id, customer_ref) as k, occurred_at, net_usd, gross_usd, kind
+      from revenue_txn
+      where website_id = {{websiteId::uuid}} and source = 'stripe'
+    ),
+    f as (
+      select k, min(occurred_at) as first from t
+      where kind = 'payment' and gross_usd > 0 and k is not null group by 1
+    ),
+    v as (
+      select f.k, f.first,
+        sum(t.net_usd) filter (where t.occurred_at < f.first + interval '30 days') as m1,
+        sum(t.net_usd) filter (where t.occurred_at < f.first + interval '365 days') as y1
+      from f join t using (k) group by 1, 2
+    )
+    select
+      (avg(m1) filter (where first >= now() - interval '180 days'
+        and first < now() - interval '30 days'))::float as "firstMonth",
+      (avg(y1) filter (where first < now() - interval '365 days'))::float as "firstYear"
+    from v
+    `,
+    { websiteId },
+    'getRoiCustomerValue',
+  );
+  const r: any = rows[0] ?? {};
+  const n = (v: any) => (v === null || v === undefined ? null : Math.round(Number(v) * 100) / 100);
+  return { firstMonth: n(r.firstMonth), firstYear: n(r.firstYear) };
 }
 
 async function getMonthlyVisitors(websiteId: string, hostname: string, from: Date) {

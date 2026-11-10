@@ -20,6 +20,7 @@ import {
   sumMonths,
 } from '@/lib/roi';
 import { type ChartMonth, FlowsChart, NetChart, ROI_COLORS } from './RoiCharts';
+import { RoiProjection } from './RoiProjection';
 
 const usd = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -368,6 +369,13 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                 </Text>
               </Column>
             </Panel>
+
+            {data.projection && (
+              <RoiProjection
+                history={data.projection.history}
+                customerValue={data.projection.customerValue}
+              />
+            )}
 
             <Panel title={formatMessage(labels.roiFunnelTitle)}>
               <Column gap="3">

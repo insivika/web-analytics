@@ -4246,5 +4246,311 @@
       "type": 1,
       "value": "x"
     }
+  ],
+  "label.roi-ad-visitor-quality": [
+    {
+      "type": 0,
+      "value": "Ad visitors convert at"
+    }
+  ],
+  "label.roi-assumptions": [
+    {
+      "type": 0,
+      "value": "Assumptions"
+    }
+  ],
+  "label.roi-based-on": [
+    {
+      "type": 0,
+      "value": "Based on the last"
+    }
+  ],
+  "label.roi-first-month-value": [
+    {
+      "type": 0,
+      "value": "First-month revenue per customer"
+    }
+  ],
+  "label.roi-first-year-value": [
+    {
+      "type": 0,
+      "value": "First-year revenue per customer"
+    }
+  ],
+  "label.roi-google-per-month": [
+    {
+      "type": 0,
+      "value": "Google ads per month"
+    }
+  ],
+  "label.roi-meta-per-month": [
+    {
+      "type": 0,
+      "value": "Meta ads per month"
+    }
+  ],
+  "label.roi-net-per-month": [
+    {
+      "type": 0,
+      "value": "Net income per month"
+    }
+  ],
+  "label.roi-pricier": [
+    {
+      "type": 0,
+      "value": "Clicks get pricier per doubling"
+    }
+  ],
+  "label.roi-reset": [
+    {
+      "type": 0,
+      "value": "Reset"
+    }
+  ],
+  "label.roi-trial-to-paying": [
+    {
+      "type": 0,
+      "value": "Trial to paying"
+    }
+  ],
+  "label.roi-visitor-to-trial": [
+    {
+      "type": 0,
+      "value": "Visitor to trial"
+    }
+  ],
+  "label.roi-what-if": [
+    {
+      "type": 0,
+      "value": "What if you spent more on ads?"
+    }
+  ],
+  "message.roi-months-n": [
+    {
+      "type": 6,
+      "value": "n",
+      "options": {
+        "one": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " month"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " months"
+            }
+          ]
+        }
+      },
+      "offset": 0,
+      "pluralType": "cardinal"
+    }
+  ],
+  "message.roi-of-normal": [
+    {
+      "type": 1,
+      "value": "pct"
+    },
+    {
+      "type": 0,
+      "value": "% of normal"
+    }
+  ],
+  "message.roi-proj-beyond": [
+    {
+      "type": 0,
+      "value": "This is more than 3× anything you've spent before, so treat it as a rough guess."
+    }
+  ],
+  "message.roi-proj-no-ads": [
+    {
+      "type": 0,
+      "value": "With no ads, about "
+    },
+    {
+      "type": 1,
+      "value": "visitors"
+    },
+    {
+      "type": 0,
+      "value": " people still visit each month and "
+    },
+    {
+      "type": 1,
+      "value": "customers"
+    },
+    {
+      "type": 0,
+      "value": " become paying customers."
+    }
+  ],
+  "message.roi-proj-note": [
+    {
+      "type": 0,
+      "value": "Starting values are what actually happened in "
+    },
+    {
+      "type": 1,
+      "value": "months"
+    },
+    {
+      "type": 0,
+      "value": ". Ad dollars become website visitors at each platform's cost per click for website campaigns (Meta "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": ", Google "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": "); Meta app-install campaigns stay as they are. Net income adds first-month revenue from the extra customers."
+    }
+  ],
+  "message.roi-proj-story": [
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " a month in ads brings about "
+    },
+    {
+      "type": 1,
+      "value": "visitors"
+    },
+    {
+      "type": 0,
+      "value": " extra visitors and "
+    },
+    {
+      "type": 1,
+      "value": "customers"
+    },
+    {
+      "type": 0,
+      "value": " extra paying customers, so each one costs "
+    },
+    {
+      "type": 1,
+      "value": "cpa"
+    },
+    {
+      "type": 0,
+      "value": " in ads."
+    }
+  ],
+  "message.roi-proj-thin": [
+    {
+      "type": 0,
+      "value": "Only "
+    },
+    {
+      "type": 6,
+      "value": "n",
+      "options": {
+        "one": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " of these months"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " of these months"
+            }
+          ]
+        }
+      },
+      "offset": 0,
+      "pluralType": "cardinal"
+    },
+    {
+      "type": 0,
+      "value": " had ad spend, so these numbers will move as more months come in."
+    }
+  ],
+  "message.roi-proj-year-gain": [
+    {
+      "type": 0,
+      "value": "In their first year those customers pay about "
+    },
+    {
+      "type": 1,
+      "value": "revenue"
+    },
+    {
+      "type": 0,
+      "value": ", so each month of these ads earns back "
+    },
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " more than it costs."
+    }
+  ],
+  "message.roi-proj-year-loss": [
+    {
+      "type": 0,
+      "value": "In their first year those customers pay about "
+    },
+    {
+      "type": 1,
+      "value": "revenue"
+    },
+    {
+      "type": 0,
+      "value": ", so each month of these ads falls "
+    },
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " short of paying for itself."
+    }
+  ],
+  "message.roi-vs-today": [
+    {
+      "type": 1,
+      "value": "delta"
+    },
+    {
+      "type": 0,
+      "value": " vs today"
+    }
   ]
 }
