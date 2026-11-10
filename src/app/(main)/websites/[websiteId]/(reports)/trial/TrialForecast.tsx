@@ -1,15 +1,19 @@
 import {
+  Accordion,
+  AccordionItem,
   Box,
   Button,
   Column,
   DataColumn,
   DataTable,
   Grid,
+  Heading,
   Icon,
   Row,
   Text,
 } from '@umami/react-zen';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { InfoTip } from '@/components/common/InfoTip';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { Pager } from '@/components/common/Pager';
 import { Panel } from '@/components/common/Panel';
@@ -56,10 +60,13 @@ function HeadlineCard({
   label,
   range,
   revenue,
+  runs,
 }: {
   label: string;
   range: SimulationRange;
   revenue: SimulationRange;
+  /** Simulated outcomes behind the range. */
+  runs: number;
 }) {
   const { formatMessage, messages } = useMessages();
   return (
@@ -68,9 +75,14 @@ function HeadlineCard({
       <Text size="8" weight="bold" wrap="nowrap">
         {one(range.expected)}
       </Text>
-      <Text color="muted" size="1">
-        {formatMessage(messages.forecastRange, { low: range.low, high: range.high })}
-      </Text>
+      <Row alignItems="center" gap="1">
+        <Text color="muted" size="1">
+          {formatMessage(messages.forecastRange, { low: range.low, high: range.high })}
+        </Text>
+        <InfoTip
+          content={formatMessage(messages.forecastRangeTip, { runs: runs.toLocaleString() })}
+        />
+      </Row>
       <Text size="2">
         {formatMessage(messages.forecastRevenue, {
           amount: usd(revenue.expected),
@@ -135,9 +147,11 @@ function Insights({ rows, trials }: { rows: InsightRow[]; trials: number }) {
 
   return (
     <Column gap="3">
-      <Text color="muted" size="1">
-        {formatMessage(messages.forecastInsightNote, { n: trials })}
-      </Text>
+      <Row>
+        <InfoTip content={formatMessage(messages.forecastInsightNote, { n: trials })}>
+          {formatMessage(labels.aboutTheseNumbers)}
+        </InfoTip>
+      </Row>
       <Grid columns={{ xs: '1fr', md: '1fr 1fr' }} gap="6">
         {groups.map(dimension => (
           <Column key={dimension} gap="1">
@@ -184,11 +198,16 @@ export function TrialForecast({
   });
   const snapshot = useUpdateQuery(`/websites/${websiteId}/trial/forecast`);
   const [saving, setSaving] = useState(false);
+  // Most likely buyers first: the people worth a nudge.
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({
-    key: 'trialEnd',
-    desc: false,
+    key: 'p14',
+    desc: true,
   });
   const [page, setPage] = useState(1);
+  // A filter change can shrink the list below the current page.
+  useEffect(() => {
+    setPage(1);
+  }, [data?.rows]);
 
   const sorted = useMemo(() => {
     const rows = [...(data?.rows ?? [])].sort((a, b) => {
@@ -198,6 +217,14 @@ export function TrialForecast({
     });
     return sort.desc ? rows.reverse() : rows;
   }, [data?.rows, sort]);
+
+  // "2|activated" → "2 active days in the first 3 · Activated"
+  const segmentName = (segment: string) => {
+    const [days, activated] = segment.split('|');
+    return `${formatMessage(labels.activeDaysFirstX, { x: 3 })}: ${days.replace('-', '–')} · ${formatMessage(
+      activated === 'activated' ? labels.activated : labels.notActivated,
+    )}`;
+  };
 
   const flagLabel = (flag: RiskFlag) =>
     ({
@@ -248,18 +275,21 @@ export function TrialForecast({
     }
   };
 
-  const header = (key: SortKey, label: string) => (
-    <Row
-      alignItems="center"
-      gap="1"
-      style={{ cursor: 'pointer', userSelect: 'none' }}
-      onClick={() => {
-        setPage(1);
-        setSort(s => ({ key, desc: s.key === key ? !s.desc : key === 'p14' }));
-      }}
-    >
-      <Text>{label}</Text>
-      {sort.key === key && <Icon size="xs">{sort.desc ? <ArrowDown /> : <ArrowUp />}</Icon>}
+  const header = (key: SortKey, label: string, tip?: string) => (
+    <Row alignItems="center" gap="1">
+      <Row
+        alignItems="center"
+        gap="1"
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => {
+          setPage(1);
+          setSort(s => ({ key, desc: s.key === key ? !s.desc : key === 'p14' }));
+        }}
+      >
+        <Text>{label}</Text>
+        {sort.key === key && <Icon size="xs">{sort.desc ? <ArrowDown /> : <ArrowUp />}</Icon>}
+      </Row>
+      {tip && <InfoTip content={tip} />}
     </Row>
   );
 
@@ -269,11 +299,15 @@ export function TrialForecast({
   });
 
   return (
-    <Panel title={title} style={{ minWidth: 0 }}>
+    <Panel style={{ minWidth: 0 }}>
       <Column gap="4">
-        <Text color="muted" size="2">
-          {scope}
-        </Text>
+        <Row alignItems="center" gap="2" wrap="wrap">
+          <Heading>{title}</Heading>
+          <Text color="muted" size="1">
+            {formatMessage(messages.forecastScopeShort)}
+          </Text>
+          <InfoTip content={scope} />
+        </Row>
         <LoadingPanel
           data={data}
           error={error}
@@ -293,108 +327,130 @@ export function TrialForecast({
           {data?.available && (
             <Column gap="6" style={{ opacity: isFetching ? 0.6 : 1, minWidth: 0 }}>
               <ForecastBody data={data} locale={locale} saving={saving} onSnapshot={runSnapshot} />
-              <Column gap="3">
-                <Row justifyContent="space-between" alignItems="center">
-                  <Text weight="bold">{formatMessage(labels.trialsEndingSoon)}</Text>
-                  <DownloadButton filename="projected-conversions" data={csv} />
-                </Row>
-                <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
-                  <DataTable
-                    data={sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
-                    style={{ minWidth: 1000 }}
-                  >
-                    <DataColumn
-                      id="userId"
-                      label={header('userId', formatMessage(labels.userId))}
-                      width="130px"
-                    >
-                      {(r: ForecastRow) => (
-                        <Text title={r.userId} style={{ fontFamily: 'monospace' }}>
-                          {`${r.userId.slice(0, 8)}…`}
-                        </Text>
-                      )}
-                    </DataColumn>
-                    <DataColumn
-                      id="platform"
-                      label={header('platform', formatMessage(labels.platform))}
-                    >
-                      {(r: ForecastRow) => r.platform ?? '–'}
-                    </DataColumn>
-                    <DataColumn id="plan" label={header('plan', formatMessage(labels.plan))}>
-                      {(r: ForecastRow) => r.plan ?? '–'}
-                    </DataColumn>
-                    <DataColumn
-                      id="trialEnd"
-                      label={header('trialEnd', formatMessage(labels.trialEnd))}
-                      width="120px"
-                    >
-                      {(r: ForecastRow) => formatDate(new Date(r.trialEnd), 'MMM d', locale)}
-                    </DataColumn>
-                    <DataColumn
-                      id="phase"
-                      label={header('phase', formatMessage(labels.trialStatus))}
-                      width="140px"
-                    >
-                      {(r: ForecastRow) =>
-                        r.phase === 'inTrial'
-                          ? formatMessage(messages.trialDayX, { x: r.trialDay })
-                          : formatMessage(messages.endedDaysAgo, { x: r.daysSinceTrialEnd })
-                      }
-                    </DataColumn>
-                    <DataColumn
-                      id="activeDays"
-                      label={header('activeDays', formatMessage(labels.activeDays))}
-                    >
-                      {(r: ForecastRow) => r.activeDays}
-                    </DataColumn>
-                    <DataColumn
-                      id="activated"
-                      label={header('activated', formatMessage(labels.activated))}
-                    >
-                      {(r: ForecastRow) =>
-                        r.activated ? (
-                          <Icon size="sm" color="primary">
-                            <Check />
-                          </Icon>
-                        ) : (
-                          <Text color="muted">–</Text>
-                        )
-                      }
-                    </DataColumn>
-                    <DataColumn id="p14" label={header('p14', formatMessage(labels.probability14))}>
-                      {(r: ForecastRow) => (
-                        <Text
-                          weight="bold"
-                          title={`7 d: ${pct(r.p7)} · ${formatMessage(labels.eventually)}: ${pct(r.pTotal)} · ${r.segment}`}
+              <Accordion type="multiple">
+                <AccordionItem>
+                  {formatMessage(labels.trialsEndingSoonCount, { n: sorted.length })}
+                  <Column gap="3" paddingTop="2">
+                    <Row justifyContent="flex-end" alignItems="center">
+                      <DownloadButton filename="projected-conversions" data={csv} />
+                    </Row>
+                    <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
+                      <DataTable
+                        data={sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
+                        style={{ minWidth: 1000 }}
+                      >
+                        <DataColumn
+                          id="userId"
+                          label={header('userId', formatMessage(labels.userId))}
+                          width="130px"
                         >
-                          {pct(r.p14)}
-                        </Text>
-                      )}
-                    </DataColumn>
-                    <DataColumn
-                      id="flags"
-                      label={header('flags', formatMessage(labels.risk))}
-                      width="220px"
-                    >
-                      {(r: ForecastRow) => (
-                        <Text color="muted" size="1">
-                          {r.flags.map(flagLabel).join(' · ') || '–'}
-                        </Text>
-                      )}
-                    </DataColumn>
-                  </DataTable>
-                </Box>
-                <Pager
-                  page={page}
-                  pageSize={PAGE_SIZE}
-                  count={sorted.length}
-                  onPageChange={setPage}
-                />
-              </Column>
-              <Column gap="3">
-                <Text weight="bold">{formatMessage(labels.whatPredictsConversion)}</Text>
-                <Insights rows={data.insights} trials={data.insightTrials} />
-              </Column>
+                          {(r: ForecastRow) => (
+                            <Text title={r.userId} style={{ fontFamily: 'monospace' }}>
+                              {`${r.userId.slice(0, 8)}…`}
+                            </Text>
+                          )}
+                        </DataColumn>
+                        <DataColumn
+                          id="platform"
+                          label={header('platform', formatMessage(labels.platform))}
+                        >
+                          {(r: ForecastRow) => r.platform ?? '–'}
+                        </DataColumn>
+                        <DataColumn id="plan" label={header('plan', formatMessage(labels.plan))}>
+                          {(r: ForecastRow) => r.plan ?? '–'}
+                        </DataColumn>
+                        <DataColumn
+                          id="trialEnd"
+                          label={header('trialEnd', formatMessage(labels.trialEnd))}
+                          width="120px"
+                        >
+                          {(r: ForecastRow) => formatDate(new Date(r.trialEnd), 'MMM d', locale)}
+                        </DataColumn>
+                        <DataColumn
+                          id="phase"
+                          label={header('phase', formatMessage(labels.trialStatus))}
+                          width="140px"
+                        >
+                          {(r: ForecastRow) =>
+                            r.phase === 'inTrial'
+                              ? formatMessage(messages.trialDayX, { x: r.trialDay })
+                              : formatMessage(messages.endedDaysAgo, { x: r.daysSinceTrialEnd })
+                          }
+                        </DataColumn>
+                        <DataColumn
+                          id="activeDays"
+                          label={header('activeDays', formatMessage(labels.activeDays))}
+                        >
+                          {(r: ForecastRow) => r.activeDays}
+                        </DataColumn>
+                        <DataColumn
+                          id="activated"
+                          label={header('activated', formatMessage(labels.activated))}
+                        >
+                          {(r: ForecastRow) =>
+                            r.activated ? (
+                              <Icon size="sm" color="primary">
+                                <Check />
+                              </Icon>
+                            ) : (
+                              <Text color="muted">–</Text>
+                            )
+                          }
+                        </DataColumn>
+                        <DataColumn
+                          id="p14"
+                          label={header(
+                            'p14',
+                            formatMessage(labels.probability14),
+                            formatMessage(messages.forecastPTip),
+                          )}
+                        >
+                          {(r: ForecastRow) => (
+                            <InfoTip
+                              strong
+                              content={formatMessage(messages.forecastPDetail, {
+                                p7: pct(r.p7),
+                                p14: pct(r.p14),
+                                total: pct(r.pTotal),
+                                segment: segmentName(r.segment),
+                              })}
+                            >
+                              {pct(r.p14)}
+                            </InfoTip>
+                          )}
+                        </DataColumn>
+                        <DataColumn
+                          id="flags"
+                          label={header(
+                            'flags',
+                            formatMessage(labels.risk),
+                            formatMessage(messages.forecastRiskTip),
+                          )}
+                          width="220px"
+                        >
+                          {(r: ForecastRow) => (
+                            <Text color="muted" size="1">
+                              {r.flags.map(flagLabel).join(' · ') || '–'}
+                            </Text>
+                          )}
+                        </DataColumn>
+                      </DataTable>
+                    </Box>
+                    <Pager
+                      page={page}
+                      pageSize={PAGE_SIZE}
+                      count={sorted.length}
+                      onPageChange={setPage}
+                    />
+                  </Column>
+                </AccordionItem>
+                <AccordionItem>
+                  {formatMessage(labels.whatPredictsConversion)}
+                  <Box paddingTop="2">
+                    <Insights rows={data.insights} trials={data.insightTrials} />
+                  </Box>
+                </AccordionItem>
+              </Accordion>
             </Column>
           )}
         </LoadingPanel>
@@ -419,27 +475,85 @@ function ForecastBody({
   const phaseName = (key: string) =>
     key === 'inTrial' ? formatMessage(labels.inTrial) : formatMessage(labels.trialEnded);
 
+  const howCalculated = [
+    formatMessage(messages.forecastHow1, { n: headline.users, rate: pct(model.baseRate) }),
+    formatMessage(messages.forecastHow2, { days: data.settings.postTrialDays }),
+    formatMessage(messages.forecastHow3, { x: one(headline.conversions7.expected) }),
+    formatMessage(messages.forecastHow4, { runs: data.settings.simulations.toLocaleString() }),
+  ];
+  const modelText = formatMessage(messages.forecastModel, {
+    rate: pct(model.baseRate),
+    n: model.trainingUsers,
+    conversions: model.conversions,
+    since: data.since ? formatDate(new Date(data.since), 'MMM d', locale) : '—',
+    min: 50,
+  });
+  const revenueText = formatMessage(
+    revenue.basis === 'net'
+      ? messages.forecastRevenueNet
+      : revenue.basis === 'partial'
+        ? messages.forecastRevenuePartial
+        : messages.forecastRevenueGross,
+    {
+      app: usd(revenue.byPlatform.ios),
+      web: usd(revenue.byPlatform.web),
+      monthly: pct(revenue.monthlyShare),
+    },
+  );
+  const backtestText =
+    backtest && backtest.users > 0
+      ? formatMessage(
+          backtest.withinRange ? messages.forecastBacktestIn : messages.forecastBacktestOut,
+          {
+            n: backtest.users,
+            predicted: one(backtest.predicted.expected),
+            low: backtest.predicted.low,
+            high: backtest.predicted.high,
+            actual: backtest.actual,
+          },
+        )
+      : null;
+  const accuracyText = [
+    accuracy?.weeks.length
+      ? formatMessage(messages.forecastAccuracy, {
+          weeks: accuracy.weeks.length,
+          predicted: one(accuracy.predicted),
+          actual: accuracy.actual,
+        })
+      : formatMessage(messages.forecastAccuracyPending),
+    accuracy && accuracy.calibration.length > 0
+      ? `${formatMessage(labels.calibration)}: ${accuracy.calibration
+          .map(b => `${b.bucket} → ${pct(b.actual)} (n = ${b.n})`)
+          .join(', ')}`
+      : null,
+  ];
+
   return (
     <Column gap="4">
-      <Text size="4">
-        {formatMessage(messages.forecastHeadline, {
-          x: one(headline.conversions7.expected),
-          y: one(headline.conversions14.expected),
-          a: headline.conversions14.low,
-          b: headline.conversions14.high,
-          revenue: usd(headline.revenue14.expected),
-        })}
-      </Text>
+      <Row alignItems="center" gap="2" wrap="wrap">
+        <Text size="4">
+          {formatMessage(messages.forecastHeadline, {
+            x: one(headline.conversions7.expected),
+            y: one(headline.conversions14.expected),
+            a: headline.conversions14.low,
+            b: headline.conversions14.high,
+            revenue: usd(headline.revenue14.expected),
+          })}
+        </Text>
+        <InfoTip content={howCalculated}>{formatMessage(labels.howCalculated)}</InfoTip>
+      </Row>
       <Grid columns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap="3">
         <HeadlineCard
           label={formatMessage(labels.nextDays, { x: 7 })}
           range={headline.conversions7}
           revenue={headline.revenue7}
+          runs={data.settings.simulations}
         />
         <HeadlineCard
           label={formatMessage(labels.nextDays, { x: 14 })}
           range={headline.conversions14}
           revenue={headline.revenue14}
+          runs={data.settings.simulations}
         />
         <Column paddingX="6" paddingY="4" borderRadius="3" backgroundColor border gap="1">
           <Text weight="bold">{formatMessage(labels.usersForecast)}</Text>
@@ -461,67 +575,24 @@ function ForecastBody({
         <Breakdown title={formatMessage(labels.byPlatform)} rows={data.byPlatform} name={k => k} />
       </Grid>
 
-      <Column gap="1">
-        <Text color="muted" size="1">
-          {formatMessage(
-            revenue.basis === 'net'
-              ? messages.forecastRevenueNet
-              : revenue.basis === 'partial'
-                ? messages.forecastRevenuePartial
-                : messages.forecastRevenueGross,
-            {
-              app: usd(revenue.byPlatform.ios),
-              web: usd(revenue.byPlatform.web),
-              monthly: pct(revenue.monthlyShare),
-            },
-          )}
-        </Text>
-        <Text color="muted" size="1">
-          {formatMessage(messages.forecastModel, {
-            rate: pct(model.baseRate),
-            n: model.trainingUsers,
-            conversions: model.conversions,
-            since: data.since ? formatDate(new Date(data.since), 'MMM d', locale) : '—',
-            min: 50,
-          })}
-        </Text>
-        <Text color="muted" size="1">
-          {formatMessage(messages.forecastBillingNote)}
-        </Text>
-        {backtest && backtest.users > 0 && (
-          <Text color="muted" size="1">
+      <Row gap="1" alignItems="center" wrap="wrap">
+        <InfoTip content={modelText}>{formatMessage(labels.howPIsSet)}</InfoTip>
+        <InfoTip content={revenueText}>{formatMessage(labels.firstPayment)}</InfoTip>
+        {backtestText && (
+          <InfoTip content={backtestText}>
             {formatMessage(
-              backtest.withinRange ? messages.forecastBacktestIn : messages.forecastBacktestOut,
-              {
-                n: backtest.users,
-                predicted: one(backtest.predicted.expected),
-                low: backtest.predicted.low,
-                high: backtest.predicted.high,
-                actual: backtest.actual,
-              },
+              backtest.withinRange ? labels.backtestInRange : labels.backtestOutOfRange,
             )}
-          </Text>
+          </InfoTip>
         )}
-        <Row gap="3" alignItems="center" wrap="wrap">
-          <Text color="muted" size="1">
-            {accuracy && accuracy.weeks.length
-              ? formatMessage(messages.forecastAccuracy, {
-                  weeks: accuracy.weeks.length,
-                  predicted: one(accuracy.predicted),
-                  actual: accuracy.actual,
-                })
-              : formatMessage(messages.forecastAccuracyPending)}
-            {accuracy &&
-              accuracy.calibration.length > 0 &&
-              ` · ${formatMessage(labels.calibration)}: ${accuracy.calibration
-                .map(b => `${b.bucket} → ${pct(b.actual)} (n = ${b.n})`)
-                .join(', ')}`}
-          </Text>
-          <Button variant="quiet" size="sm" isDisabled={saving} onPress={onSnapshot}>
-            {saving ? formatMessage(labels.saving) : formatMessage(labels.snapshotNow)}
-          </Button>
-        </Row>
-      </Column>
+        <InfoTip content={accuracyText}>{formatMessage(labels.forecastAccuracyLabel)}</InfoTip>
+        <InfoTip content={formatMessage(messages.forecastBillingNote)}>
+          {formatMessage(labels.noBillingData)}
+        </InfoTip>
+        <Button variant="quiet" size="sm" isDisabled={saving} onPress={onSnapshot}>
+          {saving ? formatMessage(labels.saving) : formatMessage(labels.snapshotNow)}
+        </Button>
+      </Row>
     </Column>
   );
 }

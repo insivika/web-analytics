@@ -4247,6 +4247,54 @@
       "value": "x"
     }
   ],
+  "label.about-these-numbers": [
+    {
+      "type": 0,
+      "value": "About these numbers"
+    }
+  ],
+  "label.backtest-in-range": [
+    {
+      "type": 0,
+      "value": "Back-test: in range"
+    }
+  ],
+  "label.backtest-out-of-range": [
+    {
+      "type": 0,
+      "value": "Back-test: outside range"
+    }
+  ],
+  "label.first-payment": [
+    {
+      "type": 0,
+      "value": "First payment"
+    }
+  ],
+  "label.forecast-accuracy": [
+    {
+      "type": 0,
+      "value": "Accuracy"
+    }
+  ],
+  "label.how-calculated": [
+    {
+      "type": 0,
+      "value": "How this is calculated"
+    }
+  ],
+  "label.how-p-is-set": [
+    {
+      "type": 0,
+      "value": "How the chance is set"
+    }
+  ],
+  "label.no-billing-data": [
+    {
+      "type": 0,
+      "value": "Why no billing data"
+    }
+  ],
   "label.roi-ad-visitor-quality": [
     {
       "type": 0,
@@ -4323,6 +4371,110 @@
     {
       "type": 0,
       "value": "What if you spent more on ads?"
+    }
+  ],
+  "label.trials-ending-soon-count": [
+    {
+      "type": 0,
+      "value": "Trials ending soon ("
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": ")"
+    }
+  ],
+  "message.forecast-how-1": [
+    {
+      "type": 0,
+      "value": "Each of the "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " users gets a chance of buying. It starts from the conversion rate of past trial users who behaved like them in their first 3 trial days (active days and whether they activated; see “What predicts conversion”), pulled toward the overall "
+    },
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " so small groups don’t swing to extremes."
+    }
+  ],
+  "message.forecast-how-2": [
+    {
+      "type": 0,
+      "value": "That chance is spread over time by when people usually buy: a few during the trial, most in the days right after it ends, and a tail up to "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days later. Someone 10 days past their trial end has used up most of their buying window, so their chance for the next 7 days is small."
+    }
+  ],
+  "message.forecast-how-3": [
+    {
+      "type": 0,
+      "value": "The headline adds up everyone’s chances: 20 users at 10% each make 2 expected customers. "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " in the next 7 days is that sum; it can be a fraction because it is an average."
+    }
+  ],
+  "message.forecast-how-4": [
+    {
+      "type": 0,
+      "value": "The range comes from simulating "
+    },
+    {
+      "type": 1,
+      "value": "runs"
+    },
+    {
+      "type": 0,
+      "value": " possible outcomes (each user buys or not, with their chance) and taking the middle 80%."
+    }
+  ],
+  "message.forecast-p-tip": [
+    {
+      "type": 0,
+      "value": "Chance this user buys in the next 14 days. Tap or hover a value for the 7-day chance, the chance of buying at all, and the user’s behavior group."
+    }
+  ],
+  "message.forecast-range-tip": [
+    {
+      "type": 0,
+      "value": "The middle 80% of "
+    },
+    {
+      "type": 1,
+      "value": "runs"
+    },
+    {
+      "type": 0,
+      "value": " simulated outcomes. Few users with low chances make this range wide."
+    }
+  ],
+  "message.forecast-risk-tip": [
+    {
+      "type": 0,
+      "value": "Trial ended, not bought: access stopped and they haven’t paid yet. Low engagement: at most 1 active day in the first 3 trial days. Not activated: never reached activation_complete."
     }
   ],
   "message.roi-months-n": [
@@ -4551,6 +4703,56 @@
     {
       "type": 0,
       "value": " vs today"
+    }
+  ],
+  "label.more-information": [
+    {
+      "type": 0,
+      "value": "More information"
+    }
+  ],
+  "message.forecast-p-detail": [
+    {
+      "type": 0,
+      "value": "Next 7 days: "
+    },
+    {
+      "type": 1,
+      "value": "p7"
+    },
+    {
+      "type": 0,
+      "value": " · next 14 days: "
+    },
+    {
+      "type": 1,
+      "value": "p14"
+    },
+    {
+      "type": 0,
+      "value": " · buys at all: "
+    },
+    {
+      "type": 1,
+      "value": "total"
+    },
+    {
+      "type": 0,
+      "value": ". Behavior group: "
+    },
+    {
+      "type": 1,
+      "value": "segment"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.forecast-scope-short": [
+    {
+      "type": 0,
+      "value": "Current trials · not filtered by signup window"
     }
   ]
 }

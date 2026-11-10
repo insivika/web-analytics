@@ -574,6 +574,22 @@ export const labels = defineMessages({
   byTrialStatus: { id: 'label.by-trial-status', defaultMessage: 'By trial status' },
   byPlatform: { id: 'label.by-platform', defaultMessage: 'By platform' },
   snapshotNow: { id: 'label.snapshot-now', defaultMessage: 'Save snapshot now' },
+  howPIsSet: { id: 'label.how-p-is-set', defaultMessage: 'How the chance is set' },
+  firstPayment: { id: 'label.first-payment', defaultMessage: 'First payment' },
+  backtestInRange: { id: 'label.backtest-in-range', defaultMessage: 'Back-test: in range' },
+  backtestOutOfRange: {
+    id: 'label.backtest-out-of-range',
+    defaultMessage: 'Back-test: outside range',
+  },
+  forecastAccuracyLabel: { id: 'label.forecast-accuracy', defaultMessage: 'Accuracy' },
+  noBillingData: { id: 'label.no-billing-data', defaultMessage: 'Why no billing data' },
+  aboutTheseNumbers: { id: 'label.about-these-numbers', defaultMessage: 'About these numbers' },
+  howCalculated: { id: 'label.how-calculated', defaultMessage: 'How this is calculated' },
+  trialsEndingSoonCount: {
+    id: 'label.trials-ending-soon-count',
+    defaultMessage: 'Trials ending soon ({n})',
+  },
+  moreInformation: { id: 'label.more-information', defaultMessage: 'More information' },
 });
 
 export const messages = defineMessages({
@@ -1078,4 +1094,48 @@ export const messages = defineMessages({
   },
   trialDayX: { id: 'message.trial-day-x', defaultMessage: 'Trial day {x}' },
   endedDaysAgo: { id: 'message.ended-days-ago', defaultMessage: 'Ended {x} d ago' },
+  forecastHow1: {
+    id: 'message.forecast-how-1',
+    defaultMessage:
+      'Each of the {n} users gets a chance of buying. It starts from the conversion rate of past trial users who behaved like them in their first 3 trial days (active days and whether they activated; see “What predicts conversion”), pulled toward the overall {rate} so small groups don’t swing to extremes.',
+  },
+  forecastHow2: {
+    id: 'message.forecast-how-2',
+    defaultMessage:
+      'That chance is spread over time by when people usually buy: a few during the trial, most in the days right after it ends, and a tail up to {days} days later. Someone 10 days past their trial end has used up most of their buying window, so their chance for the next 7 days is small.',
+  },
+  forecastHow3: {
+    id: 'message.forecast-how-3',
+    defaultMessage:
+      'The headline adds up everyone’s chances: 20 users at 10% each make 2 expected customers. {x} in the next 7 days is that sum; it can be a fraction because it is an average.',
+  },
+  forecastHow4: {
+    id: 'message.forecast-how-4',
+    defaultMessage:
+      'The range comes from simulating {runs} possible outcomes (each user buys or not, with their chance) and taking the middle 80%.',
+  },
+  forecastRangeTip: {
+    id: 'message.forecast-range-tip',
+    defaultMessage:
+      'The middle 80% of {runs} simulated outcomes. Few users with low chances make this range wide.',
+  },
+  forecastPTip: {
+    id: 'message.forecast-p-tip',
+    defaultMessage:
+      'Chance this user buys in the next 14 days. Tap or hover a value for the 7-day chance, the chance of buying at all, and the user’s behavior group.',
+  },
+  forecastRiskTip: {
+    id: 'message.forecast-risk-tip',
+    defaultMessage:
+      'Trial ended, not bought: access stopped and they haven’t paid yet. Low engagement: at most 1 active day in the first 3 trial days. Not activated: never reached activation_complete.',
+  },
+  forecastScopeShort: {
+    id: 'message.forecast-scope-short',
+    defaultMessage: 'Current trials · not filtered by signup window',
+  },
+  forecastPDetail: {
+    id: 'message.forecast-p-detail',
+    defaultMessage:
+      'Next 7 days: {p7} · next 14 days: {p14} · buys at all: {total}. Behavior group: {segment}.',
+  },
 });
