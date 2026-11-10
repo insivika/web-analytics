@@ -76,19 +76,21 @@ model Website {
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  user        User?         @relation("user", fields: [userId], references: [id])
-  createUser  User?         @relation("createUser", fields: [createdBy], references: [id])
-  team        Team?         @relation(fields: [teamId], references: [id])
-  eventData   EventData[]
-  reports     Report[]
-  revenue     Revenue[]
-  segments    Segment[]
-  savedViews  SavedView[]
-  settings    WebsiteSetting[]
-  adSpend     AdSpend[]
-  adSyncRuns  AdSyncRun[]
-  revenueTxns RevenueTxn[]
-  sessionData SessionData[]
+  user                  User?                            @relation("user", fields: [userId], references: [id])
+  createUser            User?                            @relation("createUser", fields: [createdBy], references: [id])
+  team                  Team?                            @relation(fields: [teamId], references: [id])
+  eventData             EventData[]
+  reports               Report[]
+  revenue               Revenue[]
+  segments              Segment[]
+  savedViews            SavedView[]
+  settings              WebsiteSetting[]
+  adSpend               AdSpend[]
+  adSyncRuns            AdSyncRun[]
+  revenueTxns           RevenueTxn[]
+  forecastSnapshots     ConversionForecastSnapshot[]
+  forecastUserSnapshots ConversionForecastUserSnapshot[]
+  sessionData           SessionData[]
 
   @@index([userId])
   @@index([teamId])
@@ -445,4 +447,54 @@ model RevenueTxn {
   @@index([websiteId, occurredAt])
   @@index([websiteId, userId])
   @@map("revenue_txn")
+}
+
+/// Daily headline of the Trial report's conversion forecast (one row per day).
+model ConversionForecastSnapshot {
+  id           String   @id() @unique() @map("conversion_forecast_snapshot_id") @db.Uuid
+  websiteId    String   @map("website_id") @db.Uuid
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+  model        String   @db.VarChar(40)
+  users        Int
+  expected7    Decimal  @map("expected_7") @db.Decimal(10, 4)
+  low7         Decimal  @map("low_7") @db.Decimal(10, 4)
+  high7        Decimal  @map("high_7") @db.Decimal(10, 4)
+  expected14   Decimal  @map("expected_14") @db.Decimal(10, 4)
+  low14        Decimal  @map("low_14") @db.Decimal(10, 4)
+  high14       Decimal  @map("high_14") @db.Decimal(10, 4)
+  revenue7     Decimal  @map("revenue_7") @db.Decimal(14, 4)
+  revenue14    Decimal  @map("revenue_14") @db.Decimal(14, 4)
+  /// Back-test result computed with this snapshot (JSON)
+  backtest     Json?
+  createdAt    DateTime @map("created_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, snapshotDate])
+  @@map("conversion_forecast_snapshot")
+}
+
+/// Each forecast user's probabilities on a snapshot day, and the outcome once resolved.
+model ConversionForecastUserSnapshot {
+  id           String    @id() @unique() @map("conversion_forecast_user_snapshot_id") @db.Uuid
+  websiteId    String    @map("website_id") @db.Uuid
+  snapshotDate DateTime  @map("snapshot_date") @db.Date
+  userId       String    @map("user_id") @db.VarChar(100)
+  platform     String?   @db.VarChar(20)
+  trialStart   DateTime  @map("trial_start") @db.Timestamptz(6)
+  elapsedDays  Decimal   @map("elapsed_days") @db.Decimal(8, 3)
+  segment      String    @db.VarChar(40)
+  pTotal       Decimal   @map("p_total") @db.Decimal(6, 5)
+  p7           Decimal   @map("p_7") @db.Decimal(6, 5)
+  p14          Decimal   @map("p_14") @db.Decimal(6, 5)
+  /// null until resolved: true = converted in the window, false = window closed
+  outcome      Boolean?
+  convertedAt  DateTime? @map("converted_at") @db.Timestamptz(6)
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, snapshotDate, userId])
+  @@index([websiteId, outcome])
+  @@map("conversion_forecast_user_snapshot")
 }

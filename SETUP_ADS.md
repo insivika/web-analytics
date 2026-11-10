@@ -208,3 +208,49 @@ ROI page → Data health → **Backfill revenue (2 years)** once. After that the
 cron refreshes Stripe (last 14 days) and RevenueCat (newest trial starters every
 night, older ones in rotation). Check against Stripe (Balance → Net volume) and
 RevenueCat (Charts → Revenue, proceeds) for the same dates.
+
+
+## Projected conversions (Trial report)
+
+The Trial page has a **Projected conversions** section right after the KPI cards:
+expected new paying customers in the next 7 and 14 days (10th–90th percentile
+range), the first-payment revenue that brings, a breakdown by trial status and
+platform, a sortable "Trials ending soon" table with CSV export, and conversion
+rates by behavior.
+
+How it works:
+
+- **No billing signal.** The 14-day trial is the app's own trial (`trial_expires_at`
+  set at signup, no payment method). RevenueCat shows 0 store trials, and Stripe
+  checkout has no `trial_period_days`, so there is nothing to sync per trial user.
+- **Who is included:** users in their trial, or up to 16 days after it ended
+  (purchases run to about day 29 after signup), who haven't converted. It
+  ignores the signup-window filter but respects the platform and internal filters.
+- **Behavior model:** conversion rate per segment (active days in the first 3
+  trial days × activated in them), smoothed toward the overall rate (10
+  pseudo-trials). Open trials count partially, by how much of the usual purchase
+  timing has passed. A timing curve (prior shape, updated by observed
+  conversions) spreads each user's probability over the coming days. The model
+  sits behind `ConversionModel` in `src/lib/trialForecast.ts`; swap in logistic
+  regression once there are 50+ conversions (the page says when).
+- **Revenue:** plan mix from `subscription_started.plan` × list price ($12 /
+  $108), net of fees using the real Stripe and RevenueCat net/gross ratios from
+  `revenue_txn` (ROI sync). Without synced transactions it shows gross, with a note.
+- **Back-test** (shown on the page): for trials that ended in the last 14 days,
+  the model is refit with only the data from 3 days before each trial ended,
+  and its prediction is compared with what actually happened.
+
+### Accuracy tracking
+
+Migration `20_add_conversion_forecast` adds `conversion_forecast_snapshot` (the
+daily headline) and `conversion_forecast_user_snapshot` (each user's P per day,
+plus the outcome once resolved). It is applied by `prisma migrate deploy` during
+the Vercel build (`check-db`).
+
+A nightly cron (`/api/cron/trial-forecast`, 10:30 UTC, same `CRON_SECRET`) saves
+today's forecast (all platforms, internal excluded) and records outcomes:
+converted inside the window, or window closed without a purchase. **Save snapshot
+now** on the page does the same. After a week the page shows predicted vs. actual
+7-day conversions for the last 4 weeks, plus calibration by P bucket.
+
+No new environment variables.

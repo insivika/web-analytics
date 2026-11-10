@@ -1,5 +1,6 @@
 import { keepPreviousData } from '@tanstack/react-query';
 import type { TrialReport, TrialSettings } from '@/lib/trial';
+import type { TrialForecastReport } from '@/lib/trialForecast';
 import { useApi } from '../useApi';
 import { useModified } from '../useModified';
 
@@ -47,5 +48,24 @@ export function useTrialUserEventsQuery(websiteId: string, userId: string, start
     queryFn: () =>
       get(`/websites/${websiteId}/trial/users/${encodeURIComponent(userId)}`, { startAt }),
     enabled: !!websiteId && !!userId,
+  });
+}
+
+export function useTrialForecastQuery(
+  websiteId: string,
+  params: { platform: string; internal: string },
+) {
+  const { get, useQuery } = useApi();
+  const { modified } = useModified('trialForecast');
+
+  return useQuery<TrialForecastReport>({
+    queryKey: ['website:trial-forecast', { websiteId, modified, ...params }],
+    queryFn: () =>
+      get(`/websites/${websiteId}/trial/forecast`, {
+        platform: params.platform,
+        internal: params.internal || undefined,
+      }),
+    enabled: !!websiteId,
+    placeholderData: keepPreviousData,
   });
 }

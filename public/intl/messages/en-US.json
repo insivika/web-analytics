@@ -3660,5 +3660,591 @@
       "type": 0,
       "value": " of money in from yearly plans"
     }
+  ],
+  "label.active-days-first-x": [
+    {
+      "type": 0,
+      "value": "Active days in the first "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " days"
+    }
+  ],
+  "label.by-platform": [
+    {
+      "type": 0,
+      "value": "By platform"
+    }
+  ],
+  "label.by-trial-status": [
+    {
+      "type": 0,
+      "value": "By trial status"
+    }
+  ],
+  "label.calibration": [
+    {
+      "type": 0,
+      "value": "Calibration"
+    }
+  ],
+  "label.eventually": [
+    {
+      "type": 0,
+      "value": "eventually"
+    }
+  ],
+  "label.in-trial": [
+    {
+      "type": 0,
+      "value": "In trial"
+    }
+  ],
+  "label.low-engagement": [
+    {
+      "type": 0,
+      "value": "Low engagement"
+    }
+  ],
+  "label.next-x-days": [
+    {
+      "type": 0,
+      "value": "Next "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " days"
+    }
+  ],
+  "label.not-activated": [
+    {
+      "type": 0,
+      "value": "Not activated"
+    }
+  ],
+  "label.plan": [
+    {
+      "type": 0,
+      "value": "Plan"
+    }
+  ],
+  "label.probability-14": [
+    {
+      "type": 0,
+      "value": "P (14 days)"
+    }
+  ],
+  "label.projected-conversions": [
+    {
+      "type": 0,
+      "value": "Projected conversions"
+    }
+  ],
+  "label.risk": [
+    {
+      "type": 0,
+      "value": "Risk"
+    }
+  ],
+  "label.saving": [
+    {
+      "type": 0,
+      "value": "Saving…"
+    }
+  ],
+  "label.snapshot-now": [
+    {
+      "type": 0,
+      "value": "Save snapshot now"
+    }
+  ],
+  "label.trial-end": [
+    {
+      "type": 0,
+      "value": "Trial end"
+    }
+  ],
+  "label.trial-ended-not-bought": [
+    {
+      "type": 0,
+      "value": "Trial ended, not bought yet"
+    }
+  ],
+  "label.trial-expired-not-bought": [
+    {
+      "type": 0,
+      "value": "Trial ended, not bought"
+    }
+  ],
+  "label.trial-status": [
+    {
+      "type": 0,
+      "value": "Status"
+    }
+  ],
+  "label.trials-ending-soon": [
+    {
+      "type": 0,
+      "value": "Trials ending soon"
+    }
+  ],
+  "label.users-forecast": [
+    {
+      "type": 0,
+      "value": "Users in the forecast"
+    }
+  ],
+  "label.what-predicts-conversion": [
+    {
+      "type": 0,
+      "value": "What predicts conversion"
+    }
+  ],
+  "message.ended-days-ago": [
+    {
+      "type": 0,
+      "value": "Ended "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " d ago"
+    }
+  ],
+  "message.forecast-accuracy": [
+    {
+      "type": 0,
+      "value": "Forecast accuracy, last "
+    },
+    {
+      "type": 1,
+      "value": "weeks"
+    },
+    {
+      "type": 0,
+      "value": " weeks: predicted "
+    },
+    {
+      "type": 1,
+      "value": "predicted"
+    },
+    {
+      "type": 0,
+      "value": " conversions within 7 days, actual "
+    },
+    {
+      "type": 1,
+      "value": "actual"
+    }
+  ],
+  "message.forecast-accuracy-pending": [
+    {
+      "type": 0,
+      "value": "Forecast accuracy: snapshots are saved nightly; the first comparison appears once a snapshot is 7 days old."
+    }
+  ],
+  "message.forecast-backtest-in": [
+    {
+      "type": 0,
+      "value": "Back-test: for "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " trials that ended in the last 14 days, a forecast made 3 days before trial end predicted "
+    },
+    {
+      "type": 1,
+      "value": "predicted"
+    },
+    {
+      "type": 0,
+      "value": " conversions (range "
+    },
+    {
+      "type": 1,
+      "value": "low"
+    },
+    {
+      "type": 0,
+      "value": "–"
+    },
+    {
+      "type": 1,
+      "value": "high"
+    },
+    {
+      "type": 0,
+      "value": "); "
+    },
+    {
+      "type": 1,
+      "value": "actual"
+    },
+    {
+      "type": 0,
+      "value": " happened. Within range."
+    }
+  ],
+  "message.forecast-backtest-out": [
+    {
+      "type": 0,
+      "value": "Back-test: for "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " trials that ended in the last 14 days, a forecast made 3 days before trial end predicted "
+    },
+    {
+      "type": 1,
+      "value": "predicted"
+    },
+    {
+      "type": 0,
+      "value": " conversions (range "
+    },
+    {
+      "type": 1,
+      "value": "low"
+    },
+    {
+      "type": 0,
+      "value": "–"
+    },
+    {
+      "type": 1,
+      "value": "high"
+    },
+    {
+      "type": 0,
+      "value": "); "
+    },
+    {
+      "type": 1,
+      "value": "actual"
+    },
+    {
+      "type": 0,
+      "value": " happened. Outside the range."
+    }
+  ],
+  "message.forecast-billing-note": [
+    {
+      "type": 0,
+      "value": "Billing status is not used: the 14-day trial is the app’s own trial with no payment method on file, so nothing is charged automatically."
+    }
+  ],
+  "message.forecast-headline": [
+    {
+      "type": 0,
+      "value": "Expected new paying customers: "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " in the next 7 days, "
+    },
+    {
+      "type": 1,
+      "value": "y"
+    },
+    {
+      "type": 0,
+      "value": " in the next 14 days (range "
+    },
+    {
+      "type": 1,
+      "value": "a"
+    },
+    {
+      "type": 0,
+      "value": "–"
+    },
+    {
+      "type": 1,
+      "value": "b"
+    },
+    {
+      "type": 0,
+      "value": "), about "
+    },
+    {
+      "type": 1,
+      "value": "revenue"
+    },
+    {
+      "type": 0,
+      "value": " in first payments."
+    }
+  ],
+  "message.forecast-insight-note": [
+    {
+      "type": 0,
+      "value": "Conversion rate by behavior over "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " completed trials (raw, not smoothed). Grey bars have fewer than 10 users. Late purchases can still add to recent trials."
+    }
+  ],
+  "message.forecast-model": [
+    {
+      "type": 0,
+      "value": "Behavior model (active days and activation in the first 3 trial days, smoothed toward the overall rate): "
+    },
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " of trials convert, based on "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " trials since "
+    },
+    {
+      "type": 1,
+      "value": "since"
+    },
+    {
+      "type": 0,
+      "value": " with "
+    },
+    {
+      "type": 1,
+      "value": "conversions"
+    },
+    {
+      "type": 0,
+      "value": " conversions. Open trials count partially. Switches to logistic regression once there are "
+    },
+    {
+      "type": 1,
+      "value": "min"
+    },
+    {
+      "type": 0,
+      "value": " conversions."
+    }
+  ],
+  "message.forecast-no-tracking": [
+    {
+      "type": 0,
+      "value": "No forecast yet: the conversion, active-day and activation events must all be tracked."
+    }
+  ],
+  "message.forecast-no-training": [
+    {
+      "type": 0,
+      "value": "No forecast yet: no trials have passed their first 3 days since tracking started."
+    }
+  ],
+  "message.forecast-range": [
+    {
+      "type": 0,
+      "value": "Range "
+    },
+    {
+      "type": 1,
+      "value": "low"
+    },
+    {
+      "type": 0,
+      "value": "–"
+    },
+    {
+      "type": 1,
+      "value": "high"
+    },
+    {
+      "type": 0,
+      "value": " (10th–90th percentile)"
+    }
+  ],
+  "message.forecast-revenue": [
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " first-payment revenue ("
+    },
+    {
+      "type": 1,
+      "value": "low"
+    },
+    {
+      "type": 0,
+      "value": "–"
+    },
+    {
+      "type": 1,
+      "value": "high"
+    },
+    {
+      "type": 0,
+      "value": ")"
+    }
+  ],
+  "message.forecast-revenue-gross": [
+    {
+      "type": 0,
+      "value": "Expected first payment per new customer: "
+    },
+    {
+      "type": 1,
+      "value": "app"
+    },
+    {
+      "type": 0,
+      "value": " ("
+    },
+    {
+      "type": 1,
+      "value": "monthly"
+    },
+    {
+      "type": 0,
+      "value": " choose monthly). Gross list price: no Stripe or RevenueCat transactions synced yet, so fees are not deducted."
+    }
+  ],
+  "message.forecast-revenue-net": [
+    {
+      "type": 0,
+      "value": "Expected first payment per new customer: "
+    },
+    {
+      "type": 1,
+      "value": "app"
+    },
+    {
+      "type": 0,
+      "value": " in the apps, "
+    },
+    {
+      "type": 1,
+      "value": "web"
+    },
+    {
+      "type": 0,
+      "value": " on the web ("
+    },
+    {
+      "type": 1,
+      "value": "monthly"
+    },
+    {
+      "type": 0,
+      "value": " choose monthly), net of store and Stripe fees from synced transactions."
+    }
+  ],
+  "message.forecast-revenue-partial": [
+    {
+      "type": 0,
+      "value": "Expected first payment per new customer: "
+    },
+    {
+      "type": 1,
+      "value": "app"
+    },
+    {
+      "type": 0,
+      "value": " in the apps, "
+    },
+    {
+      "type": 1,
+      "value": "web"
+    },
+    {
+      "type": 0,
+      "value": " on the web ("
+    },
+    {
+      "type": 1,
+      "value": "monthly"
+    },
+    {
+      "type": 0,
+      "value": " choose monthly). Only one of Stripe and RevenueCat has synced transactions, so the other platform is at gross list price."
+    }
+  ],
+  "message.forecast-scope": [
+    {
+      "type": 0,
+      "value": "Users currently in their trial or up to "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days after it ended, when most purchases happen. The signup-window filter does not apply here; platform and internal filters do."
+    }
+  ],
+  "message.forecast-snapshot-exists": [
+    {
+      "type": 0,
+      "value": "Today’s snapshot already exists; outcomes were updated."
+    }
+  ],
+  "message.forecast-snapshot-failed": [
+    {
+      "type": 0,
+      "value": "Could not save the snapshot: "
+    },
+    {
+      "type": 1,
+      "value": "message"
+    }
+  ],
+  "message.forecast-snapshot-saved": [
+    {
+      "type": 0,
+      "value": "Saved today's forecast snapshot."
+    }
+  ],
+  "message.trial-day-x": [
+    {
+      "type": 0,
+      "value": "Trial day "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    }
   ]
 }

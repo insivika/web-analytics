@@ -3,6 +3,7 @@ import { Column } from '@umami/react-zen';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { useTimezone, useTrialReportQuery } from '@/components/hooks';
 import { TrialFilters } from './TrialFilters';
+import { TrialForecast } from './TrialForecast';
 import {
   TrialActiveDaysHistogram,
   TrialCohorts,
@@ -42,6 +43,7 @@ export function TrialPage({ websiteId }: { websiteId: string }) {
           <Column gap style={{ minWidth: 0, opacity: isFetching ? 0.6 : 1 }}>
             <TrialNotes report={data} />
             <TrialKpis report={data} />
+            <TrialForecast websiteId={websiteId} platform={platform} internal={internal} />
             <TrialFunnel report={data} />
             <TrialDailyActive report={data} />
             <TrialActiveDaysHistogram report={data} />

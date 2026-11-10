@@ -518,6 +518,40 @@ export const labels = defineMessages({
   },
   roi: { id: 'label.roi', defaultMessage: 'ROI' },
   netRevenueWindow: { id: 'label.net-revenue-window', defaultMessage: 'Net revenue ({days}d)' },
+  saving: { id: 'label.saving', defaultMessage: 'Saving…' },
+  plan: { id: 'label.plan', defaultMessage: 'Plan' },
+  risk: { id: 'label.risk', defaultMessage: 'Risk' },
+  trialEnd: { id: 'label.trial-end', defaultMessage: 'Trial end' },
+  calibration: { id: 'label.calibration', defaultMessage: 'Calibration' },
+  inTrial: { id: 'label.in-trial', defaultMessage: 'In trial' },
+  trialEnded: { id: 'label.trial-ended-not-bought', defaultMessage: 'Trial ended, not bought yet' },
+  nextDays: { id: 'label.next-x-days', defaultMessage: 'Next {x} days' },
+  activeDaysFirstX: {
+    id: 'label.active-days-first-x',
+    defaultMessage: 'Active days in the first {x} days',
+  },
+  trialExpiredNotBought: {
+    id: 'label.trial-expired-not-bought',
+    defaultMessage: 'Trial ended, not bought',
+  },
+  lowEngagement: { id: 'label.low-engagement', defaultMessage: 'Low engagement' },
+  notActivated: { id: 'label.not-activated', defaultMessage: 'Not activated' },
+  projectedConversions: {
+    id: 'label.projected-conversions',
+    defaultMessage: 'Projected conversions',
+  },
+  trialsEndingSoon: { id: 'label.trials-ending-soon', defaultMessage: 'Trials ending soon' },
+  trialStatus: { id: 'label.trial-status', defaultMessage: 'Status' },
+  probability14: { id: 'label.probability-14', defaultMessage: 'P (14 days)' },
+  eventually: { id: 'label.eventually', defaultMessage: 'eventually' },
+  whatPredictsConversion: {
+    id: 'label.what-predicts-conversion',
+    defaultMessage: 'What predicts conversion',
+  },
+  usersForecast: { id: 'label.users-forecast', defaultMessage: 'Users in the forecast' },
+  byTrialStatus: { id: 'label.by-trial-status', defaultMessage: 'By trial status' },
+  byPlatform: { id: 'label.by-platform', defaultMessage: 'By platform' },
+  snapshotNow: { id: 'label.snapshot-now', defaultMessage: 'Save snapshot now' },
 });
 
 export const messages = defineMessages({
@@ -889,4 +923,96 @@ export const messages = defineMessages({
     id: 'message.roi-fx-gaps',
     defaultMessage: 'FX gaps: {revenue} revenue, {spend} spend rows',
   },
+  forecastScope: {
+    id: 'message.forecast-scope',
+    defaultMessage:
+      'Users currently in their trial or up to {days} days after it ended, when most purchases happen. The signup-window filter does not apply here; platform and internal filters do.',
+  },
+  snapshotSaved: {
+    id: 'message.forecast-snapshot-saved',
+    defaultMessage: "Saved today's forecast snapshot.",
+  },
+  snapshotAlreadySaved: {
+    id: 'message.forecast-snapshot-exists',
+    defaultMessage: 'Today’s snapshot already exists; outcomes were updated.',
+  },
+  snapshotFailed: {
+    id: 'message.forecast-snapshot-failed',
+    defaultMessage: 'Could not save the snapshot: {message}',
+  },
+  forecastRevenuePartial: {
+    id: 'message.forecast-revenue-partial',
+    defaultMessage:
+      'Expected first payment per new customer: {app} in the apps, {web} on the web ({monthly} choose monthly). Only one of Stripe and RevenueCat has synced transactions, so the other platform is at gross list price.',
+  },
+  forecastHeadline: {
+    id: 'message.forecast-headline',
+    defaultMessage:
+      'Expected new paying customers: {x} in the next 7 days, {y} in the next 14 days (range {a}–{b}), about {revenue} in first payments.',
+  },
+  forecastRange: {
+    id: 'message.forecast-range',
+    defaultMessage: 'Range {low}–{high} (10th–90th percentile)',
+  },
+  forecastRevenue: {
+    id: 'message.forecast-revenue',
+    defaultMessage: '{amount} first-payment revenue ({low}–{high})',
+  },
+  forecastRevenueNet: {
+    id: 'message.forecast-revenue-net',
+    defaultMessage:
+      'Expected first payment per new customer: {app} in the apps, {web} on the web ({monthly} choose monthly), net of store and Stripe fees from synced transactions.',
+  },
+  forecastRevenueGross: {
+    id: 'message.forecast-revenue-gross',
+    defaultMessage:
+      'Expected first payment per new customer: {app} ({monthly} choose monthly). Gross list price: no Stripe or RevenueCat transactions synced yet, so fees are not deducted.',
+  },
+  forecastModel: {
+    id: 'message.forecast-model',
+    defaultMessage:
+      'Behavior model (active days and activation in the first 3 trial days, smoothed toward the overall rate): {rate} of trials convert, based on {n} trials since {since} with {conversions} conversions. Open trials count partially. Switches to logistic regression once there are {min} conversions.',
+  },
+  forecastBillingNote: {
+    id: 'message.forecast-billing-note',
+    defaultMessage:
+      'Billing status is not used: the 14-day trial is the app’s own trial with no payment method on file, so nothing is charged automatically.',
+  },
+  forecastBacktestIn: {
+    id: 'message.forecast-backtest-in',
+    defaultMessage:
+      'Back-test: for {n} trials that ended in the last 14 days, a forecast made 3 days before trial end predicted {predicted} conversions (range {low}–{high}); {actual} happened. Within range.',
+  },
+  forecastBacktestOut: {
+    id: 'message.forecast-backtest-out',
+    defaultMessage:
+      'Back-test: for {n} trials that ended in the last 14 days, a forecast made 3 days before trial end predicted {predicted} conversions (range {low}–{high}); {actual} happened. Outside the range.',
+  },
+  forecastAccuracy: {
+    id: 'message.forecast-accuracy',
+    defaultMessage:
+      'Forecast accuracy, last {weeks} weeks: predicted {predicted} conversions within 7 days, actual {actual}',
+  },
+  forecastAccuracyPending: {
+    id: 'message.forecast-accuracy-pending',
+    defaultMessage:
+      'Forecast accuracy: snapshots are saved nightly; the first comparison appears once a snapshot is 7 days old.',
+  },
+  forecastInsightNote: {
+    id: 'message.forecast-insight-note',
+    defaultMessage:
+      'Conversion rate by behavior over {n} completed trials (raw, not smoothed). Grey bars have fewer than 10 users. Late purchases can still add to recent trials.',
+  },
+  forecastNoTracking: {
+    id: 'message.forecast-no-tracking',
+    defaultMessage:
+      'No forecast yet: the conversion, active-day and activation events must all be tracked.',
+  },
+  forecastNoTraining: {
+    id: 'message.forecast-no-training',
+    defaultMessage:
+      'No forecast yet: no trials have passed their first 3 days since tracking started.',
+  },
+  trialDayX: { id: 'message.trial-day-x', defaultMessage: 'Trial day {x}' },
+  endedDaysAgo: { id: 'message.ended-days-ago', defaultMessage: 'Ended {x} d ago' },
 });

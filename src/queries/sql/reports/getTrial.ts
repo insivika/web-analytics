@@ -1,6 +1,8 @@
 import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import {
+  buildTrialUsers,
+  computeComparisons,
   computeTrialReport,
   getStatsPeriodEnd,
   getTrialActivityEventNames,
@@ -15,9 +17,11 @@ import {
   type TrialExpiresRow,
   type TrialSettings,
   type TrialStartOccurrence,
+  type TrialTrackingSince,
   type TrialUserFilters,
   type TrialWindow,
 } from '@/lib/trial';
+import { getForecastSince } from '@/lib/trialForecast';
 
 // Trial report queries. Users are identified by an event-data property
 // (settings.userIdProperty, default `user_id`) joined to website_event by event id;
@@ -57,25 +61,61 @@ async function relationalQuery(
   },
 ) {
   const now = new Date();
+  const inputs = await loadTrialInputs(websiteId, window, settings, now, timezone);
+  return computeTrialReport({ ...inputs, settings, window, filters, now, timezone });
+}
+
+/** Raw per-user aggregates behind the Trial report. */
+async function loadTrialInputs(
+  websiteId: string,
+  window: TrialWindow,
+  settings: TrialSettings,
+  now: Date,
+  timezone?: string,
+) {
   // Current + previous window, plus the last 8 signup weeks for the cohort table.
   const range = getTrialDataRange(window, now, timezone);
+  const base = await loadTrialBase(websiteId, settings, range.endDate, {
+    startDate: window.startDate,
+    endDate: getStatsPeriodEnd(window, now),
+  });
+  const resolved = resolveTrialStarts(base.occurrences, base.expiresRows, settings, now);
+  const cohort = [...startsInWindow(resolved, range)];
 
+  return { ...base, ...(await loadCohortData(websiteId, settings, cohort)) };
+}
+
+/** Trial start inputs, event stats and tracking dates (not per cohort). */
+async function loadTrialBase(
+  websiteId: string,
+  settings: TrialSettings,
+  endDate: Date,
+  statsPeriod: TrialWindow,
+) {
   const derived = settings.trialStartMode === 'trialExpiresAt';
   const [occurrences, expiresRows, trialExpiresFirstSeen, eventStats, conversionPropertyFirstSeen] =
     await Promise.all([
-      getTrialStartOccurrences(websiteId, settings, range.endDate),
+      getTrialStartOccurrences(websiteId, settings, endDate),
       derived ? getTrialExpiresRows(websiteId, settings) : [],
       derived ? getPropertyFirstSeen(websiteId, settings.trialExpiresProperty) : null,
-      getTrialEventStats(websiteId, settings, {
-        startDate: window.startDate,
-        endDate: getStatsPeriodEnd(window, now),
-      }),
+      getTrialEventStats(websiteId, settings, statsPeriod),
       getConversionPropertyFirstSeen(websiteId, settings),
     ]);
+  return {
+    occurrences,
+    expiresRows,
+    trialExpiresFirstSeen,
+    eventStats,
+    conversionPropertyFirstSeen,
+  };
+}
 
-  const resolved = resolveTrialStarts(occurrences, expiresRows, settings, now);
-  const cohort = [...startsInWindow(resolved, range)];
-
+/** Per-user activity, attributes, conversions and push prompts for a cohort. */
+async function loadCohortData(
+  websiteId: string,
+  settings: TrialSettings,
+  cohort: [string, Date][],
+) {
   const [activity, attributes, conversions, pushShown] = cohort.length
     ? await Promise.all([
         getTrialActivity(websiteId, settings, cohort),
@@ -84,23 +124,124 @@ async function relationalQuery(
         getFirstEventAfterStart(websiteId, settings, cohort, settings.pushShownEvent),
       ])
     : [[], [], [], []];
+  return { activity, attributes, conversions, pushShown, cohort };
+}
 
-  return computeTrialReport({
-    occurrences,
-    expiresRows,
-    trialExpiresFirstSeen,
-    activity,
-    attributes,
-    conversions,
-    pushShown,
-    eventStats,
-    conversionPropertyFirstSeen,
-    settings,
-    window,
-    filters,
-    now,
-    timezone,
+/**
+ * Everything the conversion forecast needs: Trial report users (all platforms,
+ * internal flagged, not excluded) whose trial started on/after the forecast's
+ * tracking date, their per-day activity, tracking dates and the plan of each
+ * conversion. Only that cohort is loaded, and none of the report sections.
+ */
+export async function getTrialForecastData(websiteId: string, settings: TrialSettings) {
+  return runQuery({
+    [PRISMA]: async () => {
+      const now = new Date();
+      const base = await loadTrialBase(websiteId, settings, now, {
+        startDate: new Date(+now - 86_400_000),
+        endDate: now,
+      });
+      const resolved = resolveTrialStarts(base.occurrences, base.expiresRows, settings, now);
+      // Same tracking dates as the Trial report (the comparison window is irrelevant here).
+      const comparisons = computeComparisons(
+        settings,
+        base.eventStats,
+        { startDate: now, endDate: now },
+        base.conversionPropertyFirstSeen,
+        base.trialExpiresFirstSeen,
+      );
+      const trackingSince: TrialTrackingSince = {
+        activated: comparisons.activated.trackingStart,
+        active2: comparisons.active2.trackingStart,
+        active3: comparisons.active3.trackingStart,
+        pushOptIn: comparisons.pushOptIn.trackingStart,
+        converted: comparisons.converted.trackingStart,
+      };
+      const since = getForecastSince(trackingSince);
+      const starts = since
+        ? startsInWindow(resolved, { startDate: new Date(since), endDate: now })
+        : new Map<string, Date>();
+      const cohort = [...starts];
+      const [data, plans] = await Promise.all([
+        loadCohortData(websiteId, settings, cohort),
+        cohort.length ? getConversionPlans(websiteId, settings, cohort) : [],
+      ]);
+      const users = buildTrialUsers(
+        starts,
+        data.activity,
+        data.attributes,
+        data.conversions,
+        settings,
+        now,
+        resolved.starts,
+        {
+          since: trackingSince.pushOptIn,
+          shownUsers: new Set(data.pushShown.map(row => row.userId)),
+        },
+      );
+
+      return {
+        now,
+        users,
+        activity: data.activity,
+        trackingSince,
+        since,
+        plans: new Map(plans.map((p): [string, string] => [p.userId, p.plan])),
+      };
+    },
+    [CLICKHOUSE]: notSupported,
   });
+}
+
+/** Plan (e.g. monthly / annual) on each cohort user's first conversion event. */
+async function getConversionPlans(
+  websiteId: string,
+  settings: TrialSettings,
+  cohort: [string, Date][],
+  planProperty = 'plan',
+): Promise<{ userId: string; plan: string }[]> {
+  if (!settings.conversionEvents.length) return [];
+
+  return prisma.rawQuery(
+    `
+    with ${COHORT_CTE}
+    select distinct on (c.user_id) c.user_id as "userId", p.string_value as plan
+    from website_event e
+    join event_data u
+      on u.website_event_id = e.event_id
+      and u.data_key = {{userIdProperty}}
+    join cohort c on c.user_id = u.string_value
+    join event_data p
+      on p.website_event_id = e.event_id
+      and p.data_key = {{planProperty}}
+    where e.website_id = {{websiteId::uuid}}
+      and e.created_at >= {{minStart}}
+      and e.event_name = any({{conversionEvents}}::text[])
+      and e.created_at >= c.trial_start
+      and ({{windowDays::int}} = 0
+        or e.created_at < c.trial_start + make_interval(days => {{windowDays::int}}))
+      -- Same rule as getTrialConversions: only events that count as a conversion.
+      and ({{conversionProperty}}::text = ''
+        or exists (
+          select 1 from event_data cp
+          where cp.website_event_id = e.event_id
+            and cp.data_key = {{conversionProperty}}
+            and cp.string_value = {{conversionPropertyValue}}
+        ))
+    order by c.user_id, e.created_at
+    `,
+    {
+      websiteId,
+      userIdProperty: settings.userIdProperty,
+      planProperty,
+      conversionEvents: settings.conversionEvents,
+      windowDays: settings.conversionWindowDays,
+      conversionProperty: settings.conversionProperty,
+      conversionPropertyValue: settings.conversionPropertyValue,
+      ...cohortParams(cohort),
+    },
+    'getConversionPlans',
+  );
 }
 
 /** First occurrence of `eventName` per cohort user at or after their trial start. */
