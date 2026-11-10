@@ -194,6 +194,9 @@ export async function deleteUser(userId: string) {
         ],
       },
     }),
+    client.savedView.deleteMany({
+      where: { websiteId: { in: websiteIds } },
+    }),
     client.website.deleteMany({
       where: { id: { in: websiteIds } },
     }),

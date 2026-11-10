@@ -9,6 +9,7 @@ import {
   Row,
 } from '@umami/react-zen';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 interface SideMenuData {
   id: string;
@@ -27,6 +28,7 @@ export interface SideMenuProps extends NavMenuProps {
   title?: string;
   selectedKey?: string;
   allowMinimize?: boolean;
+  children?: ReactNode;
 }
 
 export function SideMenu({
@@ -34,6 +36,7 @@ export function SideMenu({
   title,
   selectedKey,
   allowMinimize,
+  children,
   ...props
 }: SideMenuProps) {
   const renderItems = (items: SideMenuData[]) => {
@@ -74,6 +77,7 @@ export function SideMenu({
           }
           return null;
         })}
+        {children}
       </NavMenu>
     </Column>
   );

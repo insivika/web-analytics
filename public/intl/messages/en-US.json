@@ -1297,6 +1297,12 @@
       "value": "Remove member"
     }
   ],
+  "label.rename": [
+    {
+      "type": 0,
+      "value": "Rename"
+    }
+  ],
   "label.reports": [
     {
       "type": 0,
@@ -1361,6 +1367,18 @@
     {
       "type": 0,
       "value": "Save"
+    }
+  ],
+  "label.save-view": [
+    {
+      "type": 0,
+      "value": "Save view"
+    }
+  ],
+  "label.saved-views": [
+    {
+      "type": 0,
+      "value": "Saved views"
     }
   ],
   "label.screens": [

@@ -83,6 +83,7 @@ model Website {
   reports     Report[]
   revenue     Revenue[]
   segments    Segment[]
+  savedViews  SavedView[]
   sessionData SessionData[]
 
   @@index([userId])
@@ -254,6 +255,22 @@ model Segment {
 
   @@index([websiteId])
   @@map("segment")
+}
+
+model SavedView {
+  id        String    @id() @unique() @map("saved_view_id") @db.Uuid
+  websiteId String    @map("website_id") @db.Uuid
+  name      String    @db.VarChar(200)
+  path      String    @db.VarChar(500)
+  query     String    @db.Text
+  createdBy String?   @map("created_by") @db.Uuid
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@index([websiteId])
+  @@map("saved_view")
 }
 
 model Revenue {

@@ -1,6 +1,7 @@
 export * from './link';
 export * from './pixel';
 export * from './report';
+export * from './savedView';
 export * from './segment';
 export * from './team';
 export * from './teamUser';

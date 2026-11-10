@@ -363,6 +363,9 @@ export const labels = defineMessages({
   support: { id: 'label.support', defaultMessage: 'Support' },
   documentation: { id: 'label.documentation', defaultMessage: 'Documentation' },
   switchAccount: { id: 'label.switch-account', defaultMessage: 'Switch account' },
+  savedViews: { id: 'label.saved-views', defaultMessage: 'Saved views' },
+  saveView: { id: 'label.save-view', defaultMessage: 'Save view' },
+  rename: { id: 'label.rename', defaultMessage: 'Rename' },
 });
 
 export const messages = defineMessages({

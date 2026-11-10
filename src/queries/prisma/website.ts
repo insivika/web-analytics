@@ -201,6 +201,9 @@ export async function deleteWebsite(websiteId: string) {
       client.segment.deleteMany({
         where: { websiteId },
       }),
+      client.savedView.deleteMany({
+        where: { websiteId },
+      }),
       cloudMode
         ? client.website.update({
             data: {

@@ -4,7 +4,7 @@ import { Fragment, type Key, useState } from 'react';
 import { DateDisplay } from '@/components/common/DateDisplay';
 import { useMessages, useMobile } from '@/components/hooks';
 import { DatePickerForm } from '@/components/metrics/DatePickerForm';
-import { parseDateRange } from '@/lib/date';
+import { parseDateRange, parseDateValue } from '@/lib/date';
 
 export interface DateFilterProps extends SelectProps {
   value?: string;
@@ -43,6 +43,10 @@ export function DateFilter({
       value: '7day',
     },
     {
+      label: formatMessage(labels.lastDays, { x: '14' }),
+      value: '14day',
+    },
+    {
       label: formatMessage(labels.thisMonth),
       value: '0month',
       divider: true,
@@ -75,9 +79,37 @@ export function DateFilter({
       value: 'custom',
       divider: true,
     },
-  ]
-    .filter(n => n)
-    .map((a, id) => ({ ...a, id }));
+  ].filter(n => n);
+
+  // A stored value that isn't a preset (e.g. a cohort saved via the API with `21day`)
+  // gets its own option, so it is displayed as-is and kept on save instead of the
+  // select falling back to an empty placeholder.
+  const getCustomLabel = (value: string) => {
+    const { num, unit } = parseDateValue(value) || {};
+
+    if (num > 0) {
+      if (unit === 'hour') return formatMessage(labels.lastHours, { x: num });
+      if (unit === 'day') return formatMessage(labels.lastDays, { x: num });
+      if (unit === 'month') return formatMessage(labels.lastMonths, { x: num });
+    }
+
+    return value;
+  };
+
+  if (
+    value &&
+    !value.startsWith('range') &&
+    !value.endsWith(':all') &&
+    !options.some(option => option.value === value)
+  ) {
+    options.splice(options.length - 1, 0, {
+      label: getCustomLabel(value),
+      value,
+      divider: true,
+    });
+  }
+
+  const items = options.map((a, id) => ({ ...a, id }));
 
   const handleChange = (value: Key) => {
     if (value === 'custom') {
@@ -100,7 +132,7 @@ export function DateFilter({
     );
   };
 
-  const selectedValue = value.endsWith(':all') ? 'all' : value;
+  const selectedValue = value?.endsWith(':all') ? 'all' : value;
 
   return (
     <>
@@ -113,9 +145,9 @@ export function DateFilter({
         popoverProps={{ placement }}
         isFullscreen={isMobile}
       >
-        {options.map(({ label, value, divider }: any) => {
+        {items.map(({ label, value, divider }: any) => {
           return (
-            <Fragment key={label}>
+            <Fragment key={value}>
               {divider && <ListSeparator />}
               <ListItem id={value}>{label}</ListItem>
             </Fragment>

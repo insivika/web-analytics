@@ -46,6 +46,7 @@ export * from './queries/useWebsiteExpandedMetricsQuery';
 export * from './queries/useWebsiteMetricsQuery';
 export * from './queries/useWebsitePageviewsQuery';
 export * from './queries/useWebsiteQuery';
+export * from './queries/useWebsiteSavedViewsQuery';
 export * from './queries/useWebsiteSegmentQuery';
 export * from './queries/useWebsiteSegmentsQuery';
 export * from './queries/useWebsiteSessionQuery';

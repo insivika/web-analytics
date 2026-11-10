@@ -13,6 +13,7 @@ import {
 } from '@/components/icons';
 import { WebsiteSelect } from '@/components/input/WebsiteSelect';
 import { Funnel, Lightning, Magnet, Money, Network, Path, Target } from '@/components/svg';
+import { SavedViewsNav } from './views/SavedViewsNav';
 
 export function WebsiteNav({
   websiteId,
@@ -161,7 +162,7 @@ export function WebsiteNav({
     .find(({ path }) => path && pathname.endsWith(path.split('?')[0]))?.id;
 
   return (
-    <Column padding="3" position="sticky" top="0" gap>
+    <Column padding="3" position="sticky" top="0" gap overflowY="auto" maxHeight="100dvh">
       <WebsiteSelect
         websiteId={websiteId}
         teamId={teamId}
@@ -174,7 +175,9 @@ export function WebsiteNav({
         selectedKey={selectedKey}
         allowMinimize={false}
         onItemClick={onItemClick}
-      />
+      >
+        <SavedViewsNav websiteId={websiteId} />
+      </SideMenu>
     </Column>
   );
 }

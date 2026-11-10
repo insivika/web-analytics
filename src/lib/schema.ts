@@ -230,3 +230,15 @@ export const reportResultSchema = z.intersection(
 );
 
 export const segmentTypeParam = z.enum(['segment', 'cohort']);
+
+// Saved views: path is relative to /websites/[websiteId] (e.g. '' or '/events'),
+// query is the raw query string without the leading '?'.
+export const savedViewPathParam = z
+  .string()
+  .max(500)
+  .regex(/^(\/[A-Za-z0-9_-]+)*$/);
+
+export const savedViewQueryParam = z
+  .string()
+  .max(4000)
+  .transform(value => value.replace(/^\?/, ''));
