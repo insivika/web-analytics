@@ -1,18 +1,17 @@
 import { formatInTimeZone } from 'date-fns-tz';
-import { addDays, buildFxLookup, fetchFrankfurterRates } from '@/lib/ads/fx';
+import { addDays } from '@/lib/ads/fx';
 import { REPORTING_TIMEZONE } from '@/lib/ads/sync';
 import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
+import { fetchRcProceeds } from '@/lib/revenue/revenuecat';
 import {
-  buildUserRevenue,
+  buildCustomerRevenue,
   type CohortUser,
-  DAY_MS,
-  estimateLtv,
-  type RevenueEvent,
   type RoiSettings,
   type SpendDay,
   spendNeededFor,
-  summarizeCohort,
+  sumCashIn,
+  summarizeFunnel,
   sumSpend,
 } from '@/lib/roi';
 import {
@@ -21,18 +20,23 @@ import {
   type TrialSettings,
   type TrialWindow,
 } from '@/lib/trial';
-import { getFxRates, getSyncStatus, saveFxRates } from '@/queries/prisma/adSpend';
+import { getSyncStatus } from '@/queries/prisma/adSpend';
+import { getRevenueTxns } from '@/queries/prisma/revenue';
 import { getTrialExpiresRows, getTrialStartOccurrences } from './getTrial';
 
-// Blended ROI: total ad spend vs. all trial starts in the period and their net
-// revenue. Works without click attribution; channel/campaign attribution is added
-// once signups carry click ids.
+// Marketing funnel for a period: total ad spend → marketing-site visitors → trial
+// starts → paying customers → their real revenue to date (Stripe + RevenueCat).
+// No per-ad attribution: everything is blended over the period.
 
 function notSupported(): never {
   throw new Error('The ROI report is only implemented for PostgreSQL.');
 }
 
 const dayKey = (d: Date) => formatInTimeZone(d, REPORTING_TIMEZONE, 'yyyy-MM-dd');
+
+/** Hostname of the marketing site whose sessions count as visitors. */
+export const getMarketingHostname = () =>
+  process.env.ROI_MARKETING_HOSTNAME || 'www.cashflowcalendar.app';
 
 export async function getRoiReport(
   websiteId: string,
@@ -47,6 +51,23 @@ export async function getRoiReport(
     [PRISMA]: () => relationalQuery(websiteId, params),
     [CLICKHOUSE]: notSupported,
   });
+}
+
+/** Users of the trial cohort, all time (the revenue sync refreshes these in RevenueCat). */
+export async function getTrialStarterIds(websiteId: string, trialSettings: TrialSettings) {
+  const now = new Date();
+  const [occurrences, expiresRows, internal] = await Promise.all([
+    getTrialStartOccurrences(websiteId, trialSettings, now),
+    trialSettings.trialStartMode === 'trialExpiresAt'
+      ? getTrialExpiresRows(websiteId, trialSettings)
+      : [],
+    getInternalUsers(websiteId),
+  ]);
+  const { starts } = resolveTrialStarts(occurrences, expiresRows, trialSettings, now);
+  return [...starts]
+    .filter(([id]) => !internal.has(id))
+    .sort((a, b) => +b[1].start - +a[1].start) // newest first: they change most
+    .map(([id]) => id);
 }
 
 async function relationalQuery(
@@ -64,113 +85,112 @@ async function relationalQuery(
   },
 ) {
   const now = new Date();
-  const derived = trialSettings.trialStartMode === 'trialExpiresAt';
-
-  const [occurrences, expiresRows, events, cancellations, syncStatus] = await Promise.all([
-    getTrialStartOccurrences(websiteId, trialSettings, now),
-    derived ? getTrialExpiresRows(websiteId, trialSettings) : [],
-    getRevenueEvents(websiteId),
-    getCancellations(websiteId),
-    getSyncStatus(websiteId),
-  ]);
-  // Revenue events only exist from this date; earlier cohorts have no revenue data.
-  const startedEvents = events.filter(e => e.eventName === 'subscription_started');
-  const revenueStarted = startedEvents.length
-    ? new Date(Math.min(...startedEvents.map(e => +new Date(e.createdAt))))
-    : null;
-
+  const endDate = new Date(Math.min(+window.endDate, +now));
   const start = dayKey(window.startDate);
-  const end = dayKey(new Date(Math.min(+window.endDate, +now)));
-  const spendRows = await getSpendDays(websiteId, start, end);
+  const end = dayKey(endDate);
+  const hostname = getMarketingHostname();
 
-  // FX for revenue currencies (spend rows already carry spend_usd).
-  const currencies = [...new Set(events.map(e => (e.currency || 'USD').toUpperCase()))];
-  const firstEvent = events.length
-    ? dayKey(new Date(Math.min(...events.map(e => +new Date(e.createdAt)))))
-    : start;
-  let fxRows = await getFxRates(currencies, addDays(firstEvent, -7), dayKey(now));
-  let fx = buildFxLookup(fxRows);
-  const missing = events.filter(
-    e => e.priceUsd === null && e.revenue !== null && fx(e.currency || 'USD', e.createdAt) === null,
-  );
-  if (missing.length) {
-    try {
-      await saveFxRates(await fetchFrankfurterRates(firstEvent, dayKey(now), currencies));
-      fxRows = await getFxRates(currencies, addDays(firstEvent, -7), dayKey(now));
-      fx = buildFxLookup(fxRows);
-    } catch {
-      // Reported as FX gaps below.
-    }
-  }
+  const [
+    occurrences,
+    expiresRows,
+    internal,
+    txns,
+    syncStatus,
+    spendRows,
+    visitors,
+    weeklyVisitors,
+  ] = await Promise.all([
+    getTrialStartOccurrences(websiteId, trialSettings, now),
+    trialSettings.trialStartMode === 'trialExpiresAt'
+      ? getTrialExpiresRows(websiteId, trialSettings)
+      : [],
+    getInternalUsers(websiteId),
+    getRevenueTxns(websiteId),
+    getSyncStatus(websiteId),
+    getSpendDays(websiteId, start, end),
+    getVisitors(websiteId, hostname, window.startDate, endDate),
+    getWeeklyVisitors(websiteId, hostname, window.startDate, endDate),
+  ]);
 
-  const internalUsers = new Set(events.filter(e => e.isInternal).map(e => e.userId));
   const resolved = resolveTrialStarts(occurrences, expiresRows, trialSettings, now);
   const cohort: CohortUser[] = [...resolved.starts]
     .filter(
-      ([userId, { start: s }]) =>
-        s >= window.startDate && s < window.endDate && !internalUsers.has(userId),
+      ([id, s]) => s.start >= window.startDate && s.start < window.endDate && !internal.has(id),
     )
-    .map(([userId, { start: trialStart }]) => ({ userId, trialStart }));
+    .map(([userId, s]) => ({ userId, trialStart: s.start }));
 
-  const revenueEvents = events.filter(e => !e.isInternal);
-  const users = buildUserRevenue(cohort, revenueEvents, roiSettings, fx);
+  const customers = buildCustomerRevenue(cohort, txns);
   const totalSpend = sumSpend(spendRows, start, addDays(end, 1));
-  const summary = summarizeCohort(users, totalSpend, roiSettings, now);
-  const roiWindow = roiSettings.revenueWindows[roiSettings.revenueWindows.length - 1];
+  const summary = summarizeFunnel(
+    customers,
+    totalSpend,
+    visitors,
+    trialSettings.trialLengthDays,
+    now,
+  );
   const target = targetRevenueUsd ?? roiSettings.targetRevenueUsd;
 
   // Weekly trend by trial-start week (Monday, reporting time zone).
-  const weeks = new Map<string, typeof users>();
-  for (const u of users) {
-    const week = getWeekStart(u.trialStart, REPORTING_TIMEZONE);
-    if (!weeks.has(week)) weeks.set(week, []);
-    weeks.get(week).push(u);
-  }
+  const weeks = new Map<string, typeof customers>();
   for (let w = getWeekStart(window.startDate, REPORTING_TIMEZONE); w <= end; w = addDays(w, 7)) {
-    if (!weeks.has(w)) weeks.set(w, []);
+    weeks.set(w, []);
+  }
+  for (const c of customers) {
+    const week = getWeekStart(c.trialStart, REPORTING_TIMEZONE);
+    if (!weeks.has(week)) weeks.set(week, []);
+    weeks.get(week).push(c);
   }
   const weekly = [...weeks.keys()].sort().map(week => {
-    const weekUsers = weeks.get(week);
     const spend = sumSpend(spendRows, week < start ? start : week, addDays(week, 7));
-    const s = summarizeCohort(weekUsers, spend, roiSettings, now);
+    const s = summarizeFunnel(
+      weeks.get(week),
+      spend,
+      weeklyVisitors.get(week) ?? 0,
+      trialSettings.trialLengthDays,
+      now,
+    );
     return {
       week,
       spendUsd: s.spendUsd,
+      visitors: s.visitors,
       trialStarts: s.trialStarts,
       payingCustomers: s.payingCustomers,
-      revenue: s.revenue,
+      netRevenue: s.netRevenue,
       roas: s.roas,
-      immature: +now - Date.parse(`${addDays(week, 7)}T00:00:00Z`) < roiWindow * DAY_MS,
+      immature: s.immature,
     };
   });
 
-  // Spend by channel and campaign (spend side only until attribution lands).
+  // Spend by channel and campaign.
   const byCampaign = new Map<string, any>();
   for (const r of spendRows) {
     const key = `${r.channel}|${r.campaignId}`;
-    const row =
-      byCampaign.get(key) ??
-      byCampaign
-        .set(key, {
-          channel: r.channel,
-          campaignId: r.campaignId,
-          campaignName: r.campaignName,
-          spendUsd: 0,
-          impressions: 0,
-          clicks: 0,
-        })
-        .get(key);
+    if (!byCampaign.has(key)) {
+      byCampaign.set(key, {
+        channel: r.channel,
+        campaignId: r.campaignId,
+        campaignName: r.campaignName,
+        spendUsd: 0,
+        impressions: 0,
+        clicks: 0,
+      });
+    }
+    const row = byCampaign.get(key);
     row.spendUsd = Math.round((row.spendUsd + (r.spendUsd ?? 0)) * 100) / 100;
     row.impressions += r.impressions;
     row.clicks += r.clicks;
   }
 
-  const spendFxGaps = spendRows.filter(r => r.spendUsd === null && r.spend > 0).length;
+  // All money in during the period, from every customer (not just this funnel).
+  const stripeCash = sumCashIn(txns, window.startDate, endDate, 'stripe');
+  const revenuecatProceeds = await getRcProceedsCached(start, end);
+  const unmatched = txns.filter(t => !t.userId && t.source === 'stripe').length;
 
   return {
     window,
     settings: roiSettings,
-    roiWindow,
+    hostname,
+    trialLengthDays: trialSettings.trialLengthDays,
     summary,
     headline: {
       roas: summary.roas,
@@ -178,7 +198,15 @@ async function relationalQuery(
       spendNeededUsd: spendNeededFor(target, summary.roas),
       immature: summary.immature,
     },
-    ltv: estimateLtv(revenueEvents, cancellations, roiSettings, fx, now),
+    cashIn: {
+      stripeNet: stripeCash.net,
+      stripeGross: stripeCash.gross,
+      revenuecatProceeds,
+      total:
+        revenuecatProceeds === null
+          ? null
+          : Math.round((stripeCash.net + revenuecatProceeds) * 100) / 100,
+    },
     weekly,
     campaigns: [...byCampaign.values()].sort((a, b) => b.spendUsd - a.spendUsd),
     health: {
@@ -189,64 +217,82 @@ async function relationalQuery(
         lastMessage: s.last?.status === 'error' ? s.last?.message : null,
         lastSuccessAt: s.lastSuccess?.finishedAt ?? null,
       })),
-      revenueFxGaps: summary.missingFx,
-      spendFxGaps,
-      revenueTrackingStart: revenueStarted ? revenueStarted.toISOString() : null,
+      spendFxGaps: spendRows.filter(r => r.spendUsd === null && r.spend > 0).length,
       spendRows: spendRows.length,
-      // Click attribution isn't captured yet; filled in by the attribution steps.
-      attributedShare: null as number | null,
-      iosMatchRate: null as number | null,
+      revenueRows: txns.length,
+      unmatchedStripeRows: unmatched,
     },
   };
 }
 
-const NUM = (key: string) => `max(case when d.data_key = '${key}' then
-  coalesce(d.number_value, case when d.string_value ~ '^-?[0-9.]+$' then d.string_value::numeric end) end)`;
-const STR = (key: string) => `max(case when d.data_key = '${key}' then d.string_value end)`;
-
-async function getRevenueEvents(
-  websiteId: string,
-): Promise<(RevenueEvent & { isInternal: boolean })[]> {
-  const rows = await prisma.rawQuery(
-    `
-    select e.event_name as "eventName", e.created_at as "createdAt",
-      ${STR('user_id')} as "userId",
-      ${NUM('revenue')} as revenue,
-      ${STR('currency')} as currency,
-      ${NUM('price_usd')} as "priceUsd",
-      ${STR('provider')} as provider,
-      coalesce(bool_or(d.data_key = 'is_internal' and d.string_value = 'true'), false) as "isInternal"
-    from website_event e
-    join event_data d on d.website_event_id = e.event_id
-    where e.website_id = {{websiteId::uuid}}
-      and e.event_name in ('subscription_started', 'subscription_renewed')
-    group by e.event_id, e.event_name, e.created_at
-    `,
-    { websiteId },
-    'getRoiRevenueEvents',
-  );
-
-  return rows
-    .filter((r: any) => r.userId)
-    .map((r: any) => ({
-      ...r,
-      revenue: r.revenue === null ? null : Number(r.revenue),
-      priceUsd: r.priceUsd === null ? null : Number(r.priceUsd),
-    }));
+// RevenueCat's metrics endpoint allows 25 requests/min; cache per range briefly.
+const rcCache = new Map<string, { at: number; value: number | null }>();
+async function getRcProceedsCached(start: string, end: string) {
+  const key = process.env.REVENUECAT_API_KEY;
+  const projectId = process.env.REVENUECAT_PROJECT_ID;
+  if (!key || !projectId) return null;
+  const cacheKey = `${start}|${end}`;
+  const hit = rcCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.value;
+  try {
+    const value = await fetchRcProceeds(start, end, { key, projectId });
+    rcCache.set(cacheKey, { at: Date.now(), value });
+    return value;
+  } catch {
+    return null;
+  }
 }
 
-async function getCancellations(websiteId: string) {
-  return prisma.rawQuery(
+async function getInternalUsers(websiteId: string): Promise<Set<string>> {
+  const rows = await prisma.rawQuery(
     `
-    select e.created_at as "createdAt", ${STR('user_id')} as "userId"
-    from website_event e
-    join event_data d on d.website_event_id = e.event_id
-    where e.website_id = {{websiteId::uuid}} and e.event_name = 'subscription_canceled'
-    group by e.event_id, e.created_at
+    select distinct u.string_value as "userId"
+    from event_data i
+    join event_data u on u.website_event_id = i.website_event_id and u.data_key = 'user_id'
+    where i.website_id = {{websiteId::uuid}}
+      and i.data_key = 'is_internal' and i.string_value = 'true'
     `,
     { websiteId },
-    'getRoiCancellations',
+    'getRoiInternalUsers',
   );
+  return new Set(rows.map((r: any) => r.userId).filter(Boolean));
+}
+
+async function getVisitors(websiteId: string, hostname: string, startDate: Date, endDate: Date) {
+  const rows = await prisma.rawQuery(
+    `
+    select count(distinct session_id)::int as n
+    from website_event
+    where website_id = {{websiteId::uuid}}
+      and hostname = {{hostname}}
+      and created_at between {{startDate}} and {{endDate}}
+    `,
+    { websiteId, hostname, startDate, endDate },
+    'getRoiVisitors',
+  );
+  return Number(rows[0]?.n ?? 0);
+}
+
+async function getWeeklyVisitors(
+  websiteId: string,
+  hostname: string,
+  startDate: Date,
+  endDate: Date,
+) {
+  const rows = await prisma.rawQuery(
+    `
+    select to_char(date_trunc('week', created_at at time zone '${REPORTING_TIMEZONE}'), 'YYYY-MM-DD') as week,
+      count(distinct session_id)::int as n
+    from website_event
+    where website_id = {{websiteId::uuid}}
+      and hostname = {{hostname}}
+      and created_at between {{startDate}} and {{endDate}}
+    group by 1
+    `,
+    { websiteId, hostname, startDate, endDate },
+    'getRoiWeeklyVisitors',
+  );
+  return new Map<string, number>(rows.map((r: any) => [r.week, Number(r.n)]));
 }
 
 async function getSpendDays(websiteId: string, start: string, end: string): Promise<SpendDay[]> {

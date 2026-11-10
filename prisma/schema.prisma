@@ -87,6 +87,7 @@ model Website {
   settings    WebsiteSetting[]
   adSpend     AdSpend[]
   adSyncRuns  AdSyncRun[]
+  revenueTxns RevenueTxn[]
   sessionData SessionData[]
 
   @@index([userId])
@@ -412,4 +413,36 @@ model AdSyncRun {
 
   @@index([websiteId, source, startedAt])
   @@map("ad_sync_run")
+}
+
+/// Money from the payment providers themselves: Stripe charges/refunds/disputes
+/// (with Stripe's actual fee and net) and RevenueCat subscriptions/purchases
+/// (gross, store commission + tax, proceeds). Amounts are USD; refunds are negative.
+model RevenueTxn {
+  id          String   @id() @unique() @map("revenue_txn_id") @db.Uuid
+  websiteId   String   @map("website_id") @db.Uuid
+  /// 'stripe' | 'revenuecat'
+  source      String   @db.VarChar(20)
+  externalId  String   @map("external_id") @db.VarChar(200)
+  /// 'payment' | 'refund' | 'dispute' | 'subscription' (RevenueCat cumulative)
+  kind        String   @db.VarChar(20)
+  /// Supabase profile user_id (same id as Umami's user_id event property)
+  userId      String?  @map("user_id") @db.VarChar(100)
+  customerRef String?  @map("customer_ref") @db.VarChar(200)
+  occurredAt  DateTime @map("occurred_at") @db.Timestamptz(6)
+  currency    String   @db.VarChar(3)
+  amount      Decimal  @db.Decimal(14, 4)
+  grossUsd    Decimal? @map("gross_usd") @db.Decimal(14, 4)
+  feeUsd      Decimal? @map("fee_usd") @db.Decimal(14, 4)
+  netUsd      Decimal? @map("net_usd") @db.Decimal(14, 4)
+  product     String?  @db.VarChar(200)
+  refunded    Boolean  @default(false)
+  syncedAt    DateTime @map("synced_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, source, externalId])
+  @@index([websiteId, occurredAt])
+  @@index([websiteId, userId])
+  @@map("revenue_txn")
 }

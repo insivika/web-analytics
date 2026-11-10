@@ -154,3 +154,57 @@ Preview deployments of `web-analytics` get the same env vars if they're set for
 **Preview**. Run **Sync Meta now** on the preview URL. For Google, point a copy of
 the script's `ENDPOINT` at the preview URL and run **Preview**. Vercel Cron only
 runs on Production.
+
+
+## Revenue from Stripe and RevenueCat
+
+The ROI page compares ad spend with the money that actually came in: ad spend →
+website visitors (sessions on `www.cashflowcalendar.app`) → trial starts →
+paying customers → their revenue to date. Revenue comes straight from Stripe
+(charges, refunds, disputes, with the fees Stripe booked) and RevenueCat
+(subscription and purchase revenue after store commission and tax). Nothing is
+estimated from prices or fee rates.
+
+Users are matched through a read-only Supabase view: Stripe `customer.metadata.user_id`
+(Supabase id or older Firebase uid) or `stripe_customer_id`, and the RevenueCat
+customer id (= Firebase uid), resolve to the Supabase `user_id` that Umami events carry.
+
+### 1. Supabase read-only role
+
+1. Open `scripts/supabase/roi-readonly.sql`, replace `CHANGE_ME` with a long random
+   password (only in the SQL editor, not in the file), run it in Supabase → SQL editor.
+2. Connection string: Supabase → Connect → Session pooler (IPv4). Swap the user for
+   `roi_reader.<project-ref>` and the password for the one you set.
+   That is `SUPABASE_READONLY_DATABASE_URL`.
+
+### 2. Stripe restricted key (read-only)
+
+Stripe Dashboard → Developers → API keys → Create restricted key → "Building your own
+integration". Set **Read** for: Charges, Refunds, Disputes, Customers, Balance
+transactions (shown as "Balance"). Everything else stays **None**. Name it
+`umami-roi-readonly`. That is `STRIPE_RESTRICTED_KEY` (`rk_live_…`).
+
+### 3. RevenueCat API v2 key (read-only)
+
+RevenueCat → Project settings → API keys → + New secret API key → version **V2**.
+Set Read only for: Customer information (customers, subscriptions, purchases) and
+Charts & metrics. Everything else No access. That is `REVENUECAT_API_KEY`
+(`sk_…`). `REVENUECAT_PROJECT_ID` is the `proj…` id in the dashboard URL.
+
+### 4. Vercel env vars (Production and Preview), then redeploy
+
+| Name | Value |
+|---|---|
+| `SUPABASE_READONLY_DATABASE_URL` | step 1 |
+| `STRIPE_RESTRICTED_KEY` | step 2 |
+| `REVENUECAT_API_KEY` | step 3 |
+| `REVENUECAT_PROJECT_ID` | step 3 |
+| `ROI_MARKETING_HOSTNAME` | optional, default `www.cashflowcalendar.app` |
+| `SUPABASE_CA_CERT` | optional, only if the TLS check fails (PEM from Supabase → Database → SSL) |
+
+### 5. First sync
+
+ROI page → Data health → **Backfill revenue (2 years)** once. After that the nightly
+cron refreshes Stripe (last 14 days) and RevenueCat (newest trial starters every
+night, older ones in rotation). Check against Stripe (Balance → Net volume) and
+RevenueCat (Charts → Revenue, proceeds) for the same dates.

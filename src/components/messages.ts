@@ -499,6 +499,46 @@ export const labels = defineMessages({
   dataHealth: { id: 'label.data-health', defaultMessage: 'Data health' },
   syncNow: { id: 'label.sync-now', defaultMessage: 'Sync Meta now' },
   backfill180: { id: 'label.backfill-180', defaultMessage: 'Backfill 180 days' },
+  websiteVisitors: {
+    id: 'label.website-visitors',
+    defaultMessage: 'Website visitors',
+  },
+  netRevenueToDate: {
+    id: 'label.net-revenue-to-date',
+    defaultMessage: 'Net revenue to date',
+  },
+  grossRevenue: {
+    id: 'label.gross-revenue',
+    defaultMessage: 'Gross revenue',
+  },
+  feesAndCommission: {
+    id: 'label.fees-and-commission',
+    defaultMessage: 'Fees, commission & tax',
+  },
+  costPerVisitor: {
+    id: 'label.cost-per-visitor',
+    defaultMessage: 'Cost per visitor',
+  },
+  cashIn: {
+    id: 'label.cash-in',
+    defaultMessage: 'All money in this period',
+  },
+  marketingFunnel: {
+    id: 'label.marketing-funnel',
+    defaultMessage: 'Marketing funnel',
+  },
+  syncRevenue: {
+    id: 'label.sync-revenue',
+    defaultMessage: 'Sync revenue now',
+  },
+  backfillRevenue: {
+    id: 'label.backfill-revenue',
+    defaultMessage: 'Backfill revenue (2 years)',
+  },
+  revenuePerCustomer: {
+    id: 'label.revenue-per-customer',
+    defaultMessage: 'Net revenue per customer',
+  },
 });
 
 export const messages = defineMessages({
@@ -775,6 +815,50 @@ export const messages = defineMessages({
   },
   roiSyncError: { id: 'message.roi-sync-error', defaultMessage: 'Last sync failed: {message}' },
   roiLastSync: { id: 'message.roi-last-sync', defaultMessage: 'Last successful sync: {date}' },
+  roiFunnelHeadline: {
+    id: 'message.roi-funnel-headline',
+    defaultMessage:
+      'Last {days} days: {spend} on ads, {visitors} website visitors, {trials} trials, {customers} paying customers, {revenue} net revenue from them so far.',
+  },
+  roiReturn: {
+    id: 'message.roi-return',
+    defaultMessage: 'Every $1 of ad spend has brought back {roas} so far.',
+  },
+  roiStillRunning: {
+    id: 'message.roi-still-running',
+    defaultMessage:
+      '{n} of these trials are still running, so customers and revenue will still grow.',
+  },
+  roiOfVisitors: {
+    id: 'message.roi-of-visitors',
+    defaultMessage: '{rate} of visitors',
+  },
+  roiOfCompletedTrials: {
+    id: 'message.roi-of-completed-trials',
+    defaultMessage: '{rate} of {n} completed trials',
+  },
+  roiCashInNote: {
+    id: 'message.roi-cash-in-note',
+    defaultMessage:
+      'Stripe net {stripe} + RevenueCat proceeds {revenuecat}, from all customers, not only this funnel.',
+  },
+  roiRevenueSource: {
+    id: 'message.roi-revenue-source',
+    defaultMessage:
+      'Revenue is what Stripe and RevenueCat actually booked: after Stripe fees, store commission and tax, minus refunds and chargebacks.',
+  },
+  roiUnmatched: {
+    id: 'message.roi-unmatched',
+    defaultMessage: '{n} Stripe transactions not matched to a user',
+  },
+  roiSpendFxGaps: {
+    id: 'message.roi-spend-fx-gaps',
+    defaultMessage: '{n} spend rows without an FX rate',
+  },
+  roiSessionsOn: {
+    id: 'message.roi-sessions-on',
+    defaultMessage: 'Sessions on {hostname}',
+  },
   roiRevenueSince: {
     id: 'message.roi-revenue-since',
     defaultMessage: 'Revenue events since {date}',

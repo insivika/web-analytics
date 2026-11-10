@@ -7,10 +7,6 @@ import { getWebsiteSetting, setWebsiteSetting } from '@/queries/prisma';
 
 const schema = z
   .object({
-    revenueWindows: z.array(z.coerce.number().int().min(1).max(730)).min(1).max(5),
-    storeFeeRate: z.coerce.number().min(0).max(0.5),
-    stripeFeeRate: z.coerce.number().min(0).max(0.2),
-    stripeFeeFixedUsd: z.coerce.number().min(0).max(5),
     targetRevenueUsd: z.coerce.number().min(1).max(10_000_000),
   })
   .partial();

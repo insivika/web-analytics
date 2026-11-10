@@ -171,6 +171,12 @@
       "value": "Backfill 180 days"
     }
   ],
+  "label.backfill-revenue": [
+    {
+      "type": 0,
+      "value": "Backfill revenue (2 years)"
+    }
+  ],
   "label.before": [
     {
       "type": 0,
@@ -241,6 +247,12 @@
     {
       "type": 0,
       "value": "Cancel"
+    }
+  ],
+  "label.cash-in": [
+    {
+      "type": 0,
+      "value": "All money in this period"
     }
   ],
   "label.change-password": [
@@ -399,6 +411,12 @@
     {
       "type": 0,
       "value": "Cost per trial"
+    }
+  ],
+  "label.cost-per-visitor": [
+    {
+      "type": 0,
+      "value": "Cost per visitor"
     }
   ],
   "label.count": [
@@ -767,6 +785,12 @@
       "value": "False"
     }
   ],
+  "label.fees-and-commission": [
+    {
+      "type": 0,
+      "value": "Fees, commission & tax"
+    }
+  ],
   "label.field": [
     {
       "type": 0,
@@ -861,6 +885,12 @@
     {
       "type": 0,
       "value": "Greater than or equals"
+    }
+  ],
+  "label.gross-revenue": [
+    {
+      "type": 0,
+      "value": "Gross revenue"
     }
   ],
   "label.grouped": [
@@ -1123,6 +1153,12 @@
       "value": "Manager"
     }
   ],
+  "label.marketing-funnel": [
+    {
+      "type": 0,
+      "value": "Marketing funnel"
+    }
+  ],
   "label.max": [
     {
       "type": 0,
@@ -1211,6 +1247,12 @@
     {
       "type": 0,
       "value": "Name"
+    }
+  ],
+  "label.net-revenue-to-date": [
+    {
+      "type": 0,
+      "value": "Net revenue to date"
     }
   ],
   "label.net-revenue-window": [
@@ -1715,6 +1757,12 @@
       "value": "Look into your revenue data and how users are spending."
     }
   ],
+  "label.revenue-per-customer": [
+    {
+      "type": 0,
+      "value": "Net revenue per customer"
+    }
+  ],
   "label.roi": [
     {
       "type": 0,
@@ -1905,6 +1953,12 @@
     {
       "type": 0,
       "value": "Sync Meta now"
+    }
+  ],
+  "label.sync-revenue": [
+    {
+      "type": 0,
+      "value": "Sync revenue now"
     }
   ],
   "label.tablet": [
@@ -2313,6 +2367,12 @@
     {
       "type": 0,
       "value": "Website ID"
+    }
+  ],
+  "label.website-visitors": [
+    {
+      "type": 0,
+      "value": "Website visitors"
     }
   ],
   "label.websites": [
@@ -2839,6 +2899,82 @@
       "value": "All trial starts, attributed or not"
     }
   ],
+  "message.roi-cash-in-note": [
+    {
+      "type": 0,
+      "value": "Stripe net "
+    },
+    {
+      "type": 1,
+      "value": "stripe"
+    },
+    {
+      "type": 0,
+      "value": " + RevenueCat proceeds "
+    },
+    {
+      "type": 1,
+      "value": "revenuecat"
+    },
+    {
+      "type": 0,
+      "value": ", from all customers, not only this funnel."
+    }
+  ],
+  "message.roi-funnel-headline": [
+    {
+      "type": 0,
+      "value": "Last "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days: "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " on ads, "
+    },
+    {
+      "type": 1,
+      "value": "visitors"
+    },
+    {
+      "type": 0,
+      "value": " website visitors, "
+    },
+    {
+      "type": 1,
+      "value": "trials"
+    },
+    {
+      "type": 0,
+      "value": " trials, "
+    },
+    {
+      "type": 1,
+      "value": "customers"
+    },
+    {
+      "type": 0,
+      "value": " paying customers, "
+    },
+    {
+      "type": 1,
+      "value": "revenue"
+    },
+    {
+      "type": 0,
+      "value": " net revenue from them so far."
+    }
+  ],
   "message.roi-fx-gaps": [
     {
       "type": 0,
@@ -2995,6 +3131,48 @@
       "value": "No ad spend synced for this period yet."
     }
   ],
+  "message.roi-of-completed-trials": [
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " of "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " completed trials"
+    }
+  ],
+  "message.roi-of-visitors": [
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " of visitors"
+    }
+  ],
+  "message.roi-return": [
+    {
+      "type": 0,
+      "value": "Every $1 of ad spend has brought back "
+    },
+    {
+      "type": 1,
+      "value": "roas"
+    },
+    {
+      "type": 0,
+      "value": " so far."
+    }
+  ],
   "message.roi-revenue-since": [
     {
       "type": 0,
@@ -3003,6 +3181,32 @@
     {
       "type": 1,
       "value": "date"
+    }
+  ],
+  "message.roi-revenue-source": [
+    {
+      "type": 0,
+      "value": "Revenue is what Stripe and RevenueCat actually booked: after Stripe fees, store commission and tax, minus refunds and chargebacks."
+    }
+  ],
+  "message.roi-sessions-on": [
+    {
+      "type": 0,
+      "value": "Sessions on "
+    },
+    {
+      "type": 1,
+      "value": "hostname"
+    }
+  ],
+  "message.roi-spend-fx-gaps": [
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " spend rows without an FX rate"
     }
   ],
   "message.roi-spend-needed": [
@@ -3027,6 +3231,16 @@
       "value": " at current efficiency."
     }
   ],
+  "message.roi-still-running": [
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " of these trials are still running, so customers and revenue will still grow."
+    }
+  ],
   "message.roi-sync-error": [
     {
       "type": 0,
@@ -3035,6 +3249,16 @@
     {
       "type": 1,
       "value": "message"
+    }
+  ],
+  "message.roi-unmatched": [
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " Stripe transactions not matched to a user"
     }
   ],
   "message.saved": [
