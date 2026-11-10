@@ -13,6 +13,8 @@ import {
   detectTrialStarts,
   filterTrialUsers,
   getCohortStart,
+  getMilestoneTrackingSince,
+  getStartsTrackingStart,
   getWeekStart,
   HOUR_MS,
   normalizeTrialSettings,
@@ -719,5 +721,101 @@ describe('per-metric tracking start', () => {
     expect(oct12.pushOptIn).toBeNull();
     expect(nov2.beforeTracking.pushOptIn).toBe(true);
     expect(rows.find(r => r.weekStart === '2026-11-09').beforeTracking.pushOptIn).toBe(false);
+  });
+});
+
+describe('tracking dates for starts and sections', () => {
+  test('starts are tracked from the first UTC week with at least 5 starts', () => {
+    const trickle = [new Date('2026-08-04T10:00:00Z'), new Date('2026-08-20T10:00:00Z')];
+    const busyWeek = [10, 11, 12, 13, 14].map(d => new Date(`2026-09-${d}T10:00:00Z`));
+
+    // Week of Mon Sep 7 has 1 start (Sep 10-13 are Thu-Sun); Sep 14 week gets the 5th.
+    expect(getStartsTrackingStart([...trickle, ...busyWeek])).toBeNull();
+    expect(
+      getStartsTrackingStart([
+        ...trickle,
+        ...busyWeek,
+        ...[15, 16, 17, 18, 19].map(d => new Date(`2026-09-${d}T10:00:00Z`)),
+      ]),
+    ).toEqual(new Date('2026-09-14T00:00:00Z'));
+  });
+
+  test('the starts comparison uses the volume-based date; rates keep event dates', () => {
+    const previous = { startDate: daysAgo(28), endDate: daysAgo(14) };
+    const stats = allStats(daysAgo(60));
+    const result = computeComparisons(
+      settings,
+      stats,
+      previous,
+      daysAgo(60),
+      daysAgo(60),
+      daysAgo(20),
+    );
+
+    expect(result.starts).toEqual({ available: false, trackingStart: daysAgo(20).toISOString() });
+    expect(result.activated.available).toBe(true);
+    expect(
+      computeComparisons(settings, stats, previous, daysAgo(60), daysAgo(60), null).starts,
+    ).toEqual({
+      available: false,
+      trackingStart: null,
+    });
+  });
+
+  test('journey milestones only count trials started after their own events were tracked', () => {
+    const stats = allStats(daysAgo(60)).map(s =>
+      s.eventName === 'first_calendar_opened' ? { ...s, firstSeen: daysAgo(4) } : s,
+    );
+    const trackingSince = {
+      activated: daysAgo(60).toISOString(),
+      active2: daysAgo(60).toISOString(),
+      active3: daysAgo(60).toISOString(),
+      pushOptIn: null,
+      converted: daysAgo(50).toISOString(),
+    };
+    const stepSince = getMilestoneTrackingSince(settings, stats, trackingSince);
+
+    expect(stepSince[0]).toBe(daysAgo(4).toISOString());
+    expect(stepSince[5]).toBe(daysAgo(50).toISOString()); // conversion step
+
+    const users = build(
+      new Map([
+        ['old', daysAgo(8)],
+        ['new', daysAgo(2)],
+      ]),
+      [
+        { userId: 'old', eventName: 'first_calendar_opened', day: 0, count: 1 },
+        { userId: 'new', eventName: 'first_calendar_opened', day: 0, count: 1 },
+      ],
+    );
+    const [first, second] = computeFunnel(users, settings, stepSince);
+
+    expect(first).toMatchObject({ n: 1, reached: 1, pct: 100, since: daysAgo(4).toISOString() });
+    expect(second).toMatchObject({ n: 2, reached: 0 });
+  });
+
+  test('daily active curve and histogram skip trials before the active-day event existed', () => {
+    const stats = allStats(daysAgo(60)).map(s =>
+      s.eventName === settings.activeDayEvent ? { ...s, firstSeen: daysAgo(5) } : s,
+    );
+    const report = computeTrialReport({
+      occurrences: [
+        { userId: 'before', createdAt: daysAgo(8) },
+        { userId: 'after', createdAt: daysAgo(3) },
+      ],
+      activity: [...active('before', 0, 1, 2), ...active('after', 0)],
+      attributes: [],
+      conversions: [],
+      eventStats: stats,
+      settings,
+      window,
+      filters: {},
+      now,
+    });
+
+    expect(report.activeDays).toEqual({ since: daysAgo(5).toISOString(), n: 1 });
+    expect(report.dailyActive[0]).toMatchObject({ active: 1, eligible: 1 });
+    expect(report.histogram.buckets[0].users).toBe(1);
+    expect(report.histogram.buckets[2].users).toBe(0);
   });
 });

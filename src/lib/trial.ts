@@ -13,6 +13,13 @@ export const HOUR_MS = 60 * 60 * 1000;
 /** Weekly cohort table always shows this many signup weeks. */
 export const COHORT_WEEKS = 8;
 
+/**
+ * Trial starts count as tracked from the first week (UTC, Monday) with at least
+ * this many starts, so a trickle of early or backfilled starts doesn't make the
+ * previous window look empty.
+ */
+export const MIN_WEEKLY_STARTS_FOR_TRACKING = 5;
+
 /** Daily active points with fewer eligible users than this are shown greyed out. */
 export const MIN_DAILY_ACTIVE_USERS = 10;
 
@@ -353,6 +360,20 @@ export function resolveTrialStarts(
   }
 
   return { starts, retrials, lateAttached, firstTrialStart };
+}
+
+/** Monday (UTC) of the first week with at least MIN_WEEKLY_STARTS_FOR_TRACKING starts. */
+export function getStartsTrackingStart(starts: Iterable<Date>): Date | null {
+  const weeks = new Map<string, number>();
+  for (const start of starts) {
+    const week = getWeekStart(start, 'UTC');
+    weeks.set(week, (weeks.get(week) ?? 0) + 1);
+  }
+  const first = [...weeks]
+    .filter(([, count]) => count >= MIN_WEEKLY_STARTS_FOR_TRACKING)
+    .map(([week]) => week)
+    .sort()[0];
+  return first ? new Date(`${first}T00:00:00Z`) : null;
 }
 
 /** Resolved starts that fall in [startDate, endDate). */
@@ -701,6 +722,12 @@ export function computeComparisons(
   conversionPropertyFirstSeen?: Date | string | null,
   /** First time the trial expiry property was recorded (trialExpiresAt mode). */
   trialExpiresFirstSeen?: Date | string | null,
+  /**
+   * When trial starts are considered tracked (first week with enough starts).
+   * Only affects the Trial starts comparison; rates keep using when the start
+   * event/property was first recorded, so low-volume sites still get rates.
+   */
+  startsTrackingStart?: Date | string | null,
 ): Record<TrialKpiKey, TrialComparison> {
   const firstSeen = new Map(
     stats.filter(s => s.firstSeen).map(s => [s.eventName, +new Date(s.firstSeen)]),
@@ -726,6 +753,10 @@ export function computeComparisons(
       trackingStart: new Date(trackingStart).toISOString(),
     };
   };
+  const STARTS = '\u0000starts';
+  if (startsTrackingStart) {
+    firstSeen.set(STARTS, +new Date(startsTrackingStart));
+  }
   // Trial starts come from the expiry property or (fallback) the start event.
   const start =
     settings.trialStartMode === 'trialExpiresAt'
@@ -733,7 +764,7 @@ export function computeComparisons(
       : [settings.trialStartEvent];
 
   return {
-    starts: compare(start),
+    starts: startsTrackingStart !== undefined ? compare([STARTS]) : compare(start),
     activated: compare(start, [settings.activationEvent]),
     active2: compare(start, [settings.activeDayEvent]),
     active3: compare(start, [settings.activeDayEvent]),
@@ -748,6 +779,10 @@ export function computeComparisons(
 
 export interface TrialFunnelStep {
   events: string[];
+  /** Only trials starting on/after this date count (null = never tracked). */
+  since: string | null;
+  /** Trial starters the step is computed over. */
+  n: number;
   /** Users who reached this milestone during the trial, in any order. */
   reached: number;
   pct: number;
@@ -762,19 +797,58 @@ const median = (values: number[]) => {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-export function computeFunnel(users: TrialUser[], settings: TrialSettings): TrialFunnelStep[] {
+export function computeFunnel(
+  users: TrialUser[],
+  settings: TrialSettings,
+  /** Per milestone: only trials starting on/after this date count. */
+  stepSince?: (string | null)[],
+): TrialFunnelStep[] {
   return settings.milestones.map((events, index) => {
-    const reached = users.filter(u => u.milestones[index]);
+    const since = stepSince ? (stepSince[index] ?? null) : null;
+    const eligible = !stepSince
+      ? users
+      : since === null
+        ? []
+        : users.filter(u => u.trialStart >= since);
+    const reached = eligible.filter(u => u.milestones[index]);
     const hours = reached
       .map(u => u.milestoneHours[index])
       .filter((h): h is number => h !== null && h !== undefined);
 
     return {
       events,
+      since,
+      n: eligible.length,
       reached: reached.length,
-      pct: pct(reached.length, users.length),
+      pct: pct(reached.length, eligible.length),
       medianHours: median(hours),
     };
+  });
+}
+
+/**
+ * Tracking date per milestone: the earliest first-seen date of the step's events
+ * (a conversion-only step uses the conversion KPI's date).
+ */
+export function getMilestoneTrackingSince(
+  settings: TrialSettings,
+  stats: TrialEventStat[],
+  trackingSince: TrialTrackingSince,
+): (string | null)[] {
+  const firstSeen = new Map(
+    stats.filter(s => s.firstSeen).map(s => [s.eventName, new Date(s.firstSeen).toISOString()]),
+  );
+  const isConversionStep = (step: string[]) =>
+    step.length > 0 && step.every(name => settings.conversionEvents.includes(name));
+
+  return settings.milestones.map(step => {
+    if (isConversionStep(step)) return trackingSince.converted;
+    return (
+      step
+        .map(name => firstSeen.get(name))
+        .filter(Boolean)
+        .sort()[0] ?? null
+    );
   });
 }
 
@@ -965,6 +1039,8 @@ export interface TrialReport {
   comparisons: Record<TrialKpiKey, TrialComparison>;
   funnel: TrialFunnelStep[];
   dailyActive: TrialDailyActivePoint[];
+  /** Daily active curve and histogram only cover trials started since this date. */
+  activeDays: { since: string | null; n: number };
   histogram: ReturnType<typeof computeActiveDaysHistogram>;
   cohorts: TrialCohortRow[];
   users: TrialUser[];
@@ -1036,12 +1112,16 @@ export function computeTrialReport({
 }): TrialReport {
   const previousWindow = getPreviousWindow(window);
   const resolved = resolveTrialStarts(occurrences, expiresRows, settings, now);
+  const startsTracking = getStartsTrackingStart(
+    [...resolved.starts.values()].map(({ start }) => start),
+  );
   const comparisons = computeComparisons(
     settings,
     eventStats,
     previousWindow,
     conversionPropertyFirstSeen,
     trialExpiresFirstSeen,
+    startsTracking,
   );
   // A rate only counts trials that started once its events were being recorded.
   const trackingSince: TrialTrackingSince = {
@@ -1069,6 +1149,10 @@ export function computeTrialReport({
   const currentAll = allUsers.filter(u => inWindow(u, window));
   const current = visible.filter(u => inWindow(u, window));
   const previous = visible.filter(u => inWindow(u, previousWindow));
+  // Daily active curve and histogram: only trials started once the active-day event was tracked.
+  const activeDaySince = trackingSince.active2;
+  const activeDayUsers =
+    activeDaySince === null ? [] : current.filter(u => u.trialStart >= activeDaySince);
 
   return {
     settings,
@@ -1078,9 +1162,14 @@ export function computeTrialReport({
     previousKpis: computeKpis(previous, trackingSince),
     comparisons,
     trackingSince,
-    funnel: computeFunnel(current, settings),
-    dailyActive: computeDailyActive(current, activity, settings, now),
-    histogram: computeActiveDaysHistogram(current, settings),
+    funnel: computeFunnel(
+      current,
+      settings,
+      getMilestoneTrackingSince(settings, eventStats, trackingSince),
+    ),
+    dailyActive: computeDailyActive(activeDayUsers, activity, settings, now),
+    activeDays: { since: trackingSince.active2, n: activeDayUsers.length },
+    histogram: computeActiveDaysHistogram(activeDayUsers, settings),
     cohorts: computeWeeklyCohorts(
       visible,
       settings,

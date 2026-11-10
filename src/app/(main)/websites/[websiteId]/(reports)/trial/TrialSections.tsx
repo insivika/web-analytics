@@ -24,6 +24,28 @@ export function formatDuration(hours: number | null) {
   return `${(hours / 24).toFixed(1)} d`;
 }
 
+/**
+ * "Since Oct 8 · n = 83": the date only when the window reaches back before the
+ * metric's tracking date (like the KPI cards), n always.
+ */
+function useTrackingText(report: TrialReport) {
+  const { formatMessage, messages } = useMessages();
+  const { locale } = useLocale();
+  const windowStart = new Date(report.window.startDate).toISOString();
+
+  return (since: string | null, n: number) => {
+    if (since === null) return formatMessage(messages.noComparisonNoData);
+    const parts = [];
+    if (windowStart < since) {
+      parts.push(
+        formatMessage(messages.pushSince, { date: formatDate(new Date(since), 'MMM d', locale) }),
+      );
+    }
+    parts.push(formatMessage(messages.rateN, { n }));
+    return parts.join(' · ');
+  };
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Panel title={title} style={{ minWidth: 0 }}>
@@ -273,6 +295,7 @@ export function TrialKpis({ report }: { report: TrialReport }) {
 
 export function TrialFunnel({ report }: { report: TrialReport }) {
   const { formatMessage, labels } = useMessages();
+  const trackingText = useTrackingText(report);
 
   return (
     <Section title={formatMessage(labels.trialJourney)}>
@@ -284,11 +307,16 @@ export function TrialFunnel({ report }: { report: TrialReport }) {
         </Text>
         {report.funnel.map((step, index) => (
           <Fragment key={step.events.join('|')}>
-            <Text weight="bold">{`${index + 1}. ${step.events.join(' / ')}`}</Text>
+            <Column gap="0">
+              <Text weight="bold">{`${index + 1}. ${step.events.join(' / ')}`}</Text>
+              <Text color="muted" size="1">
+                {trackingText(step.since, step.n)}
+              </Text>
+            </Column>
             <Row alignItems="center" gap="3">
               <ProgressBar value={step.pct} minValue={0} maxValue={100} style={{ width: '100%' }} />
               <Text weight="bold" wrap="nowrap">
-                {`${formatPct(step.pct)} (${step.reached})`}
+                {step.n ? `${formatPct(step.pct)} (${step.reached})` : '—'}
               </Text>
             </Row>
             <Text align="right">{formatDuration(step.medianHours)}</Text>
@@ -355,11 +383,15 @@ function VerticalBars({
 
 export function TrialDailyActive({ report }: { report: TrialReport }) {
   const { formatMessage, labels, messages } = useMessages();
+  const trackingText = useTrackingText(report);
 
   return (
     <Section
       title={`${formatMessage(labels.dailyActive)} (${formatMessage(labels.trialDay)} 1–${report.settings.trialLengthDays})`}
     >
+      <Text color="muted" size="1">
+        {trackingText(report.activeDays.since, report.activeDays.n)}
+      </Text>
       <VerticalBars
         bars={report.dailyActive.map(point => ({
           key: point.day,
@@ -384,11 +416,15 @@ export function TrialDailyActive({ report }: { report: TrialReport }) {
 
 export function TrialActiveDaysHistogram({ report }: { report: TrialReport }) {
   const { formatMessage, labels, messages } = useMessages();
+  const trackingText = useTrackingText(report);
   const { buckets, noActiveDays } = report.histogram;
   const max = Math.max(...buckets.map(b => b.users), 0);
 
   return (
     <Section title={formatMessage(labels.activeDays)}>
+      <Text color="muted" size="1">
+        {trackingText(report.activeDays.since, report.activeDays.n)}
+      </Text>
       <VerticalBars
         bars={buckets.map(bucket => ({
           key: bucket.days,
