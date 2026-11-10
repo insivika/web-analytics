@@ -147,3 +147,63 @@ export async function fetchRcProceeds(
   );
   return body && Number.isFinite(Number(body.value)) ? Number(body.value) : null;
 }
+
+interface RcChartResponse {
+  values?: { cohort: number; measure: number; segment: number; value: number }[];
+  segments?: { display_name: string; is_total?: boolean }[];
+}
+
+/** Proceeds and transaction counts per month and segment from RevenueCat's revenue chart. */
+async function fetchRcRevenueChart(
+  start: string,
+  end: string,
+  segment: 'transaction_type' | 'product_duration',
+  opts: RcOptions,
+) {
+  const params = new URLSearchParams({
+    start_date: start,
+    end_date: end,
+    resolution: '2', // month
+    segment,
+    currency: 'USD',
+    selectors: JSON.stringify({ revenue_type: 'proceeds' }),
+  });
+  const body: RcChartResponse | null = await rcGet(
+    `/projects/${encodeURIComponent(opts.projectId)}/charts/revenue?${params}`,
+    opts,
+  );
+  // month (yyyy-MM, UTC) -> segment name -> { proceeds, transactions }
+  const out = new Map<string, Map<string, { proceeds: number; transactions: number }>>();
+  const names = (body?.segments ?? []).map(s => (s.is_total ? 'Total' : s.display_name));
+  for (const v of body?.values ?? []) {
+    const month = new Date(v.cohort * 1000).toISOString().slice(0, 7);
+    const name = names[v.segment] ?? String(v.segment);
+    if (!out.has(month)) out.set(month, new Map());
+    const seg = out.get(month);
+    const cell = seg.get(name) ?? { proceeds: 0, transactions: 0 };
+    if (v.measure === 0) cell.proceeds = Number(v.value) || 0;
+    if (v.measure === 1) cell.transactions = Number(v.value) || 0;
+    seg.set(name, cell);
+  }
+  return out;
+}
+
+/**
+ * App Store and Google Play money per calendar month: proceeds (after store
+ * commission and tax), the part from yearly plans, and new paying subscriptions.
+ */
+export async function fetchRcMonthly(start: string, end: string, opts: RcOptions) {
+  const [byType, byDuration] = await Promise.all([
+    fetchRcRevenueChart(start, end, 'transaction_type', opts),
+    fetchRcRevenueChart(start, end, 'product_duration', opts),
+  ]);
+  const months = new Map<string, { proceeds: number; yearly: number; newCustomers: number }>();
+  for (const [month, seg] of byType) {
+    months.set(month, {
+      proceeds: seg.get('Total')?.proceeds ?? 0,
+      newCustomers: seg.get('New')?.transactions ?? 0,
+      yearly: byDuration.get(month)?.get('P1Y')?.proceeds ?? 0,
+    });
+  }
+  return months;
+}

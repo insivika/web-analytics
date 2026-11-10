@@ -1,184 +1,164 @@
-// Marketing ROI funnel: pure computations (unit-tested).
-// Ad spend → website visitors → trial starts → paying customers → their actual
-// revenue to date. Revenue comes from Stripe and RevenueCat transactions (real
-// fees and proceeds), never from assumed prices or fee rates.
+// Marketing ROI by calendar month: pure computations (unit-tested).
+// Net income = money in (Stripe + App Store/Google Play, after fees and refunds)
+// minus ad spend (Meta + Google). Every number is per calendar month, so any
+// period on the page is just a sum of months.
 
-export const DAY_MS = 24 * 60 * 60 * 1000;
+import { formatInTimeZone } from 'date-fns-tz';
 
-export interface RoiSettings {
-  /** Default "to earn $Y" target for the headline. */
-  targetRevenueUsd: number;
-}
-
-export const DEFAULT_ROI_SETTINGS: RoiSettings = { targetRevenueUsd: 1000 };
-
-export function normalizeRoiSettings(value?: Partial<RoiSettings> | null): RoiSettings {
-  const v = (value && typeof value === 'object' ? value : {}) as Partial<RoiSettings>;
-  const t = Number(v.targetRevenueUsd);
-  return {
-    targetRevenueUsd: Number.isFinite(t)
-      ? Math.min(Math.max(t, 1), 10_000_000)
-      : DEFAULT_ROI_SETTINGS.targetRevenueUsd,
-  };
-}
-
-export const ROI_SETTINGS_KEY = 'roi';
+export const ROI_TIMEZONE = 'America/Chicago';
+export const ROI_MONTHS = 12;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** A provider transaction (see revenue_txn). Refunds/disputes carry negative amounts. */
-export interface RevenueTxnInput {
-  source: string;
+/** The last `n` calendar months (yyyy-MM), oldest first, ending with the current month. */
+export function lastMonths(n: number, now = new Date(), tz = ROI_TIMEZONE): string[] {
+  const [y, m] = formatInTimeZone(now, tz, 'yyyy-MM').split('-').map(Number);
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(Date.UTC(y, m - 1 - (n - 1 - i), 1));
+    return d.toISOString().slice(0, 7);
+  });
+}
+
+export const monthOf = (date: Date | string, tz = ROI_TIMEZONE) =>
+  formatInTimeZone(new Date(date), tz, 'yyyy-MM');
+
+/** First day of a yyyy-MM month as yyyy-MM-dd. */
+export const monthStart = (month: string) => `${month}-01`;
+
+/** Monthly prices are $5–12, yearly $54–108: anything this size or more is a yearly plan. */
+export const YEARLY_MIN_USD = 40;
+
+export interface StripeTxn {
   kind: string;
   userId: string | null;
+  customerRef: string | null;
   occurredAt: Date | string;
   grossUsd: number | null;
-  feeUsd: number | null;
   netUsd: number | null;
 }
 
-export interface CohortUser {
-  userId: string;
-  trialStart: Date;
+export interface AppStoreMonth {
+  /** Proceeds after store commission and tax, refunds deducted. */
+  proceeds: number;
+  yearly: number;
+  newCustomers: number;
 }
 
-export interface CustomerRevenue {
-  userId: string;
-  trialStart: Date;
-  gross: number;
-  fees: number;
-  net: number;
-  sources: string[];
-  /** True once the user has made at least one payment that wasn't fully refunded. */
-  paying: boolean;
+export interface MonthInputs {
+  spend: Map<string, { meta: number; google: number }>;
+  visitors: Map<string, number>;
+  trials: Map<string, number>;
+  stripe: StripeTxn[];
+  appStores: Map<string, AppStoreMonth> | null;
 }
 
-/**
- * Payments made after the trial started count toward that trial (a RevenueCat
- * subscription is dated at its store trial start, which can be a day or two
- * before the web trial start, hence the tolerance).
- */
-export const TRIAL_START_TOLERANCE_DAYS = 2;
+export interface MonthRow {
+  month: string;
+  spendMeta: number;
+  spendGoogle: number;
+  spend: number;
+  visitors: number;
+  trials: number;
+  newCustomers: number;
+  moneyStripe: number;
+  moneyAppStores: number | null;
+  moneyIn: number;
+  yearly: number;
+  netIncome: number;
+}
 
-export function buildCustomerRevenue(
-  cohort: CohortUser[],
-  txns: RevenueTxnInput[],
-): CustomerRevenue[] {
-  const byUser = new Map<string, RevenueTxnInput[]>();
-  for (const t of txns) {
-    if (!t.userId) continue;
-    if (!byUser.has(t.userId)) byUser.set(t.userId, []);
-    byUser.get(t.userId).push(t);
+export function buildMonths(months: string[], input: MonthInputs, tz = ROI_TIMEZONE): MonthRow[] {
+  // A Stripe customer is new in the month of their first ever payment.
+  const firstPayment = new Map<string, string>();
+  const stripeNet = new Map<string, number>();
+  const stripeYearly = new Map<string, number>();
+  const sorted = [...input.stripe].sort(
+    (a, b) => +new Date(a.occurredAt) - +new Date(b.occurredAt),
+  );
+  for (const t of sorted) {
+    const month = monthOf(t.occurredAt, tz);
+    const net = t.netUsd ?? t.grossUsd ?? 0;
+    stripeNet.set(month, (stripeNet.get(month) ?? 0) + net);
+    if (t.kind === 'payment' && (t.grossUsd ?? 0) > 0) {
+      if ((t.grossUsd ?? 0) >= YEARLY_MIN_USD) {
+        stripeYearly.set(month, (stripeYearly.get(month) ?? 0) + net);
+      }
+      const key = t.userId ?? t.customerRef;
+      if (key && !firstPayment.has(key)) firstPayment.set(key, month);
+    }
   }
+  const newStripe = new Map<string, number>();
+  for (const month of firstPayment.values()) newStripe.set(month, (newStripe.get(month) ?? 0) + 1);
 
-  return cohort.map(({ userId, trialStart }) => {
-    const from = +trialStart - TRIAL_START_TOLERANCE_DAYS * DAY_MS;
-    const own = (byUser.get(userId) ?? []).filter(t => +new Date(t.occurredAt) >= from);
-    const gross = own.reduce((s, t) => s + (t.grossUsd ?? 0), 0);
-    const net = own.reduce((s, t) => s + (t.netUsd ?? t.grossUsd ?? 0), 0);
-    const fees = own.reduce((s, t) => s + (t.feeUsd ?? 0), 0);
+  return months.map(month => {
+    const spend = input.spend.get(month) ?? { meta: 0, google: 0 };
+    const app = input.appStores?.get(month);
+    const moneyStripe = round2(stripeNet.get(month) ?? 0);
+    const moneyAppStores = input.appStores ? round2(app?.proceeds ?? 0) : null;
+    const moneyIn = round2(moneyStripe + (moneyAppStores ?? 0));
+    const total = round2(spend.meta + spend.google);
     return {
-      userId,
-      trialStart,
-      gross: round2(gross),
-      fees: round2(fees),
-      net: round2(net),
-      sources: [...new Set(own.map(t => t.source))],
-      paying: gross > 0.005,
+      month,
+      spendMeta: round2(spend.meta),
+      spendGoogle: round2(spend.google),
+      spend: total,
+      visitors: input.visitors.get(month) ?? 0,
+      trials: input.trials.get(month) ?? 0,
+      newCustomers: (newStripe.get(month) ?? 0) + (app?.newCustomers ?? 0),
+      moneyStripe,
+      moneyAppStores,
+      moneyIn,
+      yearly: round2((stripeYearly.get(month) ?? 0) + (app?.yearly ?? 0)),
+      netIncome: round2(moneyIn - total),
     };
   });
 }
 
-export interface FunnelSummary {
-  spendUsd: number;
-  visitors: number;
-  trialStarts: number;
-  /** Trials that have ended (only these could have converted yet). */
-  completedTrials: number;
-  payingCustomers: number;
-  grossRevenue: number;
-  fees: number;
-  netRevenue: number;
+export interface PeriodTotals extends Omit<MonthRow, 'month' | 'moneyAppStores'> {
+  moneyAppStores: number | null;
+  months: string[];
+  costPerCustomer: number | null;
   visitorToTrial: number | null;
-  trialToPaying: number | null;
-  costPerVisitor: number | null;
-  costPerTrial: number | null;
-  cac: number | null;
-  roas: number | null;
-  revenuePerCustomer: number | null;
-  /** Some trials are still running, so customers and revenue will still grow. */
-  immature: boolean;
 }
 
-const div = (a: number, b: number) => (b > 0 ? a / b : null);
-
-export function summarizeFunnel(
-  customers: CustomerRevenue[],
-  spendUsd: number,
-  visitors: number,
-  trialLengthDays: number,
-  now: Date,
-): FunnelSummary {
-  const ended = customers.filter(c => +c.trialStart + trialLengthDays * DAY_MS <= +now);
-  const paying = customers.filter(c => c.paying);
-  const net = round2(paying.reduce((s, c) => s + c.net, 0));
-  const r = (n: number | null, digits = 2) =>
-    n === null ? null : Math.round(n * 10 ** digits) / 10 ** digits;
-
+/** Sums a set of month rows into one period. */
+export function sumMonths(rows: MonthRow[]): PeriodTotals {
+  const sum = (k: keyof MonthRow) => round2(rows.reduce((s, r) => s + Number(r[k] ?? 0), 0));
+  const spend = sum('spend');
+  const newCustomers = rows.reduce((s, r) => s + r.newCustomers, 0);
+  const visitors = rows.reduce((s, r) => s + r.visitors, 0);
+  const trials = rows.reduce((s, r) => s + r.trials, 0);
   return {
-    spendUsd: round2(spendUsd),
+    months: rows.map(r => r.month),
+    spendMeta: sum('spendMeta'),
+    spendGoogle: sum('spendGoogle'),
+    spend,
     visitors,
-    trialStarts: customers.length,
-    completedTrials: ended.length,
-    payingCustomers: paying.length,
-    grossRevenue: round2(paying.reduce((s, c) => s + c.gross, 0)),
-    fees: round2(paying.reduce((s, c) => s + c.fees, 0)),
-    netRevenue: net,
-    visitorToTrial: r(div(customers.length, visitors), 4),
-    // Among completed trials only, so running trials don't drag the rate down.
-    trialToPaying: r(div(ended.filter(c => c.paying).length, ended.length), 4),
-    costPerVisitor: r(div(spendUsd, visitors)),
-    costPerTrial: r(div(spendUsd, customers.length)),
-    cac: r(div(spendUsd, paying.length)),
-    roas: r(div(net, spendUsd)),
-    revenuePerCustomer: r(div(net, paying.length)),
-    immature: ended.length < customers.length,
+    trials,
+    newCustomers,
+    moneyStripe: sum('moneyStripe'),
+    moneyAppStores: rows.some(r => r.moneyAppStores === null) ? null : sum('moneyAppStores'),
+    moneyIn: sum('moneyIn'),
+    yearly: sum('yearly'),
+    netIncome: sum('netIncome'),
+    costPerCustomer: newCustomers > 0 && spend > 0 ? round2(spend / newCustomers) : null,
+    visitorToTrial: visitors > 0 ? Math.round((trials / visitors) * 1000) / 1000 : null,
   };
 }
 
-/** Total of all provider money in [start, end): every customer, not just this funnel. */
-export function sumCashIn(txns: RevenueTxnInput[], start: Date, end: Date, source?: string) {
-  const rows = txns.filter(
-    t =>
-      (!source || t.source === source) &&
-      +new Date(t.occurredAt) >= +start &&
-      +new Date(t.occurredAt) < +end,
-  );
-  return {
-    gross: round2(rows.reduce((s, t) => s + (t.grossUsd ?? 0), 0)),
-    net: round2(rows.reduce((s, t) => s + (t.netUsd ?? t.grossUsd ?? 0), 0)),
-  };
-}
+export const ROI_PERIODS = ['this-month', 'last-month', '3-months', '12-months'] as const;
+export type RoiPeriod = (typeof ROI_PERIODS)[number];
 
-/** Spend needed to earn `targetUsd` net at the observed ROAS. */
-export const spendNeededFor = (targetUsd: number, roas: number | null) =>
-  roas && roas > 0 ? Math.round(targetUsd / roas) : null;
-
-export interface SpendDay {
-  date: string; // yyyy-MM-dd
-  channel: string;
-  campaignId: string;
-  campaignName: string | null;
-  spendUsd: number | null;
-  spend: number;
-  currency: string;
-  impressions: number;
-  clicks: number;
-}
-
-/** Total USD spend for days in [start, end) (yyyy-MM-dd strings). */
-export function sumSpend(rows: SpendDay[], start: string, end: string) {
-  return round2(
-    rows.filter(r => r.date >= start && r.date < end).reduce((s, r) => s + (r.spendUsd ?? 0), 0),
-  );
+/** Months (oldest first, current month last) that make up a period. */
+export function periodRows(rows: MonthRow[], period: RoiPeriod): MonthRow[] {
+  switch (period) {
+    case 'this-month':
+      return rows.slice(-1);
+    case 'last-month':
+      return rows.slice(-2, -1);
+    case '3-months':
+      return rows.slice(-3);
+    default:
+      return rows.slice(-12);
+  }
 }

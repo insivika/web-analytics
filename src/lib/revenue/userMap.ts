@@ -60,9 +60,9 @@ export async function loadUserMap(connectionString = process.env.SUPABASE_READON
   const client = new Client({ connectionString, ...(ca ? { ssl: { ca } } : {}) });
   await client.connect();
   try {
-    const { rows } = await client.query<UserMapRow>(
+    const { rows } = (await client.query(
       'select user_id::text as user_id, firebase_user_id, stripe_customer_id from roi.user_map',
-    );
+    )) as { rows: UserMapRow[] };
     return buildUserMap(rows);
   } finally {
     await client.end().catch(() => {});

@@ -1,7 +1,12 @@
 import { buildFxLookup, fetchFrankfurterRates, toUsd } from '../ads/fx';
 import { isValidScriptSecret, mapGoogleRows, normalizeCustomerId } from '../ads/google';
 import { fetchMetaInsights, MetaApiError, parseAccountIds } from '../ads/meta';
-import { fetchRcCustomerRevenue, mapRcPurchase, mapRcSubscription } from '../revenue/revenuecat';
+import {
+  fetchRcCustomerRevenue,
+  fetchRcMonthly,
+  mapRcPurchase,
+  mapRcSubscription,
+} from '../revenue/revenuecat';
 import {
   fetchStripeRevenue,
   mapStripeCharge,
@@ -9,39 +14,14 @@ import {
   mapStripeRefund,
 } from '../revenue/stripe';
 import { buildUserMap } from '../revenue/userMap';
-import {
-  buildCustomerRevenue,
-  DAY_MS,
-  normalizeRoiSettings,
-  type RevenueTxnInput,
-  spendNeededFor,
-  sumCashIn,
-  summarizeFunnel,
-  sumSpend,
-} from '../roi';
+import { buildMonths, lastMonths, periodRows, sumMonths } from '../roi';
 
 const now = new Date('2026-11-10T12:00:00Z');
-const daysAgo = (n: number) => new Date(+now - n * DAY_MS);
 const fx = buildFxLookup([
   { date: '2026-11-06', currency: 'AUD', usdRate: 0.687, source: 'frankfurter' },
   { date: '2026-11-06', currency: 'GBP', usdRate: 1.338, source: 'frankfurter' },
   { date: '2026-11-06', currency: 'GBP', usdRate: 1.3, source: 'manual' },
 ]);
-
-const txn = (
-  userId: string | null,
-  at: Date,
-  extra: Partial<RevenueTxnInput> = {},
-): RevenueTxnInput => ({
-  source: 'stripe',
-  kind: 'payment',
-  userId,
-  occurredAt: at,
-  grossUsd: 10,
-  feeUsd: 0.59,
-  netUsd: 9.41,
-  ...extra,
-});
 
 describe('FX conversion', () => {
   test('carries the last rate forward over weekends and prefers manual rates', () => {
@@ -76,98 +56,112 @@ describe('FX conversion', () => {
   });
 });
 
-describe('funnel revenue from provider transactions', () => {
-  const cohort = [
-    { userId: 'paid', trialStart: daysAgo(40) },
-    { userId: 'refunded', trialStart: daysAgo(30) },
-    { userId: 'free', trialStart: daysAgo(20) },
-    { userId: 'running', trialStart: daysAgo(3) },
+describe('monthly ROI', () => {
+  const months = lastMonths(3, now);
+  const stripe = [
+    // Old customer renewing: money in, not a new customer.
+    {
+      kind: 'payment',
+      userId: 'old',
+      customerRef: 'cus_old',
+      occurredAt: '2026-06-03T15:00:00Z',
+      grossUsd: 5,
+      netUsd: 4.55,
+    },
+    {
+      kind: 'payment',
+      userId: 'old',
+      customerRef: 'cus_old',
+      occurredAt: '2026-10-03T15:00:00Z',
+      grossUsd: 5,
+      netUsd: 4.55,
+    },
+    // New yearly customer in October.
+    {
+      kind: 'payment',
+      userId: 'y',
+      customerRef: 'cus_y',
+      occurredAt: '2026-10-20T15:00:00Z',
+      grossUsd: 72,
+      netUsd: 69.61,
+    },
+    // New monthly customer in November, then a refund for someone else.
+    {
+      kind: 'payment',
+      userId: null,
+      customerRef: 'cus_n',
+      occurredAt: '2026-11-02T15:00:00Z',
+      grossUsd: 8,
+      netUsd: 7.47,
+    },
+    {
+      kind: 'refund',
+      userId: 'old',
+      customerRef: 'cus_old',
+      occurredAt: '2026-11-05T15:00:00Z',
+      grossUsd: -5,
+      netUsd: -5,
+    },
   ];
-  const txns = [
-    txn('paid', daysAgo(26)),
-    txn('paid', daysAgo(10), {
-      source: 'revenuecat',
-      kind: 'subscription',
-      grossUsd: 30,
-      feeUsd: 4.5,
-      netUsd: 25.5,
-    }),
-    txn('paid', daysAgo(400)), // before this trial: not counted
-    txn('refunded', daysAgo(16)),
-    txn('refunded', daysAgo(14), { kind: 'refund', grossUsd: -10, feeUsd: 0, netUsd: -10 }),
-    txn('someone-else', daysAgo(5)),
-    txn(null, daysAgo(5)),
-  ];
+  const input = {
+    spend: new Map([
+      ['2026-10', { meta: 200, google: 15.98 }],
+      ['2026-11', { meta: 160.27, google: 0 }],
+    ]),
+    visitors: new Map([
+      ['2026-10', 2648],
+      ['2026-11', 968],
+    ]),
+    trials: new Map([
+      ['2026-10', 89],
+      ['2026-11', 63],
+    ]),
+    stripe,
+    appStores: new Map([
+      ['2026-10', { proceeds: 367.9, yearly: 245.37, newCustomers: 14 }],
+      ['2026-11', { proceeds: 42.8, yearly: 0, newCustomers: 3 }],
+    ]),
+  };
 
-  test('sums real gross, fees and net per trial starter since the trial began', () => {
-    const customers = buildCustomerRevenue(cohort, txns);
-    expect(customers.find(c => c.userId === 'paid')).toMatchObject({
-      gross: 40,
-      fees: 5.09,
-      net: 34.91,
-      paying: true,
-      sources: ['stripe', 'revenuecat'],
+  test('lists the last calendar months, current month last', () => {
+    expect(months).toEqual(['2026-09', '2026-10', '2026-11']);
+  });
+
+  test('money in, yearly plans, new customers and net income per month', () => {
+    const rows = buildMonths(months, input);
+    expect(rows[1]).toMatchObject({
+      month: '2026-10',
+      spend: 215.98,
+      moneyStripe: 74.16,
+      moneyAppStores: 367.9,
+      moneyIn: 442.06,
+      yearly: 314.98,
+      newCustomers: 15,
+      netIncome: 226.08,
     });
-    // A full refund leaves no paying customer and slightly negative net (Stripe keeps the fee).
-    expect(customers.find(c => c.userId === 'refunded')).toMatchObject({ gross: 0, paying: false });
-    expect(customers.find(c => c.userId === 'free')).toMatchObject({ gross: 0, paying: false });
+    expect(rows[2]).toMatchObject({ moneyIn: 45.27, newCustomers: 4, netIncome: -115 });
+    expect(rows[0]).toMatchObject({ spend: 0, moneyIn: 0, netIncome: 0 });
   });
 
-  test('funnel rates, CAC and ROAS; trial-to-paying uses completed trials only', () => {
-    const s = summarizeFunnel(buildCustomerRevenue(cohort, txns), 100, 400, 14, now);
-    expect(s).toMatchObject({
-      spendUsd: 100,
-      visitors: 400,
-      trialStarts: 4,
-      completedTrials: 3,
-      payingCustomers: 1,
-      netRevenue: 34.91,
-      visitorToTrial: 0.01,
-      trialToPaying: 0.3333,
-      costPerVisitor: 0.25,
-      costPerTrial: 25,
-      cac: 100,
-      roas: 0.35,
-      immature: true,
+  test('periods are sums of months', () => {
+    const rows = buildMonths(months, input);
+    expect(sumMonths(periodRows(rows, 'this-month'))).toMatchObject({ netIncome: -115 });
+    expect(sumMonths(periodRows(rows, 'last-month'))).toMatchObject({ netIncome: 226.08 });
+    const q = sumMonths(periodRows(rows, '3-months'));
+    expect(q).toMatchObject({
+      spend: 376.25,
+      moneyIn: 487.33,
+      netIncome: 111.08,
+      newCustomers: 19,
+      costPerCustomer: 19.8,
+      visitorToTrial: 0.042,
     });
-    expect(spendNeededFor(1000, s.roas)).toBe(2857);
   });
 
-  test('no spend or visitors: no ratios', () => {
-    const s = summarizeFunnel([], 0, 0, 14, now);
-    expect(s).toMatchObject({ roas: null, cac: null, costPerTrial: null, visitorToTrial: null });
-  });
-
-  test('cash in counts every customer in the period', () => {
-    expect(sumCashIn(txns, daysAgo(20), now, 'stripe')).toEqual({ gross: 20, net: 18.23 });
-  });
-
-  test('sums USD spend in a half-open date range', () => {
-    const rows = [
-      { date: '2026-11-01', spendUsd: 10, spend: 10 },
-      { date: '2026-11-02', spendUsd: null, spend: 5 },
-      { date: '2026-11-03', spendUsd: 2.5, spend: 2.5 },
-    ].map(r => ({
-      ...r,
-      channel: 'meta',
-      campaignId: 'c',
-      campaignName: null,
-      currency: 'USD',
-      impressions: 0,
-      clicks: 0,
-    }));
-
-    expect(sumSpend(rows, '2026-11-01', '2026-11-03')).toBe(10);
-    expect(sumSpend(rows, '2026-11-01', '2026-11-04')).toBe(12.5);
-  });
-});
-
-describe('settings', () => {
-  test('keeps the default target for invalid values', () => {
-    expect(normalizeRoiSettings({ targetRevenueUsd: 'x' as any })).toEqual({
-      targetRevenueUsd: 1000,
-    });
-    expect(normalizeRoiSettings({ targetRevenueUsd: 5000 })).toEqual({ targetRevenueUsd: 5000 });
+  test('no App Store data: money in is Stripe only and flagged', () => {
+    const rows = buildMonths(months, { ...input, appStores: null });
+    expect(rows[1]).toMatchObject({ moneyAppStores: null, moneyIn: 74.16 });
+    expect(sumMonths(rows).moneyAppStores).toBeNull();
   });
 });
 
@@ -345,6 +339,46 @@ describe('RevenueCat revenue', () => {
     const opts = { key: 'sk_x', projectId: 'proj', fetchImpl, sleep: async () => {} };
     expect(await fetchRcCustomerRevenue('fb-1', opts)).toHaveLength(1);
     expect(await fetchRcCustomerRevenue('missing', opts)).toEqual([]);
+  });
+
+  test('reads monthly proceeds, yearly part and new subscriptions from the revenue chart', async () => {
+    const chart = (segments: string[], vals: [number, number, number, number][]) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        segments: segments.map((n, i) => ({ display_name: n, is_total: i === 0 })),
+        values: vals.map(([cohort, measure, segment, value]) => ({
+          cohort,
+          measure,
+          segment,
+          value,
+        })),
+      }),
+    });
+    const oct = 1790812800;
+    const fetchImpl: any = async (url: string) =>
+      url.includes('transaction_type')
+        ? chart(
+            ['Total', 'New', 'Renewal'],
+            [
+              [oct, 0, 0, 367.9],
+              [oct, 1, 1, 14],
+              [oct, 0, 1, 344.11],
+            ],
+          )
+        : chart(
+            ['Total', 'P1Y', 'P1M'],
+            [
+              [oct, 0, 1, 245.37],
+              [oct, 0, 2, 122.53],
+            ],
+          );
+    const months = await fetchRcMonthly('2026-10-01', '2026-10-31', {
+      key: 'k',
+      projectId: 'p',
+      fetchImpl,
+    });
+    expect(months.get('2026-10')).toEqual({ proceeds: 367.9, yearly: 245.37, newCustomers: 14 });
   });
 });
 

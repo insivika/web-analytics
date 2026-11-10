@@ -1,25 +1,17 @@
-import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
-import { badRequest, json, unauthorized } from '@/lib/response';
-import { normalizeRoiSettings, ROI_SETTINGS_KEY } from '@/lib/roi';
+import { json, unauthorized } from '@/lib/response';
 import { normalizeTrialSettings, TRIAL_SETTINGS_KEY } from '@/lib/trial';
 import { canViewWebsite } from '@/permissions';
 import { getWebsiteSetting } from '@/queries/prisma';
 import { getRoiReport } from '@/queries/sql';
 
-const MAX_WINDOW_MS = 400 * 24 * 60 * 60 * 1000;
-
+// Last 12 calendar months of spend, visitors, trials, new customers, money in
+// and net income. The page picks its period by summing months.
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ websiteId: string }> },
 ) {
-  const schema = z.object({
-    startAt: z.coerce.number().int(),
-    endAt: z.coerce.number().int(),
-    target: z.coerce.number().positive().max(10_000_000).optional(),
-  });
-
-  const { auth, query, error } = await parseRequest(request, schema);
+  const { auth, error } = await parseRequest(request);
 
   if (error) {
     return error();
@@ -31,20 +23,9 @@ export async function GET(
     return unauthorized();
   }
 
-  if (query.endAt <= query.startAt || query.endAt - query.startAt > MAX_WINDOW_MS) {
-    return badRequest({ message: 'Invalid period.' });
-  }
-
-  const [trialSetting, roiSetting] = await Promise.all([
-    getWebsiteSetting(websiteId, TRIAL_SETTINGS_KEY),
-    getWebsiteSetting(websiteId, ROI_SETTINGS_KEY),
-  ]);
-
+  const trialSetting = await getWebsiteSetting(websiteId, TRIAL_SETTINGS_KEY);
   const report = await getRoiReport(websiteId, {
-    window: { startDate: new Date(query.startAt), endDate: new Date(query.endAt) },
     trialSettings: normalizeTrialSettings(trialSetting?.value as any),
-    roiSettings: normalizeRoiSettings(roiSetting?.value as any),
-    targetRevenueUsd: query.target,
   });
 
   return json(report);

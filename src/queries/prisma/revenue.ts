@@ -49,6 +49,7 @@ export interface RevenueTxn {
   source: string;
   kind: string;
   userId: string | null;
+  customerRef: string | null;
   occurredAt: Date;
   grossUsd: number | null;
   feeUsd: number | null;
@@ -62,6 +63,7 @@ export async function getRevenueTxns(websiteId: string): Promise<RevenueTxn[]> {
       source: true,
       kind: true,
       userId: true,
+      customerRef: true,
       occurredAt: true,
       grossUsd: true,
       feeUsd: true,
