@@ -37,12 +37,16 @@ const sortValue = (user: TrialUser, key: SortKey) => {
   const value = user[key];
   // Ended trials sort after every in-progress day.
   if (key === 'currentTrialDay') return value ?? Number.MAX_SAFE_INTEGER;
+  // Push: opted in > saw prompt > didn't see it > not eligible.
+  if (key === 'pushOptIn') {
+    return !user.pushEligible ? -1 : user.pushOptIn ? 2 : user.pushPromptShown ? 1 : 0;
+  }
   if (typeof value === 'boolean') return value ? 1 : 0;
   return value ?? '';
 };
 
 export function TrialUsersTable({ websiteId, report }: { websiteId: string; report: TrialReport }) {
-  const { formatMessage, labels } = useMessages();
+  const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({
     key: 'trialStart',
@@ -68,11 +72,15 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
       sorted.map(u => ({
         user_id: u.userId,
         trial_start: u.trialStart,
+        start_source: u.startSource,
+        observed_during_trial: u.observedDuringTrial,
         platform: u.platform ?? '',
         trial_day: u.currentTrialDay ?? 'ended',
         active_days: u.activeDays,
         engagement_events: u.engagementCount,
         ...Object.fromEntries(milestones.map((step, i) => [step.join('|'), u.milestones[i]])),
+        push_eligible: u.pushEligible,
+        push_prompt_shown: u.pushPromptShown,
         push_opt_in: u.pushOptIn,
         converted: u.converted,
         converted_at: u.convertedAt ?? '',
@@ -167,7 +175,19 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
               </DataColumn>
             ))}
             <DataColumn id="pushOptIn" label={header('pushOptIn', formatMessage(labels.pushOptIn))}>
-              {(row: TrialUser) => check(row.pushOptIn)}
+              {(row: TrialUser) =>
+                !row.pushEligible ? (
+                  <Text color="muted" title={formatMessage(messages.pushNotEligible)}>
+                    n/a
+                  </Text>
+                ) : row.pushOptIn ? (
+                  check(true)
+                ) : row.pushPromptShown ? (
+                  <Text color="muted">{formatMessage(labels.promptShown)}</Text>
+                ) : (
+                  check(false)
+                )
+              }
             </DataColumn>
             <DataColumn
               id="converted"

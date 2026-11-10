@@ -10,13 +10,20 @@ const propertyName = z.string().trim().min(1).max(500);
 const list = z.array(eventName).max(50);
 
 const trialSettingsSchema = z.object({
+  trialStartMode: z.enum(['trialExpiresAt', 'event']),
+  trialExpiresProperty: propertyName,
+  excludeRetrials: z.boolean(),
+  retrialThresholdDays: z.coerce.number().int().min(0).max(3650),
+  daysSinceSignupProperty: propertyName,
   trialStartEvent: eventName,
   trialLengthDays: z.coerce.number().int().min(1).max(90),
   activeDayEvent: eventName,
   activationEvent: eventName,
   milestones: z.array(z.array(eventName).min(1).max(10)).max(20),
   engagementEvents: list,
+  pushShownEvent: eventName,
   pushEvent: eventName,
+  pushRequireGranted: z.boolean(),
   pushAnswerProperty: propertyName,
   pushAnswerValue: z.string().trim().min(1).max(500),
   pushGrantedProperty: propertyName,

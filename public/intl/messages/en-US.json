@@ -473,6 +473,12 @@
       "value": "Day"
     }
   ],
+  "label.days-since-signup-property": [
+    {
+      "type": 0,
+      "value": "Days since signup property"
+    }
+  ],
   "label.default-date-range": [
     {
       "type": 0,
@@ -681,6 +687,12 @@
     {
       "type": 0,
       "value": "Exclude internal users"
+    }
+  ],
+  "label.exclude-retrials": [
+    {
+      "type": 0,
+      "value": "Exclude re-trials of long-time users"
     }
   ],
   "label.exists": [
@@ -1395,6 +1407,12 @@
       "value": "Profile"
     }
   ],
+  "label.prompt-shown": [
+    {
+      "type": 0,
+      "value": "Shown, not opted in"
+    }
+  ],
   "label.properties": [
     {
       "type": 0,
@@ -1435,6 +1453,18 @@
     {
       "type": 0,
       "value": "Push opt-in"
+    }
+  ],
+  "label.push-require-granted": [
+    {
+      "type": 0,
+      "value": "Push opt-in also requires granted = true"
+    }
+  ],
+  "label.push-shown-event": [
+    {
+      "type": 0,
+      "value": "Push prompt shown event"
     }
   ],
   "label.queries": [
@@ -1567,6 +1597,12 @@
     {
       "type": 0,
       "value": "Measure your website stickiness by tracking how often users return."
+    }
+  ],
+  "label.retrial-threshold-days": [
+    {
+      "type": 0,
+      "value": "Re-trial threshold (days beyond trial length)"
     }
   ],
   "label.revenue": [
@@ -1929,6 +1965,12 @@
       "value": "Trial day"
     }
   ],
+  "label.trial-expires-property": [
+    {
+      "type": 0,
+      "value": "Trial expiry property"
+    }
+  ],
   "label.trial-journey": [
     {
       "type": 0,
@@ -1957,6 +1999,24 @@
     {
       "type": 0,
       "value": "Trial start event"
+    }
+  ],
+  "label.trial-start-mode": [
+    {
+      "type": 0,
+      "value": "Trial start definition"
+    }
+  ],
+  "label.trial-start-mode-event": [
+    {
+      "type": 0,
+      "value": "First trial start event"
+    }
+  ],
+  "label.trial-start-mode-expires": [
+    {
+      "type": 0,
+      "value": "Trial expiry minus trial length (fallback: start event)"
     }
   ],
   "label.trial-starts": [
@@ -2337,6 +2397,16 @@
       "value": "url"
     }
   ],
+  "message.excluded-retrials": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " re-trials of long-time users excluded"
+    }
+  ],
   "message.forbidden": [
     {
       "type": 0,
@@ -2469,6 +2539,18 @@
       "value": "Passwords do not match."
     }
   ],
+  "message.no-one-saw-prompt": [
+    {
+      "type": 0,
+      "value": "No trial starter has seen the prompt yet"
+    }
+  ],
+  "message.no-push-prompt-yet": [
+    {
+      "type": 0,
+      "value": "No push prompt recorded yet"
+    }
+  ],
   "message.no-results-found": [
     {
       "type": 0,
@@ -2485,6 +2567,16 @@
     {
       "type": 0,
       "value": "You have not created any teams."
+    }
+  ],
+  "message.no-trial-starts-since": [
+    {
+      "type": 0,
+      "value": "No trial starts since "
+    },
+    {
+      "type": 1,
+      "value": "date"
     }
   ],
   "message.no-user-id-for-event": [
@@ -2523,6 +2615,16 @@
       "value": "Not found"
     }
   ],
+  "message.not-observed-during-trial": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " first seen after their trial ended"
+    }
+  ],
   "message.nothing-selected": [
     {
       "type": 0,
@@ -2533,6 +2635,22 @@
     {
       "type": 0,
       "value": "Page not found"
+    }
+  ],
+  "message.push-not-eligible": [
+    {
+      "type": 0,
+      "value": "Trial started before the first push prompt was shown"
+    }
+  ],
+  "message.push-since": [
+    {
+      "type": 0,
+      "value": "Since "
+    },
+    {
+      "type": 1,
+      "value": "date"
     }
   ],
   "message.reset-website": [
@@ -2559,6 +2677,28 @@
     {
       "type": 0,
       "value": "Saved."
+    }
+  ],
+  "message.saw-prompt": [
+    {
+      "type": 0,
+      "value": "Saw prompt: "
+    },
+    {
+      "type": 1,
+      "value": "pct"
+    },
+    {
+      "type": 0,
+      "value": " of trial starters ("
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": ")"
     }
   ],
   "message.sever-error": [
@@ -2627,6 +2767,40 @@
     {
       "type": 0,
       "value": "Transfer website ownership to your account or another team."
+    }
+  ],
+  "message.trial-start-sources": [
+    {
+      "type": 0,
+      "value": "Starts: "
+    },
+    {
+      "type": 1,
+      "value": "derived"
+    },
+    {
+      "type": 0,
+      "value": " from "
+    },
+    {
+      "type": 1,
+      "value": "property"
+    },
+    {
+      "type": 0,
+      "value": ", "
+    },
+    {
+      "type": 1,
+      "value": "event"
+    },
+    {
+      "type": 0,
+      "value": " from "
+    },
+    {
+      "type": 1,
+      "value": "startEvent"
     }
   ],
   "message.trial-user-events": [

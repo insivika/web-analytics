@@ -16,6 +16,7 @@ import {
   getWeekStart,
   HOUR_MS,
   normalizeTrialSettings,
+  resolveTrialStarts,
   type TrialActivityRow,
   type TrialAttributeRow,
   type TrialConversionRow,
@@ -54,6 +55,7 @@ const allStats = (firstSeen: Date, periodCount = 5): TrialEventStat[] =>
     settings.activeDayEvent,
     settings.activationEvent,
     settings.pushEvent,
+    settings.pushShownEvent,
     ...settings.milestones.flat(),
     ...settings.engagementEvents,
     ...settings.conversionEvents,
@@ -424,5 +426,228 @@ describe('review fixes', () => {
 
     expect(row).toMatchObject({ inProgress: false, conversionFinal: false, settling: true });
     expect(row.converted).toBeNull();
+  });
+});
+
+describe('trial start from trial_expires_at', () => {
+  const expires = (userId: string, startDaysAgo: number, seenDaysAgo: number, dss?: number) => ({
+    userId,
+    expiresAt: new Date(+daysAgo(startDaysAgo) + 14 * DAY_MS),
+    seenAt: daysAgo(seenDaysAgo),
+    daysSinceSignup: dss ?? null,
+  });
+
+  test('derives the start from the earliest expiry and falls back to the start event', () => {
+    const { starts } = resolveTrialStarts(
+      [
+        { userId: 'seed-only', createdAt: daysAgo(5) },
+        // Derived start wins over a later onboarding event.
+        { userId: 'both', createdAt: daysAgo(9) },
+      ],
+      [
+        expires('both', 10, 10, 0),
+        // A later, larger expiry value for the same user is ignored.
+        { ...expires('both', 3, 3, 7) },
+        expires('expiry-only', 20, 10, 10),
+      ],
+      settings,
+      now,
+    );
+
+    expect(starts.get('both')).toEqual({
+      start: daysAgo(10),
+      source: 'trialExpiresAt',
+      observedDuringTrial: true,
+    });
+    expect(starts.get('seed-only')).toMatchObject({ start: daysAgo(5), source: 'event' });
+    expect(starts.get('expiry-only')).toMatchObject({
+      start: daysAgo(20),
+      observedDuringTrial: true,
+    });
+  });
+
+  test('flags trials that were first seen only after they ended', () => {
+    const { starts } = resolveTrialStarts([], [expires('late', 30, 15, 15)], settings, now);
+
+    expect(starts.get('late')).toMatchObject({ start: daysAgo(30), observedDuringTrial: false });
+  });
+
+  test('skips re-trials of long-time users and future starts from bad expiry values', () => {
+    const resolved = resolveTrialStarts(
+      [{ userId: 'bad-expiry', createdAt: daysAgo(4) }],
+      [
+        // Seen 20 days after the derived start with days_since_signup 335: signed up long before.
+        expires('retrial', 25, 5, 335),
+        // Exactly at the limit (14 + 30 days) is still a trial.
+        expires('edge', 10, 10, 44),
+        {
+          userId: 'bad-expiry',
+          expiresAt: '2036-09-23T22:20:50Z',
+          seenAt: daysAgo(1),
+          daysSinceSignup: 3,
+        },
+      ],
+      settings,
+      now,
+    );
+
+    expect(resolved.starts.has('retrial')).toBe(false);
+    expect(resolved.retrials.get('retrial')).toEqual(daysAgo(25));
+    expect(resolved.starts.has('edge')).toBe(true);
+    expect(resolved.starts.get('bad-expiry')).toMatchObject({ source: 'event', start: daysAgo(4) });
+
+    const keepAll = normalizeTrialSettings({ excludeRetrials: false });
+    expect(
+      resolveTrialStarts([], [expires('retrial', 25, 5, 335)], keepAll, now).starts.has('retrial'),
+    ).toBe(true);
+  });
+
+  test('event mode ignores expiry values', () => {
+    const eventMode = normalizeTrialSettings({ trialStartMode: 'event' });
+    const { starts } = resolveTrialStarts(
+      [{ userId: 'u', createdAt: daysAgo(5) }],
+      [expires('u', 10, 10, 0), expires('v', 8, 8, 0)],
+      eventMode,
+      now,
+    );
+
+    expect([...starts.keys()]).toEqual(['u']);
+    expect(starts.get('u')).toMatchObject({ start: daysAgo(5), source: 'event' });
+  });
+
+  test('report counts start sources and adds expiry-only users', () => {
+    const report = computeTrialReport({
+      occurrences: [{ userId: 'seed', createdAt: daysAgo(3) }],
+      expiresRows: [expires('expiry', 6, 6, 0), expires('retrial', 8, 2, 400)],
+      activity: [],
+      attributes: [],
+      conversions: [],
+      eventStats: [],
+      settings,
+      window,
+      filters: {},
+      now,
+    });
+
+    expect(report.kpis.starts).toBe(2);
+    expect(report.startSources).toEqual({
+      trialExpiresAt: 1,
+      event: 1,
+      notObservedDuringTrial: 0,
+      excludedRetrials: 1,
+    });
+  });
+});
+
+describe('journey conversion milestone', () => {
+  test('uses the conversion rule, so it matches the Converted KPI', () => {
+    const starts = new Map([
+      ['late-convert', daysAgo(30)],
+      ['in-trial-purchase-not-flagged', daysAgo(30)],
+    ]);
+    const activity: TrialActivityRow[] = [
+      // A purchase event during the trial without is_trial_conversion: not a conversion.
+      { userId: 'in-trial-purchase-not-flagged', eventName: 'paywall_purchased', day: 2, count: 1 },
+    ];
+    // Converted 16 days after start (after the trial), with is_trial_conversion.
+    const conversions = [{ userId: 'late-convert', firstAt: new Date(+daysAgo(30) + 16 * DAY_MS) }];
+    const users = build(starts, activity, [], conversions);
+    const funnel = computeFunnel(users, settings);
+    const last = funnel[funnel.length - 1];
+
+    expect(last).toMatchObject({ reached: 1, medianHours: 16 * 24 });
+    expect(computeKpis(users).converted).toBe(50);
+  });
+});
+
+describe('weekly cohorts before the first trial start', () => {
+  test('hides weeks that end before the first recorded trial start', () => {
+    const users = build(new Map([['u', new Date('2026-10-14T10:00:00Z')]]));
+    const rows = computeWeeklyCohorts(
+      users,
+      settings,
+      now,
+      'UTC',
+      new Date('2026-10-14T10:00:00Z'),
+    );
+
+    expect(rows.map(r => r.weekStart)).toEqual([
+      '2026-11-09',
+      '2026-11-02',
+      '2026-10-26',
+      '2026-10-19',
+      '2026-10-12',
+    ]);
+    expect(computeWeeklyCohorts([], settings, now, 'UTC', null)).toEqual([]);
+  });
+});
+
+describe('push opt-in', () => {
+  const since = daysAgo(3); // first push_prompt_shown ever recorded
+  const starts = new Map([
+    ['before', daysAgo(10)], // trial started before the prompt existed: not eligible
+    ['opted', daysAgo(2)],
+    ['declined', daysAgo(2)],
+    ['answered-no-shown-event', daysAgo(1)],
+    ['never-saw', daysAgo(1)],
+  ]);
+  const attributes = [
+    attr('before', { pushOptIn: true, pushAnswered: true }),
+    attr('opted', { pushOptIn: true, pushAnswered: true }),
+    attr('declined', { pushOptIn: false, pushAnswered: true }),
+    attr('answered-no-shown-event', { pushOptIn: false, pushAnswered: true }),
+    attr('never-saw'),
+  ];
+  const users = buildTrialUsers(starts, [], attributes, [], settings, now, undefined, {
+    since,
+    shownUsers: new Set(['before', 'opted', 'declined']),
+  });
+
+  test('is measured among eligible trial starters who saw the prompt', () => {
+    const kpis = computeKpis(users);
+
+    expect(kpis.pushEligibleStarts).toBe(4);
+    // Answering implies the prompt was shown, even without a shown event.
+    expect(kpis.pushSeenUsers).toBe(3);
+    expect(kpis.pushSeen).toBe(75);
+    expect(kpis.pushOptIn).toBeCloseTo(33.33, 1);
+    expect(users.find(u => u.userId === 'before')).toMatchObject({ pushEligible: false });
+  });
+
+  test('is null when nobody eligible saw the prompt, or the prompt never fired', () => {
+    expect(computeKpis(users.filter(u => u.userId === 'never-saw'))).toMatchObject({
+      pushOptIn: null,
+      pushSeen: 0,
+    });
+    const noPrompt = buildTrialUsers(starts, [], attributes, [], settings, now, undefined, {
+      since: null,
+      shownUsers: new Set(),
+    });
+    expect(computeKpis(noPrompt)).toMatchObject({
+      pushOptIn: null,
+      pushSeen: null,
+      pushEligibleStarts: 0,
+    });
+  });
+
+  test('report exposes when push tracking started', () => {
+    const report = computeTrialReport({
+      occurrences: [{ userId: 'opted', createdAt: daysAgo(2) }],
+      activity: [],
+      attributes,
+      conversions: [],
+      pushShown: [{ userId: 'opted', firstAt: daysAgo(2) }],
+      eventStats: allStats(daysAgo(60)).map(s =>
+        s.eventName === settings.pushShownEvent ? { ...s, firstSeen: since } : s,
+      ),
+      settings,
+      window,
+      filters: {},
+      now,
+    });
+
+    expect(report.pushSince).toBe(since.toISOString());
+    expect(report.kpis).toMatchObject({ pushOptIn: 100, pushSeen: 100, pushSeenUsers: 1 });
+    expect(report.comparisons.pushOptIn.available).toBe(false);
   });
 });

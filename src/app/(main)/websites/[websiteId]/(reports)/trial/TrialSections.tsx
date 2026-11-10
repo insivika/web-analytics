@@ -71,6 +71,7 @@ function KpiCard({
   isPercent,
   comparison,
   emptyText,
+  details,
 }: {
   label: string;
   value: number | null;
@@ -78,6 +79,8 @@ function KpiCard({
   isPercent?: boolean;
   comparison: TrialComparison;
   emptyText?: string;
+  /** Extra lines under the value (e.g. the push prompt reach). */
+  details?: string[];
 }) {
   const { formatMessage, messages } = useMessages();
   const { locale } = useLocale();
@@ -139,6 +142,11 @@ function KpiCard({
       <Text size="8" weight="bold" wrap="nowrap">
         {isPercent ? formatPct(value) : value === null ? '—' : formatLongNumber(value)}
       </Text>
+      {details?.map(line => (
+        <Text key={line} color="muted" size="1">
+          {line}
+        </Text>
+      ))}
       {footer}
     </Column>
   );
@@ -151,12 +159,46 @@ export function TrialKpis({ report }: { report: TrialReport }) {
     (+new Date(report.window.endDate) - +new Date(report.window.startDate)) / 864e5,
   );
 
-  const cards: { key: TrialKpiKey; label: string; isPercent?: boolean; emptyText?: string }[] = [
+  const { locale } = useLocale();
+  const pushSince = report.pushSince
+    ? formatDate(new Date(report.pushSince), 'MMM d', locale)
+    : null;
+  const pushEmptyText = !pushSince
+    ? formatMessage(messages.noPushPromptYet)
+    : kpis.pushEligibleStarts === 0
+      ? formatMessage(messages.noTrialStartsSince, { date: pushSince })
+      : formatMessage(messages.noOneSawPrompt);
+
+  const cards: {
+    key: TrialKpiKey;
+    label: string;
+    isPercent?: boolean;
+    emptyText?: string;
+    details?: string[];
+  }[] = [
     { key: 'starts', label: formatMessage(labels.trialStarts) },
     { key: 'activated', label: formatMessage(labels.activated), isPercent: true },
     { key: 'active2', label: formatMessage(labels.activeDaysAtLeast, { x: 2 }), isPercent: true },
     { key: 'active3', label: formatMessage(labels.activeDaysAtLeast, { x: 3 }), isPercent: true },
-    { key: 'pushOptIn', label: formatMessage(labels.pushOptIn), isPercent: true },
+    {
+      key: 'pushOptIn',
+      label: formatMessage(labels.pushOptIn),
+      isPercent: true,
+      emptyText: pushEmptyText,
+      details: pushSince
+        ? [
+            formatMessage(messages.pushSince, { date: pushSince }),
+            ...(kpis.pushSeen === null
+              ? []
+              : [
+                  formatMessage(messages.sawPrompt, {
+                    pct: formatPct(kpis.pushSeen),
+                    n: kpis.pushSeenUsers,
+                  }),
+                ]),
+          ]
+        : undefined,
+    },
     {
       key: 'converted',
       label: formatMessage(labels.convertedCompletedTrials, { n: kpis.completedTrials }),
@@ -179,7 +221,23 @@ export function TrialKpis({ report }: { report: TrialReport }) {
         ))}
       </MetricsBar>
       <Text color="muted" size="1">
-        {formatMessage(messages.changeVsPrevious, { x: windowDays })}
+        {[
+          formatMessage(messages.trialStartSources, {
+            derived: report.startSources.trialExpiresAt,
+            property: report.settings.trialExpiresProperty,
+            event: report.startSources.event,
+            startEvent: report.settings.trialStartEvent,
+          }),
+          report.startSources.excludedRetrials > 0 &&
+            formatMessage(messages.excludedRetrials, { x: report.startSources.excludedRetrials }),
+          report.startSources.notObservedDuringTrial > 0 &&
+            formatMessage(messages.notObservedDuringTrial, {
+              x: report.startSources.notObservedDuringTrial,
+            }),
+          formatMessage(messages.changeVsPrevious, { x: windowDays }),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </Text>
     </Column>
   );

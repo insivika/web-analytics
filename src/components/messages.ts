@@ -444,6 +444,37 @@ export const labels = defineMessages({
   },
   lastSignupWeeks: { id: 'label.last-signup-weeks', defaultMessage: 'Last {x} signup weeks' },
   billingSettling: { id: 'label.billing-settling', defaultMessage: 'Billing settling' },
+  trialStartMode: { id: 'label.trial-start-mode', defaultMessage: 'Trial start definition' },
+  trialStartModeExpires: {
+    id: 'label.trial-start-mode-expires',
+    defaultMessage: 'Trial expiry minus trial length (fallback: start event)',
+  },
+  trialStartModeEvent: {
+    id: 'label.trial-start-mode-event',
+    defaultMessage: 'First trial start event',
+  },
+  trialExpiresProperty: {
+    id: 'label.trial-expires-property',
+    defaultMessage: 'Trial expiry property',
+  },
+  daysSinceSignupProperty: {
+    id: 'label.days-since-signup-property',
+    defaultMessage: 'Days since signup property',
+  },
+  retrialThresholdDays: {
+    id: 'label.retrial-threshold-days',
+    defaultMessage: 'Re-trial threshold (days beyond trial length)',
+  },
+  excludeRetrials: {
+    id: 'label.exclude-retrials',
+    defaultMessage: 'Exclude re-trials of long-time users',
+  },
+  promptShown: { id: 'label.prompt-shown', defaultMessage: 'Shown, not opted in' },
+  pushShownEvent: { id: 'label.push-shown-event', defaultMessage: 'Push prompt shown event' },
+  pushRequireGranted: {
+    id: 'label.push-require-granted',
+    defaultMessage: 'Push opt-in also requires granted = true',
+  },
 });
 
 export const messages = defineMessages({
@@ -642,5 +673,38 @@ export const messages = defineMessages({
   noUserIdForEvent: {
     id: 'message.no-user-id-for-event',
     defaultMessage: '{event} has data but no {property} property, so no trial starts can be found',
+  },
+  trialStartSources: {
+    id: 'message.trial-start-sources',
+    defaultMessage: 'Starts: {derived} from {property}, {event} from {startEvent}',
+  },
+  excludedRetrials: {
+    id: 'message.excluded-retrials',
+    defaultMessage: '{x} re-trials of long-time users excluded',
+  },
+  notObservedDuringTrial: {
+    id: 'message.not-observed-during-trial',
+    defaultMessage: '{x} first seen after their trial ended',
+  },
+  noPushPromptYet: {
+    id: 'message.no-push-prompt-yet',
+    defaultMessage: 'No push prompt recorded yet',
+  },
+  noTrialStartsSince: {
+    id: 'message.no-trial-starts-since',
+    defaultMessage: 'No trial starts since {date}',
+  },
+  noOneSawPrompt: {
+    id: 'message.no-one-saw-prompt',
+    defaultMessage: 'No trial starter has seen the prompt yet',
+  },
+  pushSince: { id: 'message.push-since', defaultMessage: 'Since {date}' },
+  sawPrompt: {
+    id: 'message.saw-prompt',
+    defaultMessage: 'Saw prompt: {pct} of trial starters ({n})',
+  },
+  pushNotEligible: {
+    id: 'message.push-not-eligible',
+    defaultMessage: 'Trial started before the first push prompt was shown',
   },
 });

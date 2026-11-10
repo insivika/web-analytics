@@ -7,7 +7,9 @@ import {
   FormField,
   FormSubmitButton,
   Grid,
+  ListItem,
   Loading,
+  Select,
   Text,
   TextField,
 } from '@umami/react-zen';
@@ -38,9 +40,18 @@ const TEXT_FIELDS = [
   'internalProperty',
   'conversionProperty',
   'conversionPropertyValue',
+  'pushShownEvent',
+  'trialStartMode',
+  'trialExpiresProperty',
+  'daysSinceSignupProperty',
 ] as const;
 
-const NUMBER_FIELDS = ['trialLengthDays', 'conversionWindowDays', 'conversionSettleDays'] as const;
+const NUMBER_FIELDS = [
+  'trialLengthDays',
+  'conversionWindowDays',
+  'conversionSettleDays',
+  'retrialThresholdDays',
+] as const;
 
 export function toFormValues(settings: TrialSettings) {
   return {
@@ -56,6 +67,8 @@ export function fromFormValues(values: Record<string, any>): Partial<TrialSettin
     ...Object.fromEntries(TEXT_FIELDS.map(key => [key, String(values[key] ?? '').trim()])),
     ...Object.fromEntries(NUMBER_FIELDS.map(key => [key, Number(values[key])])),
     excludeInternal: !!values.excludeInternal,
+    excludeRetrials: !!values.excludeRetrials,
+    pushRequireGranted: !!values.pushRequireGranted,
     milestones: String(values.milestones ?? '')
       .split('\n')
       .map(line =>
@@ -116,8 +129,21 @@ function TrialSettingsForm({ websiteId, onClose }: { websiteId: string; onClose:
     <Form onSubmit={handleSubmit} error={getErrorMessage(error)} defaultValues={toFormValues(data)}>
       <Column gap="3">
         <Grid columns={{ xs: '1fr', md: '1fr 1fr' }} gap="3">
+          <FormField name="trialStartMode" label={formatMessage(labels.trialStartMode)}>
+            {({ field }) => (
+              <Select value={field.value} onChange={field.onChange}>
+                <ListItem id="trialExpiresAt">
+                  {formatMessage(labels.trialStartModeExpires)}
+                </ListItem>
+                <ListItem id="event">{formatMessage(labels.trialStartModeEvent)}</ListItem>
+              </Select>
+            )}
+          </FormField>
+          {field('trialExpiresProperty', formatMessage(labels.trialExpiresProperty))}
           {field('trialStartEvent', formatMessage(labels.trialStartEvent))}
           {field('trialLengthDays', formatMessage(labels.trialLengthDays))}
+          {field('daysSinceSignupProperty', formatMessage(labels.daysSinceSignupProperty))}
+          {field('retrialThresholdDays', formatMessage(labels.retrialThresholdDays))}
           {field('activeDayEvent', formatMessage(labels.activeDayEvent))}
           {field('activationEvent', formatMessage(labels.activationEvent))}
         </Grid>
@@ -149,6 +175,7 @@ function TrialSettingsForm({ websiteId, onClose }: { websiteId: string; onClose:
             <TextField autoComplete="off" />
           </FormField>
           {field('statusProperty', formatMessage(labels.statusProperty))}
+          {field('pushShownEvent', formatMessage(labels.pushShownEvent))}
           {field('pushEvent', formatMessage(labels.pushEvent))}
           {field('pushAnswerProperty', formatMessage(labels.pushAnswerProperty))}
           {field('pushAnswerValue', formatMessage(labels.pushAnswerValue))}
@@ -160,6 +187,20 @@ function TrialSettingsForm({ websiteId, onClose }: { websiteId: string; onClose:
         <Text color="muted" size="1">
           {formatMessage(messages.commaSeparatedHint)}
         </Text>
+        <FormField name="pushRequireGranted">
+          {({ field }) => (
+            <Checkbox isSelected={!!field.value} onChange={field.onChange}>
+              {formatMessage(labels.pushRequireGranted)}
+            </Checkbox>
+          )}
+        </FormField>
+        <FormField name="excludeRetrials">
+          {({ field }) => (
+            <Checkbox isSelected={!!field.value} onChange={field.onChange}>
+              {formatMessage(labels.excludeRetrials)}
+            </Checkbox>
+          )}
+        </FormField>
         <FormField name="excludeInternal">
           {({ field }) => (
             <Checkbox isSelected={!!field.value} onChange={field.onChange}>

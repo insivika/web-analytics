@@ -2,15 +2,17 @@ import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import {
   computeTrialReport,
-  detectTrialStarts,
   getStatsPeriodEnd,
   getTrialActivityEventNames,
   getTrialDataRange,
   getTrialDefinitionEvents,
+  resolveTrialStarts,
+  startsInWindow,
   type TrialActivityRow,
   type TrialAttributeRow,
   type TrialConversionRow,
   type TrialEventStat,
+  type TrialExpiresRow,
   type TrialSettings,
   type TrialStartOccurrence,
   type TrialUserFilters,
@@ -58,30 +60,39 @@ async function relationalQuery(
   // Current + previous window, plus the last 8 signup weeks for the cohort table.
   const range = getTrialDataRange(window, now, timezone);
 
-  const [occurrences, eventStats, conversionPropertyFirstSeen] = await Promise.all([
-    getTrialStartOccurrences(websiteId, settings, range.endDate),
-    getTrialEventStats(websiteId, settings, {
-      startDate: window.startDate,
-      endDate: getStatsPeriodEnd(window, now),
-    }),
-    getConversionPropertyFirstSeen(websiteId, settings),
-  ]);
+  const derived = settings.trialStartMode === 'trialExpiresAt';
+  const [occurrences, expiresRows, trialExpiresFirstSeen, eventStats, conversionPropertyFirstSeen] =
+    await Promise.all([
+      getTrialStartOccurrences(websiteId, settings, range.endDate),
+      derived ? getTrialExpiresRows(websiteId, settings) : [],
+      derived ? getPropertyFirstSeen(websiteId, settings.trialExpiresProperty) : null,
+      getTrialEventStats(websiteId, settings, {
+        startDate: window.startDate,
+        endDate: getStatsPeriodEnd(window, now),
+      }),
+      getConversionPropertyFirstSeen(websiteId, settings),
+    ]);
 
-  const cohort = [...detectTrialStarts(occurrences, range)];
+  const resolved = resolveTrialStarts(occurrences, expiresRows, settings, now);
+  const cohort = [...startsInWindow(resolved, range)];
 
-  const [activity, attributes, conversions] = cohort.length
+  const [activity, attributes, conversions, pushShown] = cohort.length
     ? await Promise.all([
         getTrialActivity(websiteId, settings, cohort),
         getTrialAttributes(websiteId, settings, cohort),
         getTrialConversions(websiteId, settings, cohort),
+        getFirstEventAfterStart(websiteId, settings, cohort, settings.pushShownEvent),
       ])
-    : [[], [], []];
+    : [[], [], [], []];
 
   return computeTrialReport({
     occurrences,
+    expiresRows,
+    trialExpiresFirstSeen,
     activity,
     attributes,
     conversions,
+    pushShown,
     eventStats,
     conversionPropertyFirstSeen,
     settings,
@@ -92,6 +103,35 @@ async function relationalQuery(
   });
 }
 
+/** First occurrence of `eventName` per cohort user at or after their trial start. */
+async function getFirstEventAfterStart(
+  websiteId: string,
+  settings: TrialSettings,
+  cohort: [string, Date][],
+  eventName: string,
+): Promise<TrialConversionRow[]> {
+  if (!eventName) return [];
+
+  return prisma.rawQuery(
+    `
+    with ${COHORT_CTE}
+    select c.user_id as "userId", min(e.created_at) as "firstAt"
+    from website_event e
+    join event_data u
+      on u.website_event_id = e.event_id
+      and u.data_key = {{userIdProperty}}
+    join cohort c on c.user_id = u.string_value
+    where e.website_id = {{websiteId::uuid}}
+      and e.created_at >= {{minStart}}
+      and e.event_name = {{eventName}}
+      and e.created_at >= c.trial_start
+    group by 1
+    `,
+    { websiteId, userIdProperty: settings.userIdProperty, eventName, ...cohortParams(cohort) },
+    'getFirstEventAfterStart',
+  );
+}
+
 async function getTrialStartOccurrences(
   websiteId: string,
   settings: TrialSettings,
@@ -99,11 +139,15 @@ async function getTrialStartOccurrences(
 ): Promise<TrialStartOccurrence[]> {
   return prisma.rawQuery(
     `
-    select u.string_value as "userId", e.created_at as "createdAt"
+    select u.string_value as "userId", e.created_at as "createdAt",
+      d.number_value as "daysSinceSignup"
     from website_event e
     join event_data u
       on u.website_event_id = e.event_id
       and u.data_key = {{userIdProperty}}
+    left join event_data d
+      on d.website_event_id = e.event_id
+      and d.data_key = {{daysSinceSignupProperty}}
     where e.website_id = {{websiteId::uuid}}
       and e.event_name = {{startEvent}}
       and e.created_at < {{endDate}}
@@ -114,10 +158,72 @@ async function getTrialStartOccurrences(
       websiteId,
       startEvent: settings.trialStartEvent,
       userIdProperty: settings.userIdProperty,
+      daysSinceSignupProperty: settings.daysSinceSignupProperty,
       endDate,
     },
     'getTrialStartOccurrences',
   );
+}
+
+/**
+ * Per user, the earliest trial expiry value seen on any event (ISO timestamps
+ * only), with the time and days_since_signup of the event that carried it.
+ * DISTINCT ON keeps the per-user pick in one sorted pass; the extra columns are
+ * joined only for the chosen rows.
+ */
+async function getTrialExpiresRows(
+  websiteId: string,
+  settings: TrialSettings,
+): Promise<TrialExpiresRow[]> {
+  return prisma.rawQuery(
+    `
+    with firsts as (
+      select distinct on (u.string_value)
+        u.string_value as user_id,
+        x.string_value::timestamptz as expires_at,
+        x.website_event_id
+      from event_data x
+      join event_data u
+        on u.website_event_id = x.website_event_id
+        and u.data_key = {{userIdProperty}}
+      where x.website_id = {{websiteId::uuid}}
+        and x.data_key = {{expiresProperty}}
+        and x.string_value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        and u.string_value <> ''
+      order by u.string_value, x.string_value::timestamptz, x.created_at
+    )
+    select f.user_id as "userId", f.expires_at as "expiresAt", e.created_at as "seenAt",
+      d.number_value as "daysSinceSignup"
+    from firsts f
+    join website_event e on e.event_id = f.website_event_id
+    left join event_data d
+      on d.website_event_id = f.website_event_id
+      and d.data_key = {{daysSinceSignupProperty}}
+    `,
+    {
+      websiteId,
+      userIdProperty: settings.userIdProperty,
+      expiresProperty: settings.trialExpiresProperty,
+      daysSinceSignupProperty: settings.daysSinceSignupProperty,
+    },
+    'getTrialExpiresRows',
+  );
+}
+
+/** When an event-data property was first recorded for the website. */
+async function getPropertyFirstSeen(websiteId: string, property: string): Promise<Date | null> {
+  const [row] = await prisma.rawQuery(
+    `
+    select created_at as "firstSeen" from event_data
+    where website_id = {{websiteId::uuid}} and data_key = {{property}}
+    order by created_at
+    limit 1
+    `,
+    { websiteId, property },
+    'getPropertyFirstSeen',
+  );
+
+  return row?.firstSeen ?? null;
 }
 
 /**
@@ -320,11 +426,16 @@ async function getTrialAttributes(
       ) as platform,
       (array_agg(string_value order by created_at desc)
         filter (where data_key = {{statusProperty}}))[1] as "subscriptionStatus",
+      -- Push opt-in: answered yes (and granted = true, if required) after trial start.
       coalesce(bool_or(
-        event_name = {{pushEvent}} and day >= 0 and day < {{trialDays::int}}
-        and ((data_key = {{pushAnswerProperty}} and string_value = {{pushAnswerValue}})
-          or (data_key = {{pushGrantedProperty}} and string_value = 'true'))
-      ), false) as "pushOptIn",
+        event_name = {{pushEvent}} and day >= 0
+        and data_key = {{pushAnswerProperty}} and string_value = {{pushAnswerValue}}
+      ), false)
+      and (not {{pushRequireGranted::boolean}} or coalesce(bool_or(
+        event_name = {{pushEvent}} and day >= 0
+        and data_key = {{pushGrantedProperty}} and string_value = 'true'
+      ), false)) as "pushOptIn",
+      coalesce(bool_or(event_name = {{pushEvent}} and day >= 0), false) as "pushAnswered",
       coalesce(bool_or(
         data_key = {{statusProperty}} and string_value = any({{paidStatuses}}::text[])
         and day >= 0 and ({{windowDays::int}} = 0 or day < {{windowDays::int}})
@@ -343,6 +454,7 @@ async function getTrialAttributes(
       pushAnswerProperty: settings.pushAnswerProperty,
       pushAnswerValue: settings.pushAnswerValue,
       pushGrantedProperty: settings.pushGrantedProperty,
+      pushRequireGranted: settings.pushRequireGranted,
       paidStatuses: settings.paidStatuses,
       trialDays: settings.trialLengthDays,
       windowDays: settings.conversionWindowDays,

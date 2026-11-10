@@ -20,18 +20,36 @@ export const TRIAL_PLATFORMS = ['ios', 'android', 'web'] as const;
 
 export type TrialPlatformFilter = 'all' | (typeof TRIAL_PLATFORMS)[number];
 
+export type TrialStartMode = 'trialExpiresAt' | 'event';
+
 export interface TrialSettings {
+  /**
+   * How a user's trial start is found. `trialExpiresAt`: earliest trial expiry
+   * value seen for the user minus trialLengthDays, falling back to the first
+   * trialStartEvent. `event`: first occurrence of trialStartEvent.
+   */
+  trialStartMode: TrialStartMode;
+  trialExpiresProperty: string;
   trialStartEvent: string;
+  /** Skip trial starts of users who signed up long before (re-trials). */
+  excludeRetrials: boolean;
+  /** A start is a re-trial if days since signup exceeds trialLengthDays + this. */
+  retrialThresholdDays: number;
+  daysSinceSignupProperty: string;
   trialLengthDays: number;
   activeDayEvent: string;
   activationEvent: string;
   /** Ordered milestones; each step is reached by any one of its events. */
   milestones: string[][];
   engagementEvents: string[];
+  /** Users who saw the push prompt (the opt-in denominator). */
+  pushShownEvent: string;
   pushEvent: string;
   pushAnswerProperty: string;
   pushAnswerValue: string;
   pushGrantedProperty: string;
+  /** Opt-in also requires pushGrantedProperty = true (not just the answer). */
+  pushRequireGranted: boolean;
   /** A user converts on the first of these events after their trial start... */
   conversionEvents: string[];
   /** ...that carries this property with this value (empty property = no requirement). */
@@ -51,7 +69,12 @@ export interface TrialSettings {
 }
 
 export const DEFAULT_TRIAL_SETTINGS: TrialSettings = {
+  trialStartMode: 'trialExpiresAt',
+  trialExpiresProperty: 'trial_expires_at',
   trialStartEvent: 'onboarding_seed_saved',
+  excludeRetrials: true,
+  retrialThresholdDays: 30,
+  daysSinceSignupProperty: 'days_since_signup',
   trialLengthDays: 14,
   activeDayEvent: 'trial_day_active',
   activationEvent: 'activation_complete',
@@ -69,10 +92,12 @@ export const DEFAULT_TRIAL_SETTINGS: TrialSettings = {
     'category_assigned',
     'categories_opened',
   ],
+  pushShownEvent: 'push_prompt_shown',
   pushEvent: 'push_prompt_answered',
   pushAnswerProperty: 'answer',
   pushAnswerValue: 'yes',
   pushGrantedProperty: 'granted',
+  pushRequireGranted: true,
   conversionEvents: ['subscription_started', 'paywall_purchased'],
   conversionProperty: 'is_trial_conversion',
   conversionPropertyValue: 'true',
@@ -123,6 +148,10 @@ export function normalizeTrialSettings(value?: Partial<TrialSettings> | null): T
   settings.trialLengthDays = Math.min(Math.max(settings.trialLengthDays, 1), 90);
   settings.conversionWindowDays = Math.min(settings.conversionWindowDays, 365);
   settings.conversionSettleDays = Math.min(settings.conversionSettleDays, 60);
+  settings.retrialThresholdDays = Math.min(settings.retrialThresholdDays, 3650);
+  if (!['trialExpiresAt', 'event'].includes(settings.trialStartMode)) {
+    settings.trialStartMode = DEFAULT_TRIAL_SETTINGS.trialStartMode;
+  }
 
   return settings;
 }
@@ -145,6 +174,7 @@ export function getTrialDefinitionEvents(settings: TrialSettings): string[] {
     ...new Set([
       settings.trialStartEvent,
       ...getTrialActivityEventNames(settings),
+      settings.pushShownEvent,
       settings.pushEvent,
       ...settings.conversionEvents,
     ]),
@@ -186,6 +216,127 @@ export function getCohortStart(now: Date, timezone = 'UTC'): Date {
 export interface TrialStartOccurrence {
   userId: string;
   createdAt: Date | string;
+  /** days_since_signup on that event, when present. */
+  daysSinceSignup?: number | string | null;
+}
+
+/** Per user: the earliest trial expiry value seen, and the event it came from. */
+export interface TrialExpiresRow {
+  userId: string;
+  expiresAt: Date | string;
+  /** When the event carrying that expiry value was recorded. */
+  seenAt: Date | string;
+  daysSinceSignup?: number | string | null;
+}
+
+export type TrialStartSource = 'trialExpiresAt' | 'event';
+
+export interface ResolvedTrialStart {
+  start: Date;
+  source: TrialStartSource;
+  /** At least one event for the user was recorded while the trial was running. */
+  observedDuringTrial: boolean;
+}
+
+export interface ResolvedTrialStarts {
+  starts: Map<string, ResolvedTrialStart>;
+  /** Users skipped as re-trials of long-time users, with their trial start. */
+  retrials: Map<string, Date>;
+  /** Earliest trial start under the active definition. */
+  firstTrialStart: Date | null;
+}
+
+const toNumber = (value: unknown) =>
+  value === null || value === undefined || value === '' || !Number.isFinite(Number(value))
+    ? null
+    : Number(value);
+
+/**
+ * Resolves each user's trial start (all time). In `trialExpiresAt` mode the start
+ * is the earliest expiry value seen minus the trial length, with the first start
+ * event as a fallback for users without an expiry value. In `event` mode it is the
+ * first start event. Starts in the future (bad expiry values) are ignored, and
+ * re-trials of long-time users are skipped when `excludeRetrials` is on.
+ */
+export function resolveTrialStarts(
+  occurrences: TrialStartOccurrence[],
+  expiresRows: TrialExpiresRow[],
+  settings: TrialSettings,
+  now: Date,
+): ResolvedTrialStarts {
+  const length = settings.trialLengthDays * DAY_MS;
+  const retrialLimit = settings.trialLengthDays + settings.retrialThresholdDays;
+  const candidates = new Map<
+    string,
+    { start: Date; source: TrialStartSource; observed: boolean; daysAtStart: number | null }
+  >();
+
+  for (const { userId, createdAt, daysSinceSignup } of occurrences) {
+    if (!userId) continue;
+    const date = new Date(createdAt);
+    const existing = candidates.get(userId);
+    if (!existing || date < existing.start) {
+      candidates.set(userId, {
+        start: date,
+        source: 'event',
+        observed: true,
+        daysAtStart: toNumber(daysSinceSignup),
+      });
+    }
+  }
+
+  if (settings.trialStartMode === 'trialExpiresAt') {
+    const derived = new Map<string, TrialExpiresRow>();
+    for (const row of expiresRows) {
+      if (!row.userId || !+new Date(row.expiresAt)) continue;
+      const existing = derived.get(row.userId);
+      if (!existing || +new Date(row.expiresAt) < +new Date(existing.expiresAt)) {
+        derived.set(row.userId, row);
+      }
+    }
+
+    for (const [userId, row] of derived) {
+      const start = new Date(+new Date(row.expiresAt) - length);
+      if (start > now) continue; // Bad expiry value: keep the event fallback, if any.
+      const seenAt = +new Date(row.seenAt);
+      const days = toNumber(row.daysSinceSignup);
+
+      candidates.set(userId, {
+        start,
+        source: 'trialExpiresAt',
+        observed: seenAt < +start + length,
+        // days_since_signup was measured when the expiry value was seen.
+        daysAtStart: days === null ? null : days - (seenAt - +start) / DAY_MS,
+      });
+    }
+  }
+
+  const starts = new Map<string, ResolvedTrialStart>();
+  const retrials = new Map<string, Date>();
+  let firstTrialStart: Date | null = null;
+
+  for (const [userId, c] of candidates) {
+    if (settings.excludeRetrials && c.daysAtStart !== null && c.daysAtStart > retrialLimit) {
+      retrials.set(userId, c.start);
+      continue;
+    }
+    starts.set(userId, { start: c.start, source: c.source, observedDuringTrial: c.observed });
+    if (!firstTrialStart || c.start < firstTrialStart) firstTrialStart = c.start;
+  }
+
+  return { starts, retrials, firstTrialStart };
+}
+
+/** Resolved starts that fall in [startDate, endDate). */
+export function startsInWindow(
+  resolved: ResolvedTrialStarts,
+  { startDate, endDate }: TrialWindow,
+): Map<string, Date> {
+  const result = new Map<string, Date>();
+  for (const [userId, { start }] of resolved.starts) {
+    if (start >= startDate && start < endDate) result.set(userId, start);
+  }
+  return result;
 }
 
 /**
@@ -233,7 +384,10 @@ export interface TrialAttributeRow {
   isInternal: boolean;
   platform: string | null;
   subscriptionStatus: string | null;
+  /** Answered the prompt with pushAnswerValue (and granted, if required) after trial start. */
   pushOptIn: boolean;
+  /** Answered the push prompt at all after trial start (implies it was shown). */
+  pushAnswered?: boolean;
   /** Had a paid subscription status after trial start (only if paidStatuses is set). */
   paidInWindow: boolean;
 }
@@ -254,6 +408,9 @@ export interface TrialEventStat {
 export interface TrialUser {
   userId: string;
   trialStart: string;
+  startSource: TrialStartSource;
+  /** False when the user was first seen only after the trial ended. */
+  observedDuringTrial: boolean;
   platform: string | null;
   isInternal: boolean;
   /** 1-based current trial day, or null once the trial has ended. */
@@ -266,6 +423,11 @@ export interface TrialUser {
   /** Hours from trial start to first reaching each milestone (null = not reached). */
   milestoneHours: (number | null)[];
   activated: boolean;
+  /** Trial started on or after the first push prompt ever shown, so push counts. */
+  pushEligible: boolean;
+  /** Saw the push prompt after trial start. */
+  pushPromptShown: boolean;
+  /** Opted in to push after trial start (only meaningful when pushEligible). */
   pushOptIn: boolean;
   converted: boolean;
   convertedAt: string | null;
@@ -288,7 +450,15 @@ export function buildTrialUsers(
   conversions: TrialConversionRow[],
   settings: TrialSettings,
   now: Date,
+  sources?: Map<string, ResolvedTrialStart>,
+  push?: {
+    /** First time the push prompt was ever shown; trials before it are not eligible. */
+    since: Date | string | null;
+    /** Users with the push prompt shown event after their trial start. */
+    shownUsers: Set<string>;
+  },
 ): TrialUser[] {
+  const pushSince = push?.since ? +new Date(push.since) : null;
   const length = settings.trialLengthDays;
   const acc = new Map<string, UserAccumulator>();
 
@@ -348,11 +518,28 @@ export function buildTrialUsers(
       convertedTime >= +start &&
       (settings.conversionWindowDays === 0 ||
         convertedTime < +start + settings.conversionWindowDays * DAY_MS);
-    const milestoneHours = settings.milestones.map(step => firstHours(step));
+    const converted = conversionValid || !!attr?.paidInWindow;
+    // A milestone made only of conversion events uses the conversion rule, so the
+    // journey and the Converted KPI agree (e.g. is_trial_conversion, any time).
+    const isConversionStep = (step: string[]) =>
+      step.length > 0 && step.every(name => settings.conversionEvents.includes(name));
+    const milestones = settings.milestones.map(step =>
+      isConversionStep(step) ? converted : firstHours(step) !== null,
+    );
+    const milestoneHours = settings.milestones.map(step =>
+      isConversionStep(step)
+        ? conversionValid
+          ? (convertedTime - +start) / HOUR_MS
+          : null
+        : firstHours(step),
+    );
+    const source = sources?.get(userId);
 
     return {
       userId,
       trialStart: start.toISOString(),
+      startSource: source?.source ?? 'event',
+      observedDuringTrial: source?.observedDuringTrial ?? true,
       platform: attr?.platform ?? null,
       isInternal: !!attr?.isInternal,
       currentTrialDay: elapsedDays < length ? elapsedDays + 1 : null,
@@ -362,11 +549,13 @@ export function buildTrialUsers(
         (sum, name) => sum + (user?.events.get(name)?.count ?? 0),
         0,
       ),
-      milestones: milestoneHours.map(h => h !== null),
+      milestones,
       milestoneHours,
       activated: !!user?.events.has(settings.activationEvent),
+      pushEligible: pushSince !== null && +start >= pushSince,
+      pushPromptShown: !!push?.shownUsers.has(userId) || !!attr?.pushAnswered,
       pushOptIn: !!attr?.pushOptIn,
-      converted: conversionValid || !!attr?.paidInWindow,
+      converted,
       convertedAt: conversionValid ? new Date(convertedTime).toISOString() : null,
       subscriptionStatus: attr?.subscriptionStatus ?? null,
     };
@@ -393,14 +582,24 @@ export interface TrialKpis {
   activated: number;
   active2: number;
   active3: number;
-  pushOptIn: number;
+  /** % opted in among eligible trial starters who saw the prompt; null if none saw it. */
+  pushOptIn: number | null;
+  /** % of eligible trial starters who saw the push prompt; null if none are eligible. */
+  pushSeen: number | null;
+  /** Eligible trial starters who saw the prompt (the opt-in denominator). */
+  pushSeenUsers: number;
+  /** Trial starters whose trial began on or after the first prompt was shown. */
+  pushEligibleStarts: number;
   /** % converted among completed trials; null when no trial in the group has completed. */
   converted: number | null;
   /** Number of completed trials the conversion rate is based on. */
   completedTrials: number;
 }
 
-export type TrialKpiKey = Exclude<keyof TrialKpis, 'completedTrials'>;
+export type TrialKpiKey = Exclude<
+  keyof TrialKpis,
+  'completedTrials' | 'pushSeen' | 'pushSeenUsers' | 'pushEligibleStarts'
+>;
 
 const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
 
@@ -408,13 +607,20 @@ export function computeKpis(users: TrialUser[]): TrialKpis {
   const n = users.length;
   const share = (fn: (u: TrialUser) => boolean) => pct(users.filter(fn).length, n);
   const completed = users.filter(u => u.trialCompleted);
+  const pushEligible = users.filter(u => u.pushEligible);
+  const pushSeen = pushEligible.filter(u => u.pushPromptShown);
 
   return {
     starts: n,
     activated: share(u => u.activated),
     active2: share(u => u.activeDays >= 2),
     active3: share(u => u.activeDays >= 3),
-    pushOptIn: share(u => u.pushOptIn),
+    pushOptIn: pushSeen.length
+      ? pct(pushSeen.filter(u => u.pushOptIn).length, pushSeen.length)
+      : null,
+    pushSeen: pushEligible.length ? pct(pushSeen.length, pushEligible.length) : null,
+    pushSeenUsers: pushSeen.length,
+    pushEligibleStarts: pushEligible.length,
     converted: completed.length
       ? pct(completed.filter(u => u.converted).length, completed.length)
       : null,
@@ -440,6 +646,8 @@ export function computeComparisons(
   previousWindow: TrialWindow,
   /** First time a conversion event carried the required conversion property. */
   conversionPropertyFirstSeen?: Date | string | null,
+  /** First time the trial expiry property was recorded (trialExpiresAt mode). */
+  trialExpiresFirstSeen?: Date | string | null,
 ): Record<TrialKpiKey, TrialComparison> {
   const firstSeen = new Map(
     stats.filter(s => s.firstSeen).map(s => [s.eventName, +new Date(s.firstSeen)]),
@@ -447,6 +655,10 @@ export function computeComparisons(
   const CONVERSION_PROPERTY = '\u0000conversionProperty';
   if (conversionPropertyFirstSeen) {
     firstSeen.set(CONVERSION_PROPERTY, +new Date(conversionPropertyFirstSeen));
+  }
+  const TRIAL_EXPIRES = '\u0000trialExpires';
+  if (trialExpiresFirstSeen) {
+    firstSeen.set(TRIAL_EXPIRES, +new Date(trialExpiresFirstSeen));
   }
   const earliest = (names: string[]) => {
     const times = names.map(n => firstSeen.get(n)).filter((t): t is number => t !== undefined);
@@ -461,14 +673,18 @@ export function computeComparisons(
       trackingStart: new Date(trackingStart).toISOString(),
     };
   };
-  const start = [settings.trialStartEvent];
+  // Trial starts come from the expiry property or (fallback) the start event.
+  const start =
+    settings.trialStartMode === 'trialExpiresAt'
+      ? [TRIAL_EXPIRES, settings.trialStartEvent]
+      : [settings.trialStartEvent];
 
   return {
     starts: compare(start),
     activated: compare(start, [settings.activationEvent]),
     active2: compare(start, [settings.activeDayEvent]),
     active3: compare(start, [settings.activeDayEvent]),
-    pushOptIn: compare(start, [settings.pushEvent]),
+    pushOptIn: compare(start, [settings.pushEvent], [settings.pushShownEvent]),
     // With a required property (e.g. is_trial_conversion), conversions only count
     // from when that property was first recorded.
     converted: settings.conversionProperty
@@ -495,14 +711,15 @@ const median = (values: number[]) => {
 
 export function computeFunnel(users: TrialUser[], settings: TrialSettings): TrialFunnelStep[] {
   return settings.milestones.map((events, index) => {
-    const hours = users
+    const reached = users.filter(u => u.milestones[index]);
+    const hours = reached
       .map(u => u.milestoneHours[index])
       .filter((h): h is number => h !== null && h !== undefined);
 
     return {
       events,
-      reached: hours.length,
-      pct: pct(hours.length, users.length),
+      reached: reached.length,
+      pct: pct(reached.length, users.length),
       medianHours: median(hours),
     };
   });
@@ -584,12 +801,21 @@ export function computeWeeklyCohorts(
   settings: TrialSettings,
   now: Date,
   timezone = 'UTC',
+  /** Weeks that end before this date are hidden; null hides every week. */
+  firstTrialStart?: Date | null,
 ): TrialCohortRow[] {
   const groups = new Map<string, TrialUser[]>();
   const currentWeek = getWeekStart(now, timezone);
+  const firstWeek =
+    firstTrialStart === undefined
+      ? ''
+      : firstTrialStart === null
+        ? '9999-12-31'
+        : getWeekStart(firstTrialStart, timezone);
 
   for (let i = 0; i < COHORT_WEEKS; i++) {
-    groups.set(addCalendarDays(currentWeek, -7 * i), []);
+    const week = addCalendarDays(currentWeek, -7 * i);
+    if (week >= firstWeek) groups.set(week, []);
   }
 
   for (const user of users) {
@@ -670,6 +896,15 @@ export interface TrialReport {
   users: TrialUser[];
   notes: TrialNote[];
   internalUsers: number;
+  /** How the current window's trial starts were found. */
+  /** First time the push prompt was ever shown; push metrics only cover trials since. */
+  pushSince: string | null;
+  startSources: {
+    trialExpiresAt: number;
+    event: number;
+    notObservedDuringTrial: number;
+    excludedRetrials: number;
+  };
 }
 
 /** "No data yet" notes cover the signup window, but never past now. */
@@ -690,9 +925,12 @@ export function getTrialDataRange(window: TrialWindow, now: Date, timezone?: str
 
 export function computeTrialReport({
   occurrences,
+  expiresRows = [],
+  trialExpiresFirstSeen,
   activity,
   attributes,
   conversions,
+  pushShown = [],
   eventStats,
   conversionPropertyFirstSeen,
   settings,
@@ -702,9 +940,13 @@ export function computeTrialReport({
   timezone,
 }: {
   occurrences: TrialStartOccurrence[];
+  expiresRows?: TrialExpiresRow[];
+  trialExpiresFirstSeen?: Date | string | null;
   activity: TrialActivityRow[];
   attributes: TrialAttributeRow[];
   conversions: TrialConversionRow[];
+  /** Users with the push prompt shown event at or after their trial start. */
+  pushShown?: TrialConversionRow[];
   eventStats: TrialEventStat[];
   /** First time a conversion event carried settings.conversionProperty. */
   conversionPropertyFirstSeen?: Date | string | null;
@@ -715,9 +957,15 @@ export function computeTrialReport({
   timezone?: string;
 }): TrialReport {
   const previousWindow = getPreviousWindow(window);
-  const allStarts = detectTrialStarts(occurrences, getTrialDataRange(window, now, timezone));
+  const resolved = resolveTrialStarts(occurrences, expiresRows, settings, now);
+  const pushSince =
+    eventStats.find(s => s.eventName === settings.pushShownEvent)?.firstSeen ?? null;
+  const allStarts = startsInWindow(resolved, getTrialDataRange(window, now, timezone));
   const allUsers = filterTrialUsers(
-    buildTrialUsers(allStarts, activity, attributes, conversions, settings, now),
+    buildTrialUsers(allStarts, activity, attributes, conversions, settings, now, resolved.starts, {
+      since: pushSince,
+      shownUsers: new Set(pushShown.map(row => row.userId)),
+    }),
     { excludeInternal: false, platform: filters.platform },
   );
 
@@ -741,17 +989,29 @@ export function computeTrialReport({
       eventStats,
       previousWindow,
       conversionPropertyFirstSeen,
+      trialExpiresFirstSeen,
     ),
     funnel: computeFunnel(current, settings),
     dailyActive: computeDailyActive(current, activity, settings, now),
     histogram: computeActiveDaysHistogram(current, settings),
-    cohorts: computeWeeklyCohorts(visible, settings, now, timezone),
+    cohorts: computeWeeklyCohorts(visible, settings, now, timezone, resolved.firstTrialStart),
     users: current.sort((a, b) => (a.trialStart < b.trialStart ? 1 : -1)),
-    notes: computeNotes(settings, eventStats, occurrences, {
-      startDate: window.startDate,
-      endDate: getStatsPeriodEnd(window, now),
-    }),
+    notes: computeNotes(
+      settings,
+      eventStats,
+      [...resolved.starts].map(([userId, { start }]) => ({ userId, createdAt: start })),
+      { startDate: window.startDate, endDate: getStatsPeriodEnd(window, now) },
+    ),
     internalUsers: currentAll.filter(u => u.isInternal).length,
+    pushSince: pushSince ? new Date(pushSince).toISOString() : null,
+    startSources: {
+      trialExpiresAt: current.filter(u => u.startSource === 'trialExpiresAt').length,
+      event: current.filter(u => u.startSource === 'event').length,
+      notObservedDuringTrial: current.filter(u => !u.observedDuringTrial).length,
+      excludedRetrials: [...resolved.retrials.values()].filter(
+        d => d >= window.startDate && d < window.endDate,
+      ).length,
+    },
   };
 }
 
