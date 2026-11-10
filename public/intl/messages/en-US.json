@@ -165,6 +165,12 @@
       "value": "Before"
     }
   ],
+  "label.before-tracking": [
+    {
+      "type": 0,
+      "value": "Before tracking"
+    }
+  ],
   "label.billing-settling": [
     {
       "type": 0,
@@ -687,6 +693,12 @@
     {
       "type": 0,
       "value": "Exclude internal users"
+    }
+  ],
+  "label.exclude-late-attached": [
+    {
+      "type": 0,
+      "value": "Exclude trials whose expiry was first seen at or after trial end"
     }
   ],
   "label.exclude-retrials": [
@@ -2397,6 +2409,16 @@
       "value": "url"
     }
   ],
+  "message.excluded-late-attached": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " with trial expiry attached only after the trial excluded"
+    }
+  ],
   "message.excluded-retrials": [
     {
       "type": 1,
@@ -2651,6 +2673,16 @@
     {
       "type": 1,
       "value": "date"
+    }
+  ],
+  "message.rate-n": [
+    {
+      "type": 0,
+      "value": "n = "
+    },
+    {
+      "type": 1,
+      "value": "n"
     }
   ],
   "message.reset-website": [

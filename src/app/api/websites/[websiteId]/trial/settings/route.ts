@@ -13,6 +13,7 @@ const trialSettingsSchema = z.object({
   trialStartMode: z.enum(['trialExpiresAt', 'event']),
   trialExpiresProperty: propertyName,
   excludeRetrials: z.boolean(),
+  excludeLateAttached: z.boolean(),
   retrialThresholdDays: z.coerce.number().int().min(0).max(3650),
   daysSinceSignupProperty: propertyName,
   trialStartEvent: eventName,

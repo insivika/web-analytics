@@ -207,6 +207,30 @@ export function TrialKpis({ report }: { report: TrialReport }) {
     },
   ];
 
+  // Rates only count trials started on/after the metric's tracking date. Say so
+  // when the window reaches back before it, and show the n each rate uses.
+  const windowStart = new Date(report.window.startDate).toISOString();
+  for (const card of cards) {
+    if (card.key === 'starts' || card.key === 'pushOptIn') continue;
+    const since = report.trackingSince[card.key];
+    const lines: string[] = [];
+    if (since && windowStart < since) {
+      lines.push(
+        formatMessage(messages.pushSince, { date: formatDate(new Date(since), 'MMM d', locale) }),
+      );
+    }
+    if (card.key !== 'converted') {
+      lines.push(formatMessage(messages.rateN, { n: kpis.n[card.key] }));
+    }
+    if (since === null) card.emptyText = formatMessage(messages.noComparisonNoData);
+    else if (kpis.n[card.key] === 0 && card.key !== 'converted') {
+      card.emptyText = formatMessage(messages.noTrialStartsSince, {
+        date: formatDate(new Date(since), 'MMM d', locale),
+      });
+    }
+    card.details = lines;
+  }
+
   return (
     <Column gap="2">
       <MetricsBar>
@@ -228,6 +252,10 @@ export function TrialKpis({ report }: { report: TrialReport }) {
             event: report.startSources.event,
             startEvent: report.settings.trialStartEvent,
           }),
+          report.startSources.excludedLateAttached > 0 &&
+            formatMessage(messages.excludedLateAttached, {
+              x: report.startSources.excludedLateAttached,
+            }),
           report.startSources.excludedRetrials > 0 &&
             formatMessage(messages.excludedRetrials, { x: report.startSources.excludedRetrials }),
           report.startSources.notObservedDuringTrial > 0 &&
@@ -440,7 +468,18 @@ export function TrialCohorts({ report }: { report: TrialReport }) {
                       : undefined
                   }
                 >
-                  {row.starts === 0 ? '—' : formatPct(row[c.key])}
+                  {row.starts === 0 ? (
+                    '—'
+                  ) : c.key !== 'starts' && row.beforeTracking[c.key] ? (
+                    <Column alignItems="flex-end" gap="0">
+                      <Text color="muted">—</Text>
+                      <Text color="muted" size="1" style={{ fontSize: 10 }}>
+                        {formatMessage(labels.beforeTracking)}
+                      </Text>
+                    </Column>
+                  ) : (
+                    formatPct(row[c.key])
+                  )}
                 </Text>
               ))}
             </Fragment>

@@ -35,6 +35,14 @@ export interface TrialSettings {
   excludeRetrials: boolean;
   /** A start is a re-trial if days since signup exceeds trialLengthDays + this. */
   retrialThresholdDays: number;
+  /**
+   * Skip derived starts whose first event carrying the trial expiry came at or
+   * after the end of the derived trial (expiry attached late, e.g. by a backfill,
+   * so the trial was never observed). For such users days_since_signup equals the
+   * trial length at first sighting; measuring from the derived start instead of
+   * the implied signup keeps re-trials (handled separately) out of this rule.
+   */
+  excludeLateAttached: boolean;
   daysSinceSignupProperty: string;
   trialLengthDays: number;
   activeDayEvent: string;
@@ -74,6 +82,7 @@ export const DEFAULT_TRIAL_SETTINGS: TrialSettings = {
   trialStartEvent: 'onboarding_seed_saved',
   excludeRetrials: true,
   retrialThresholdDays: 30,
+  excludeLateAttached: true,
   daysSinceSignupProperty: 'days_since_signup',
   trialLengthDays: 14,
   activeDayEvent: 'trial_day_active',
@@ -242,6 +251,8 @@ export interface ResolvedTrialStarts {
   starts: Map<string, ResolvedTrialStart>;
   /** Users skipped as re-trials of long-time users, with their trial start. */
   retrials: Map<string, Date>;
+  /** Users skipped because their trial expiry was only attached after the trial. */
+  lateAttached: Map<string, Date>;
   /** Earliest trial start under the active definition. */
   firstTrialStart: Date | null;
 }
@@ -268,7 +279,14 @@ export function resolveTrialStarts(
   const retrialLimit = settings.trialLengthDays + settings.retrialThresholdDays;
   const candidates = new Map<
     string,
-    { start: Date; source: TrialStartSource; observed: boolean; daysAtStart: number | null }
+    {
+      start: Date;
+      source: TrialStartSource;
+      observed: boolean;
+      daysAtStart: number | null;
+      /** Days from the derived trial start to the first event carrying the expiry. */
+      firstSeenAfterStartDays?: number;
+    }
   >();
 
   for (const { userId, createdAt, daysSinceSignup } of occurrences) {
@@ -307,12 +325,14 @@ export function resolveTrialStarts(
         observed: seenAt < +start + length,
         // days_since_signup was measured when the expiry value was seen.
         daysAtStart: days === null ? null : days - (seenAt - +start) / DAY_MS,
+        firstSeenAfterStartDays: (seenAt - +start) / DAY_MS,
       });
     }
   }
 
   const starts = new Map<string, ResolvedTrialStart>();
   const retrials = new Map<string, Date>();
+  const lateAttached = new Map<string, Date>();
   let firstTrialStart: Date | null = null;
 
   for (const [userId, c] of candidates) {
@@ -320,11 +340,19 @@ export function resolveTrialStarts(
       retrials.set(userId, c.start);
       continue;
     }
+    if (
+      settings.excludeLateAttached &&
+      c.firstSeenAfterStartDays !== undefined &&
+      c.firstSeenAfterStartDays >= settings.trialLengthDays
+    ) {
+      lateAttached.set(userId, c.start);
+      continue;
+    }
     starts.set(userId, { start: c.start, source: c.source, observedDuringTrial: c.observed });
     if (!firstTrialStart || c.start < firstTrialStart) firstTrialStart = c.start;
   }
 
-  return { starts, retrials, firstTrialStart };
+  return { starts, retrials, lateAttached, firstTrialStart };
 }
 
 /** Resolved starts that fall in [startDate, endDate). */
@@ -577,11 +605,18 @@ export function filterTrialUsers(users: TrialUser[], filters: TrialUserFilters):
   );
 }
 
+/** Rate KPIs that depend on events with their own tracking start date. */
+export type TrialRateKey = 'activated' | 'active2' | 'active3' | 'pushOptIn' | 'converted';
+
+/** Per rate: only trials starting on/after this date count (null = never tracked). */
+export type TrialTrackingSince = Record<TrialRateKey, string | null>;
+
 export interface TrialKpis {
   starts: number;
-  activated: number;
-  active2: number;
-  active3: number;
+  /** Rates are null when no trial starter is eligible (e.g. all before tracking). */
+  activated: number | null;
+  active2: number | null;
+  active3: number | null;
   /** % opted in among eligible trial starters who saw the prompt; null if none saw it. */
   pushOptIn: number | null;
   /** % of eligible trial starters who saw the push prompt; null if none are eligible. */
@@ -594,37 +629,55 @@ export interface TrialKpis {
   converted: number | null;
   /** Number of completed trials the conversion rate is based on. */
   completedTrials: number;
+  /** Users each rate is computed over. */
+  n: Record<TrialRateKey, number>;
 }
 
 export type TrialKpiKey = Exclude<
   keyof TrialKpis,
-  'completedTrials' | 'pushSeen' | 'pushSeenUsers' | 'pushEligibleStarts'
+  'completedTrials' | 'pushSeen' | 'pushSeenUsers' | 'pushEligibleStarts' | 'n'
 >;
 
 const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
 
-export function computeKpis(users: TrialUser[]): TrialKpis {
-  const n = users.length;
-  const share = (fn: (u: TrialUser) => boolean) => pct(users.filter(fn).length, n);
-  const completed = users.filter(u => u.trialCompleted);
+/**
+ * KPIs for a group of trial users. With `since`, each rate only covers users whose
+ * trial started on or after that metric's tracking date, so trials from before the
+ * events existed don't count as 0%. Push eligibility comes from `pushEligible`.
+ */
+export function computeKpis(users: TrialUser[], since?: TrialTrackingSince): TrialKpis {
+  const eligible = (key: TrialRateKey) => {
+    if (!since) return users;
+    const date = since[key];
+    return date === null ? [] : users.filter(u => u.trialStart >= date);
+  };
+  const rate = (group: TrialUser[], fn: (u: TrialUser) => boolean) =>
+    group.length ? pct(group.filter(fn).length, group.length) : null;
+
+  const activation = eligible('activated');
+  const activeDays = eligible('active2');
+  const completed = eligible('converted').filter(u => u.trialCompleted);
   const pushEligible = users.filter(u => u.pushEligible);
   const pushSeen = pushEligible.filter(u => u.pushPromptShown);
 
   return {
-    starts: n,
-    activated: share(u => u.activated),
-    active2: share(u => u.activeDays >= 2),
-    active3: share(u => u.activeDays >= 3),
-    pushOptIn: pushSeen.length
-      ? pct(pushSeen.filter(u => u.pushOptIn).length, pushSeen.length)
-      : null,
+    starts: users.length,
+    activated: rate(activation, u => u.activated),
+    active2: rate(activeDays, u => u.activeDays >= 2),
+    active3: rate(activeDays, u => u.activeDays >= 3),
+    pushOptIn: rate(pushSeen, u => u.pushOptIn),
     pushSeen: pushEligible.length ? pct(pushSeen.length, pushEligible.length) : null,
     pushSeenUsers: pushSeen.length,
     pushEligibleStarts: pushEligible.length,
-    converted: completed.length
-      ? pct(completed.filter(u => u.converted).length, completed.length)
-      : null,
+    converted: rate(completed, u => u.converted),
     completedTrials: completed.length,
+    n: {
+      activated: activation.length,
+      active2: activeDays.length,
+      active3: activeDays.length,
+      pushOptIn: pushSeen.length,
+      converted: completed.length,
+    },
   };
 }
 
@@ -789,6 +842,8 @@ export interface TrialCohortRow extends TrialKpis {
   conversionFinal: boolean;
   /** All trials ended, but some are still inside the conversion settle period. */
   settling: boolean;
+  /** The signup week ended before the metric was tracked: show "Before tracking". */
+  beforeTracking: Record<TrialRateKey, boolean>;
 }
 
 /**
@@ -803,6 +858,7 @@ export function computeWeeklyCohorts(
   timezone = 'UTC',
   /** Weeks that end before this date are hidden; null hides every week. */
   firstTrialStart?: Date | null,
+  since?: TrialTrackingSince,
 ): TrialCohortRow[] {
   const groups = new Map<string, TrialUser[]>();
   const currentWeek = getWeekStart(now, timezone);
@@ -827,7 +883,18 @@ export function computeWeeklyCohorts(
   return [...groups]
     .sort(([a], [b]) => (a < b ? 1 : -1))
     .map(([weekStart, group]) => {
-      const kpis = computeKpis(group);
+      const kpis = computeKpis(group, since);
+      const before = (key: TrialRateKey) => {
+        if (!since) return false;
+        const date = since[key];
+        // Before tracking: the week ended before tracking began, or every trial in
+        // it started before then (so the rate has no eligible users).
+        return (
+          date === null ||
+          getWeekStart(new Date(date), timezone) > weekStart ||
+          (group.length > 0 && group.every(u => u.trialStart < date))
+        );
+      };
       const conversionFinal = group.length > 0 && group.every(u => u.trialCompleted);
       const inProgress = group.some(
         u => +new Date(u.trialStart) + settings.trialLengthDays * DAY_MS > +now,
@@ -840,6 +907,13 @@ export function computeWeeklyCohorts(
         conversionFinal,
         inProgress,
         settling: group.length > 0 && !inProgress && !conversionFinal,
+        beforeTracking: {
+          activated: before('activated'),
+          active2: before('active2'),
+          active3: before('active3'),
+          pushOptIn: before('pushOptIn'),
+          converted: before('converted'),
+        },
       };
     });
 }
@@ -899,11 +973,15 @@ export interface TrialReport {
   /** How the current window's trial starts were found. */
   /** First time the push prompt was ever shown; push metrics only cover trials since. */
   pushSince: string | null;
+  /** Per rate KPI: trials starting before this date are not counted. */
+  trackingSince: TrialTrackingSince;
   startSources: {
     trialExpiresAt: number;
     event: number;
     notObservedDuringTrial: number;
     excludedRetrials: number;
+    /** Trial expiry first attached at/after trial end (e.g. a backfill): excluded. */
+    excludedLateAttached: number;
   };
 }
 
@@ -958,8 +1036,22 @@ export function computeTrialReport({
 }): TrialReport {
   const previousWindow = getPreviousWindow(window);
   const resolved = resolveTrialStarts(occurrences, expiresRows, settings, now);
-  const pushSince =
-    eventStats.find(s => s.eventName === settings.pushShownEvent)?.firstSeen ?? null;
+  const comparisons = computeComparisons(
+    settings,
+    eventStats,
+    previousWindow,
+    conversionPropertyFirstSeen,
+    trialExpiresFirstSeen,
+  );
+  // A rate only counts trials that started once its events were being recorded.
+  const trackingSince: TrialTrackingSince = {
+    activated: comparisons.activated.trackingStart,
+    active2: comparisons.active2.trackingStart,
+    active3: comparisons.active3.trackingStart,
+    pushOptIn: comparisons.pushOptIn.trackingStart,
+    converted: comparisons.converted.trackingStart,
+  };
+  const pushSince = trackingSince.pushOptIn;
   const allStarts = startsInWindow(resolved, getTrialDataRange(window, now, timezone));
   const allUsers = filterTrialUsers(
     buildTrialUsers(allStarts, activity, attributes, conversions, settings, now, resolved.starts, {
@@ -982,19 +1074,21 @@ export function computeTrialReport({
     settings,
     window,
     previousWindow,
-    kpis: computeKpis(current),
-    previousKpis: computeKpis(previous),
-    comparisons: computeComparisons(
-      settings,
-      eventStats,
-      previousWindow,
-      conversionPropertyFirstSeen,
-      trialExpiresFirstSeen,
-    ),
+    kpis: computeKpis(current, trackingSince),
+    previousKpis: computeKpis(previous, trackingSince),
+    comparisons,
+    trackingSince,
     funnel: computeFunnel(current, settings),
     dailyActive: computeDailyActive(current, activity, settings, now),
     histogram: computeActiveDaysHistogram(current, settings),
-    cohorts: computeWeeklyCohorts(visible, settings, now, timezone, resolved.firstTrialStart),
+    cohorts: computeWeeklyCohorts(
+      visible,
+      settings,
+      now,
+      timezone,
+      resolved.firstTrialStart,
+      trackingSince,
+    ),
     users: current.sort((a, b) => (a.trialStart < b.trialStart ? 1 : -1)),
     notes: computeNotes(
       settings,
@@ -1003,12 +1097,15 @@ export function computeTrialReport({
       { startDate: window.startDate, endDate: getStatsPeriodEnd(window, now) },
     ),
     internalUsers: currentAll.filter(u => u.isInternal).length,
-    pushSince: pushSince ? new Date(pushSince).toISOString() : null,
+    pushSince,
     startSources: {
       trialExpiresAt: current.filter(u => u.startSource === 'trialExpiresAt').length,
       event: current.filter(u => u.startSource === 'event').length,
       notObservedDuringTrial: current.filter(u => !u.observedDuringTrial).length,
       excludedRetrials: [...resolved.retrials.values()].filter(
+        d => d >= window.startDate && d < window.endDate,
+      ).length,
+      excludedLateAttached: [...resolved.lateAttached.values()].filter(
         d => d >= window.startDate && d < window.endDate,
       ).length,
     },

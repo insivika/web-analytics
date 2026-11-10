@@ -68,6 +68,7 @@ export function fromFormValues(values: Record<string, any>): Partial<TrialSettin
     ...Object.fromEntries(NUMBER_FIELDS.map(key => [key, Number(values[key])])),
     excludeInternal: !!values.excludeInternal,
     excludeRetrials: !!values.excludeRetrials,
+    excludeLateAttached: !!values.excludeLateAttached,
     pushRequireGranted: !!values.pushRequireGranted,
     milestones: String(values.milestones ?? '')
       .split('\n')
@@ -191,6 +192,13 @@ function TrialSettingsForm({ websiteId, onClose }: { websiteId: string; onClose:
           {({ field }) => (
             <Checkbox isSelected={!!field.value} onChange={field.onChange}>
               {formatMessage(labels.pushRequireGranted)}
+            </Checkbox>
+          )}
+        </FormField>
+        <FormField name="excludeLateAttached">
+          {({ field }) => (
+            <Checkbox isSelected={!!field.value} onChange={field.onChange}>
+              {formatMessage(labels.excludeLateAttached)}
             </Checkbox>
           )}
         </FormField>

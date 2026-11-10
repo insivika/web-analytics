@@ -475,6 +475,11 @@ export const labels = defineMessages({
     id: 'label.push-require-granted',
     defaultMessage: 'Push opt-in also requires granted = true',
   },
+  beforeTracking: { id: 'label.before-tracking', defaultMessage: 'Before tracking' },
+  excludeLateAttached: {
+    id: 'label.exclude-late-attached',
+    defaultMessage: 'Exclude trials whose expiry was first seen at or after trial end',
+  },
 });
 
 export const messages = defineMessages({
@@ -706,5 +711,10 @@ export const messages = defineMessages({
   pushNotEligible: {
     id: 'message.push-not-eligible',
     defaultMessage: 'Trial started before the first push prompt was shown',
+  },
+  rateN: { id: 'message.rate-n', defaultMessage: 'n = {n}' },
+  excludedLateAttached: {
+    id: 'message.excluded-late-attached',
+    defaultMessage: '{x} with trial expiry attached only after the trial excluded',
   },
 });

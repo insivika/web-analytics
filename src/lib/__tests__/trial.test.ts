@@ -150,7 +150,7 @@ describe('internal user exclusion', () => {
         activity,
         attributes,
         conversions: [],
-        eventStats: [],
+        eventStats: allStats(daysAgo(60)),
         settings,
         window,
         filters: { excludeInternal },
@@ -466,10 +466,21 @@ describe('trial start from trial_expires_at', () => {
     });
   });
 
-  test('flags trials that were first seen only after they ended', () => {
-    const { starts } = resolveTrialStarts([], [expires('late', 30, 15, 15)], settings, now);
+  test('excludes trials whose expiry was only attached at or after trial end', () => {
+    // Backfill pattern: first seen exactly at expiry (day 14) with days_since_signup 14.
+    const resolved = resolveTrialStarts([], [expires('late', 30, 16, 14)], settings, now);
 
-    expect(starts.get('late')).toMatchObject({ start: daysAgo(30), observedDuringTrial: false });
+    expect(resolved.starts.has('late')).toBe(false);
+    expect(resolved.lateAttached.get('late')).toEqual(daysAgo(30));
+
+    const keep = normalizeTrialSettings({ excludeLateAttached: false });
+    expect(
+      resolveTrialStarts([], [expires('late', 30, 16, 14)], keep, now).starts.get('late'),
+    ).toMatchObject({ start: daysAgo(30), observedDuringTrial: false });
+    // Seen on day 12 of the trial: kept.
+    expect(
+      resolveTrialStarts([], [expires('ok', 30, 18, 12)], settings, now).starts.has('ok'),
+    ).toBe(true);
   });
 
   test('skips re-trials of long-time users and future starts from bad expiry values', () => {
@@ -496,7 +507,7 @@ describe('trial start from trial_expires_at', () => {
     expect(resolved.starts.has('edge')).toBe(true);
     expect(resolved.starts.get('bad-expiry')).toMatchObject({ source: 'event', start: daysAgo(4) });
 
-    const keepAll = normalizeTrialSettings({ excludeRetrials: false });
+    const keepAll = normalizeTrialSettings({ excludeRetrials: false, excludeLateAttached: false });
     expect(
       resolveTrialStarts([], [expires('retrial', 25, 5, 335)], keepAll, now).starts.has('retrial'),
     ).toBe(true);
@@ -535,6 +546,7 @@ describe('trial start from trial_expires_at', () => {
       event: 1,
       notObservedDuringTrial: 0,
       excludedRetrials: 1,
+      excludedLateAttached: 0,
     });
   });
 });
@@ -649,5 +661,63 @@ describe('push opt-in', () => {
     expect(report.pushSince).toBe(since.toISOString());
     expect(report.kpis).toMatchObject({ pushOptIn: 100, pushSeen: 100, pushSeenUsers: 1 });
     expect(report.comparisons.pushOptIn.available).toBe(false);
+  });
+});
+
+describe('per-metric tracking start', () => {
+  test('rates only count trials started on/after the metric was tracked', () => {
+    // Activation tracked from 5 days ago; 'old' started before that.
+    const starts = new Map([
+      ['old', daysAgo(8)],
+      ['new-active', daysAgo(3)],
+      ['new-idle', daysAgo(2)],
+    ]);
+    const activity: TrialActivityRow[] = [
+      { userId: 'new-active', eventName: 'activation_complete', day: 0, count: 1 },
+    ];
+    const users = build(starts, activity);
+    const since = {
+      activated: daysAgo(5).toISOString(),
+      active2: daysAgo(60).toISOString(),
+      active3: daysAgo(60).toISOString(),
+      pushOptIn: null,
+      converted: daysAgo(60).toISOString(),
+    };
+    const kpis = computeKpis(users, since);
+
+    expect(kpis.activated).toBe(50);
+    expect(kpis.n.activated).toBe(2);
+    expect(kpis.n.active2).toBe(3);
+    expect(kpis.pushOptIn).toBeNull();
+    expect(
+      computeKpis(
+        users.filter(u => u.userId === 'old'),
+        since,
+      ).activated,
+    ).toBeNull();
+  });
+
+  test('cohort weeks that ended before tracking are flagged', () => {
+    const users = build(
+      new Map([
+        ['a', new Date('2026-10-13T10:00:00Z')],
+        ['b', new Date('2026-11-03T10:00:00Z')],
+      ]),
+    );
+    const since = {
+      activated: '2026-10-08T00:00:00.000Z',
+      active2: '2026-10-08T00:00:00.000Z',
+      active3: '2026-10-08T00:00:00.000Z',
+      pushOptIn: '2026-11-08T05:07:48.000Z',
+      converted: '2026-10-08T00:00:00.000Z',
+    };
+    const rows = computeWeeklyCohorts(users, settings, now, 'UTC', undefined, since);
+    const oct12 = rows.find(r => r.weekStart === '2026-10-12');
+    const nov2 = rows.find(r => r.weekStart === '2026-11-02');
+
+    expect(oct12.beforeTracking).toMatchObject({ activated: false, pushOptIn: true });
+    expect(oct12.pushOptIn).toBeNull();
+    expect(nov2.beforeTracking.pushOptIn).toBe(true);
+    expect(rows.find(r => r.weekStart === '2026-11-09').beforeTracking.pushOptIn).toBe(false);
   });
 });
