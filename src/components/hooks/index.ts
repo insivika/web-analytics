@@ -33,6 +33,7 @@ export * from './queries/useTeamMembersQuery';
 export * from './queries/useTeamQuery';
 export * from './queries/useTeamsQuery';
 export * from './queries/useTeamWebsitesQuery';
+export * from './queries/useTrialQueries';
 export * from './queries/useUpdateQuery';
 export * from './queries/useUserQuery';
 export * from './queries/useUsersQuery';

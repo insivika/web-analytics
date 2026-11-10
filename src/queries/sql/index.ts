@@ -26,6 +26,7 @@ export * from './reports/getBreakdown';
 export * from './reports/getFunnel';
 export * from './reports/getJourney';
 export * from './reports/getRetention';
+export * from './reports/getTrial';
 export * from './reports/getUTM';
 export * from './sessions/createSession';
 export * from './sessions/getSessionActivity';

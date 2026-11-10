@@ -43,10 +43,6 @@ export function DateFilter({
       value: '7day',
     },
     {
-      label: formatMessage(labels.lastDays, { x: '14' }),
-      value: '14day',
-    },
-    {
       label: formatMessage(labels.thisMonth),
       value: '0month',
       divider: true,

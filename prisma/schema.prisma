@@ -84,6 +84,7 @@ model Website {
   revenue     Revenue[]
   segments    Segment[]
   savedViews  SavedView[]
+  settings    WebsiteSetting[]
   sessionData SessionData[]
 
   @@index([userId])
@@ -271,6 +272,21 @@ model SavedView {
 
   @@index([websiteId])
   @@map("saved_view")
+}
+
+model WebsiteSetting {
+  id        String    @id() @unique() @map("website_setting_id") @db.Uuid
+  websiteId String    @map("website_id") @db.Uuid
+  key       String    @db.VarChar(100)
+  value     Json
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, key])
+  @@index([websiteId])
+  @@map("website_setting")
 }
 
 model Revenue {

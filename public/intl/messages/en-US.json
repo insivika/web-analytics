@@ -11,6 +11,40 @@
       "value": "Actions"
     }
   ],
+  "label.activated": [
+    {
+      "type": 0,
+      "value": "Activated"
+    }
+  ],
+  "label.activation-event": [
+    {
+      "type": 0,
+      "value": "Activation event"
+    }
+  ],
+  "label.active-day-event": [
+    {
+      "type": 0,
+      "value": "Active day event"
+    }
+  ],
+  "label.active-days": [
+    {
+      "type": 0,
+      "value": "Active days"
+    }
+  ],
+  "label.active-days-at-least": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": "+ active days"
+    }
+  ],
   "label.activity": [
     {
       "type": 0,
@@ -75,6 +109,12 @@
     {
       "type": 0,
       "value": "All"
+    }
+  ],
+  "label.all-platforms": [
+    {
+      "type": 0,
+      "value": "All platforms"
     }
   ],
   "label.all-time": [
@@ -251,6 +291,18 @@
       "value": "Conversion"
     }
   ],
+  "label.conversion-events": [
+    {
+      "type": 0,
+      "value": "Conversion events"
+    }
+  ],
+  "label.conversion-grace-days": [
+    {
+      "type": 0,
+      "value": "Conversion grace period (days)"
+    }
+  ],
   "label.conversion-rate": [
     {
       "type": 0,
@@ -261,6 +313,12 @@
     {
       "type": 0,
       "value": "Conversion step"
+    }
+  ],
+  "label.converted-to-paid": [
+    {
+      "type": 0,
+      "value": "Converted to paid"
     }
   ],
   "label.count": [
@@ -339,6 +397,12 @@
     {
       "type": 0,
       "value": "Custom range"
+    }
+  ],
+  "label.daily-active": [
+    {
+      "type": 0,
+      "value": "Daily active"
     }
   ],
   "label.dashboard": [
@@ -521,6 +585,24 @@
       "value": "End Step"
     }
   ],
+  "label.ended": [
+    {
+      "type": 0,
+      "value": "Ended"
+    }
+  ],
+  "label.engagement": [
+    {
+      "type": 0,
+      "value": "Engagement"
+    }
+  ],
+  "label.engagement-events": [
+    {
+      "type": 0,
+      "value": "Engagement events"
+    }
+  ],
   "label.entry": [
     {
       "type": 0,
@@ -549,6 +631,18 @@
     {
       "type": 0,
       "value": "Events"
+    }
+  ],
+  "label.exclude-internal-by-default": [
+    {
+      "type": 0,
+      "value": "Exclude internal users by default"
+    }
+  ],
+  "label.exclude-internal-users": [
+    {
+      "type": 0,
+      "value": "Exclude internal users"
     }
   ],
   "label.exists": [
@@ -677,6 +771,12 @@
       "value": "Hostname"
     }
   ],
+  "label.in-progress": [
+    {
+      "type": 0,
+      "value": "In progress"
+    }
+  ],
   "label.includes": [
     {
       "type": 0,
@@ -699,6 +799,12 @@
     {
       "type": 0,
       "value": "Dive deeper into your data by using segments and filters."
+    }
+  ],
+  "label.internal-property": [
+    {
+      "type": 0,
+      "value": "Internal user property"
     }
   ],
   "label.is": [
@@ -905,6 +1011,12 @@
       "value": "Maximize"
     }
   ],
+  "label.median-trial-day": [
+    {
+      "type": 0,
+      "value": "Median trial day"
+    }
+  ],
   "label.medium": [
     {
       "type": 0,
@@ -921,6 +1033,18 @@
     {
       "type": 0,
       "value": "Members"
+    }
+  ],
+  "label.milestone": [
+    {
+      "type": 0,
+      "value": "Milestone"
+    }
+  ],
+  "label.milestones": [
+    {
+      "type": 0,
+      "value": "Milestones"
     }
   ],
   "label.min": [
@@ -1137,6 +1261,12 @@
       "value": "Paid social"
     }
   ],
+  "label.paid-statuses": [
+    {
+      "type": 0,
+      "value": "Paid status values"
+    }
+  ],
   "label.paid-video": [
     {
       "type": 0,
@@ -1165,6 +1295,18 @@
     {
       "type": 0,
       "value": "Pixels"
+    }
+  ],
+  "label.platform": [
+    {
+      "type": 0,
+      "value": "Platform"
+    }
+  ],
+  "label.platform-property": [
+    {
+      "type": 0,
+      "value": "Platform property"
     }
   ],
   "label.powered-by": [
@@ -1213,6 +1355,36 @@
       "value": "Property"
     }
   ],
+  "label.push-answer-property": [
+    {
+      "type": 0,
+      "value": "Push answer property"
+    }
+  ],
+  "label.push-answer-value": [
+    {
+      "type": 0,
+      "value": "Push answer value"
+    }
+  ],
+  "label.push-event": [
+    {
+      "type": 0,
+      "value": "Push opt-in event"
+    }
+  ],
+  "label.push-granted-property": [
+    {
+      "type": 0,
+      "value": "Push granted property"
+    }
+  ],
+  "label.push-opt-in": [
+    {
+      "type": 0,
+      "value": "Push opt-in"
+    }
+  ],
   "label.queries": [
     {
       "type": 0,
@@ -1229,6 +1401,18 @@
     {
       "type": 0,
       "value": "Query parameters"
+    }
+  ],
+  "label.reached": [
+    {
+      "type": 0,
+      "value": "Reached"
+    }
+  ],
+  "label.reached-in-order": [
+    {
+      "type": 0,
+      "value": "Reached in order"
     }
   ],
   "label.realtime": [
@@ -1459,6 +1643,18 @@
       "value": "Share URL"
     }
   ],
+  "label.signup-week": [
+    {
+      "type": 0,
+      "value": "Signup week"
+    }
+  ],
+  "label.signup-window": [
+    {
+      "type": 0,
+      "value": "Signup window"
+    }
+  ],
   "label.single-day": [
     {
       "type": 0,
@@ -1483,10 +1679,22 @@
       "value": "Start Step"
     }
   ],
+  "label.status-property": [
+    {
+      "type": 0,
+      "value": "Subscription status property"
+    }
+  ],
   "label.steps": [
     {
       "type": 0,
       "value": "Steps"
+    }
+  ],
+  "label.subscription": [
+    {
+      "type": 0,
+      "value": "Subscription"
     }
   ],
   "label.sum": [
@@ -1663,6 +1871,60 @@
       "value": "Transfer website"
     }
   ],
+  "label.trial": [
+    {
+      "type": 0,
+      "value": "Trial"
+    }
+  ],
+  "label.trial-day": [
+    {
+      "type": 0,
+      "value": "Trial day"
+    }
+  ],
+  "label.trial-journey": [
+    {
+      "type": 0,
+      "value": "Trial journey"
+    }
+  ],
+  "label.trial-length-days": [
+    {
+      "type": 0,
+      "value": "Trial length (days)"
+    }
+  ],
+  "label.trial-settings": [
+    {
+      "type": 0,
+      "value": "Trial settings"
+    }
+  ],
+  "label.trial-start": [
+    {
+      "type": 0,
+      "value": "Trial start"
+    }
+  ],
+  "label.trial-start-event": [
+    {
+      "type": 0,
+      "value": "Trial start event"
+    }
+  ],
+  "label.trial-starts": [
+    {
+      "type": 0,
+      "value": "Trial starts"
+    }
+  ],
+  "label.trial-users": [
+    {
+      "type": 0,
+      "value": "Trial users"
+    }
+  ],
   "label.true": [
     {
       "type": 0,
@@ -1715,6 +1977,18 @@
     {
       "type": 0,
       "value": "User"
+    }
+  ],
+  "label.user-id": [
+    {
+      "type": 0,
+      "value": "User ID"
+    }
+  ],
+  "label.user-id-property": [
+    {
+      "type": 0,
+      "value": "User ID property"
     }
   ],
   "label.username": [
@@ -1813,6 +2087,12 @@
       "value": "Websites"
     }
   ],
+  "label.weekly-cohorts": [
+    {
+      "type": 0,
+      "value": "Weekly cohorts"
+    }
+  ],
   "label.window": [
     {
       "type": 0,
@@ -1837,6 +2117,24 @@
     {
       "type": 0,
       "value": " in the box below to confirm."
+    }
+  ],
+  "message.active-of-eligible": [
+    {
+      "type": 1,
+      "value": "active"
+    },
+    {
+      "type": 0,
+      "value": " of "
+    },
+    {
+      "type": 1,
+      "value": "eligible"
+    },
+    {
+      "type": 0,
+      "value": " users whose trial reached this day"
     }
   ],
   "message.active-users": [
@@ -1879,10 +2177,30 @@
       "value": "Bad request"
     }
   ],
+  "message.change-vs-previous": [
+    {
+      "type": 0,
+      "value": "vs. previous "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " days"
+    }
+  ],
   "message.collected-data": [
     {
       "type": 0,
       "value": "Collected data"
+    }
+  ],
+  "message.comma-separated-hint": [
+    {
+      "type": 0,
+      "value": "Comma-separated."
     }
   ],
   "message.confirm-delete": [
@@ -1991,10 +2309,26 @@
       "value": "Incorrect username and/or password."
     }
   ],
+  "message.internal-users-excluded": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " internal users excluded."
+    }
+  ],
   "message.invalid-domain": [
     {
       "type": 0,
       "value": "Invalid domain. Do not include http/https."
+    }
+  ],
+  "message.milestones-hint": [
+    {
+      "type": 0,
+      "value": "One milestone per line, in order. Separate alternative events with |."
     }
   ],
   "message.min-password-length": [
@@ -2029,6 +2363,34 @@
     {
       "type": 0,
       "value": "No data available."
+    }
+  ],
+  "message.no-data-for-event": [
+    {
+      "type": 0,
+      "value": "No data yet for "
+    },
+    {
+      "type": 1,
+      "value": "event"
+    }
+  ],
+  "message.no-data-for-event-on-platform": [
+    {
+      "type": 0,
+      "value": "No data yet for "
+    },
+    {
+      "type": 1,
+      "value": "event"
+    },
+    {
+      "type": 0,
+      "value": " on "
+    },
+    {
+      "type": 1,
+      "value": "platform"
     }
   ],
   "message.no-event-data": [
@@ -2185,6 +2547,20 @@
       "value": "Transfer website ownership to your account or another team."
     }
   ],
+  "message.trial-user-events": [
+    {
+      "type": 0,
+      "value": "Events for "
+    },
+    {
+      "type": 1,
+      "value": "userId"
+    },
+    {
+      "type": 0,
+      "value": " from one day before trial start (max 1,000)."
+    }
+  ],
   "message.triggered-event": [
     {
       "type": 0,
@@ -2201,6 +2577,16 @@
     {
       "type": 0,
       "value": "User deleted."
+    }
+  ],
+  "message.users-with-no-active-day": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " users had no active day"
     }
   ],
   "message.viewed-page": [
