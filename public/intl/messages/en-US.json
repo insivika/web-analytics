@@ -4295,18 +4295,6 @@
       "value": "Why no billing data"
     }
   ],
-  "label.roi-ad-visitor-quality": [
-    {
-      "type": 0,
-      "value": "Ad visitors convert at"
-    }
-  ],
-  "label.roi-assumptions": [
-    {
-      "type": 0,
-      "value": "Assumptions"
-    }
-  ],
   "label.roi-based-on": [
     {
       "type": 0,
@@ -4331,28 +4319,10 @@
       "value": "Net income per month"
     }
   ],
-  "label.roi-pricier": [
-    {
-      "type": 0,
-      "value": "Clicks get pricier per doubling"
-    }
-  ],
   "label.roi-reset": [
     {
       "type": 0,
       "value": "Reset"
-    }
-  ],
-  "label.roi-trial-to-paying": [
-    {
-      "type": 0,
-      "value": "Trial to paying"
-    }
-  ],
-  "label.roi-visitor-to-trial": [
-    {
-      "type": 0,
-      "value": "Visitor to trial"
     }
   ],
   "label.roi-what-if": [
@@ -4497,106 +4467,10 @@
       "pluralType": "cardinal"
     }
   ],
-  "message.roi-of-normal": [
-    {
-      "type": 1,
-      "value": "pct"
-    },
-    {
-      "type": 0,
-      "value": "% of normal"
-    }
-  ],
   "message.roi-proj-beyond": [
     {
       "type": 0,
       "value": "This is more than 3× anything you've spent before, so treat it as a rough guess."
-    }
-  ],
-  "message.roi-proj-no-ads": [
-    {
-      "type": 0,
-      "value": "With no ads, about "
-    },
-    {
-      "type": 1,
-      "value": "visitors"
-    },
-    {
-      "type": 0,
-      "value": " people still visit each month and "
-    },
-    {
-      "type": 1,
-      "value": "customers"
-    },
-    {
-      "type": 0,
-      "value": " become paying customers."
-    }
-  ],
-  "message.roi-proj-note": [
-    {
-      "type": 0,
-      "value": "Starting values are what actually happened in "
-    },
-    {
-      "type": 1,
-      "value": "months"
-    },
-    {
-      "type": 0,
-      "value": ". Ad dollars become website visitors at each platform's cost per click for website campaigns (Meta "
-    },
-    {
-      "type": 1,
-      "value": "meta"
-    },
-    {
-      "type": 0,
-      "value": ", Google "
-    },
-    {
-      "type": 1,
-      "value": "google"
-    },
-    {
-      "type": 0,
-      "value": "); Meta app-install campaigns stay as they are. Net income adds first-month revenue from the extra customers."
-    }
-  ],
-  "message.roi-proj-story": [
-    {
-      "type": 1,
-      "value": "spend"
-    },
-    {
-      "type": 0,
-      "value": " a month in ads brings about "
-    },
-    {
-      "type": 1,
-      "value": "visitors"
-    },
-    {
-      "type": 0,
-      "value": " extra visitors and "
-    },
-    {
-      "type": 1,
-      "value": "customers"
-    },
-    {
-      "type": 0,
-      "value": " extra paying customers, so each one costs "
-    },
-    {
-      "type": 1,
-      "value": "cpa"
-    },
-    {
-      "type": 0,
-      "value": " in ads."
     }
   ],
   "message.roi-proj-thin": [
@@ -4637,50 +4511,6 @@
     {
       "type": 0,
       "value": " had ad spend, so these numbers will move as more months come in."
-    }
-  ],
-  "message.roi-proj-year-gain": [
-    {
-      "type": 0,
-      "value": "In their first year those customers pay about "
-    },
-    {
-      "type": 1,
-      "value": "revenue"
-    },
-    {
-      "type": 0,
-      "value": ", so each month of these ads earns back "
-    },
-    {
-      "type": 1,
-      "value": "amount"
-    },
-    {
-      "type": 0,
-      "value": " more than it costs."
-    }
-  ],
-  "message.roi-proj-year-loss": [
-    {
-      "type": 0,
-      "value": "In their first year those customers pay about "
-    },
-    {
-      "type": 1,
-      "value": "revenue"
-    },
-    {
-      "type": 0,
-      "value": ", so each month of these ads falls "
-    },
-    {
-      "type": 1,
-      "value": "amount"
-    },
-    {
-      "type": 0,
-      "value": " short of paying for itself."
     }
   ],
   "message.roi-vs-today": [
@@ -4743,108 +4573,110 @@
       "value": "Current trials · not filtered by signup window"
     }
   ],
-  "label.roi-yearly-share": [
+  "label.roi-money-in-per-month": [
     {
       "type": 0,
-      "value": "Share choosing yearly"
+      "value": "Money in per month"
     }
   ],
-  "label.roi-yearly-price": [
+  "message.roi-proj-simple": [
     {
       "type": 0,
-      "value": "Yearly price"
-    }
-  ],
-  "label.roi-monthly-price": [
-    {
-      "type": 0,
-      "value": "Monthly price"
-    }
-  ],
-  "label.roi-months-kept": [
-    {
-      "type": 0,
-      "value": "Months a monthly customer pays in year one"
-    }
-  ],
-  "label.roi-keep-rate": [
-    {
-      "type": 0,
-      "value": "Kept after fees and store cut"
-    }
-  ],
-  "message.roi-value-now": [
-    {
-      "type": 0,
-      "value": "At these settings a new customer brings in "
+      "value": "At "
     },
     {
       "type": 1,
-      "value": "month"
+      "value": "spend"
     },
     {
       "type": 0,
-      "value": " in their first month and "
+      "value": " a month in ads, about "
     },
     {
       "type": 1,
-      "value": "year"
+      "value": "visitors"
     },
     {
       "type": 0,
-      "value": " in their first year. Past new customers actually paid "
+      "value": " people would visit the website each month. In the past, 1 in "
     },
     {
       "type": 1,
-      "value": "past"
+      "value": "n"
     },
     {
       "type": 0,
-      "value": " in their first 30 days."
+      "value": " visitors became a paying customer, so that would be about "
+    },
+    {
+      "type": 1,
+      "value": "customers"
+    },
+    {
+      "type": 0,
+      "value": " new paying customers a month."
     }
   ],
-  "message.roi-prices-note": [
+  "message.roi-proj-how": [
     {
       "type": 0,
-      "value": "Prices per month / year: Stripe "
+      "value": "How this works: ad dollars buy website visits at what a click cost before ("
     },
     {
       "type": 1,
-      "value": "stripe"
+      "value": "months"
     },
     {
       "type": 0,
-      "value": ", App Store and Google Play "
+      "value": ": Meta "
     },
     {
       "type": 1,
-      "value": "stores"
+      "value": "meta"
     },
     {
       "type": 0,
-      "value": " (from RevenueCat). "
+      "value": ", Google "
     },
     {
       "type": 1,
-      "value": "web"
+      "value": "google"
     },
     {
       "type": 0,
-      "value": "% of recent new customers paid on the web. Recent yearly buyers on the web paid "
+      "value": "). Every visit, from ads or not, becomes a paying customer at your past rate. A new customer pays about "
     },
     {
       "type": 1,
-      "value": "paid"
+      "value": "value"
     },
     {
       "type": 0,
-      "value": " on average, so check for discounts."
-    }
-  ],
-  "message.roi-stripe-prices-missing": [
+      "value": " in their first month at today's prices (Stripe "
+    },
+    {
+      "type": 1,
+      "value": "monthly"
+    },
     {
       "type": 0,
-      "value": "unavailable (the Stripe key needs Read access to Prices)"
+      "value": " a month or "
+    },
+    {
+      "type": 1,
+      "value": "yearlyPrice"
+    },
+    {
+      "type": 0,
+      "value": " a year; "
+    },
+    {
+      "type": 1,
+      "value": "yearly"
+    },
+    {
+      "type": 0,
+      "value": "% choose yearly)."
     }
   ]
 }

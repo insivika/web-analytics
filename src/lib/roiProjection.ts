@@ -160,8 +160,11 @@ export interface Projection {
   today: ProjectionPoint;
   withoutAds: ProjectionPoint;
   spend: number;
-  /** Net income per month: today's money in, plus first-month revenue from the
-   * change in new customers, minus all ad spend. */
+  /** Money in per month: today's, plus first-month revenue from the change in
+   * new customers. */
+  moneyIn: number;
+  todayMoneyIn: number;
+  /** Net income per month: money in minus all ad spend. */
   netIncome: number;
   todayNetIncome: number;
   customersFromAds: number;
@@ -179,16 +182,16 @@ export function project(base: ProjectionBase, i: ProjectionInputs): Projection {
   const spend = i.metaSpend + i.googleSpend;
   const todaySpend = base.metaSpend + base.googleSpend;
   const customersFromAds = projected.newCustomers - withoutAds.newCustomers;
+  const moneyIn =
+    base.moneyIn + (projected.newCustomers - today.newCustomers) * customerValue(i).firstMonth;
   return {
+    moneyIn,
+    todayMoneyIn: base.moneyIn,
     projected,
     today,
     withoutAds,
     spend,
-    netIncome:
-      base.moneyIn +
-      (projected.newCustomers - today.newCustomers) * customerValue(i).firstMonth -
-      spend -
-      base.otherSpend,
+    netIncome: moneyIn - spend - base.otherSpend,
     todayNetIncome: base.moneyIn - todaySpend - base.otherSpend,
     customersFromAds,
     costPerCustomerFromAds: customersFromAds > 0.01 ? spend / customersFromAds : null,
@@ -314,6 +317,8 @@ export function defaultInputs(base: ProjectionBase, plans: PlanEconomics): Proje
     yearlyPrice: plans.yearlyPrice ?? plans.sources.recentYearlyPaid ?? 0,
     monthsKept: plans.monthsKept ?? PLAN_FALLBACKS.monthsKept,
     keepRate: plans.keepRate ?? PLAN_FALLBACKS.keepRate,
-    pricier: 0.15,
+    // Simple by default: every visit costs what it cost before, and converts
+    // like any other visit (no ad attribution).
+    pricier: 0,
   };
 }

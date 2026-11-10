@@ -5,7 +5,7 @@ import { Panel } from '@/components/common/Panel';
 import { useLocale, useMessages } from '@/components/hooks';
 import { formatDate } from '@/lib/date';
 import {
-  type CustomerValue,
+  customerValue,
   defaultInputs,
   type PlanEconomics,
   PROJECTION_WINDOWS,
@@ -14,7 +14,6 @@ import {
   type ProjectionWindow,
   project,
   projectionBase,
-  customerValue as valueOf,
 } from '@/lib/roiProjection';
 import { ROI_COLORS } from './RoiCharts';
 
@@ -22,57 +21,47 @@ const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLo
 const int = (n: number) => Math.round(n).toLocaleString('en-US');
 const one = (n: number) => n.toFixed(1);
 const signed = (n: number, f: (n: number) => string) => `${n >= 0 ? '+' : '−'}${f(Math.abs(n))}`;
-const SPEND_MAX = 3000;
 const money = (n: number | null) => (n === null ? '—' : `$${n.toFixed(2)}`);
+const SPEND_MAX = 3000;
 
-function Slider({
+function SpendSlider({
   label,
   value,
-  min,
-  max,
-  step,
-  format,
   color,
   onChange,
 }: {
   label: string;
   value: number;
-  min: number;
-  max: number;
-  step: number;
-  format: (v: number) => string;
-  color?: string;
+  color: string;
   onChange: (v: number) => void;
 }) {
   return (
     <Row alignItems="center" gap="4" wrap="wrap">
-      <Text color="muted" size="2" style={{ minWidth: 220 }}>
-        {color && (
-          <span
-            aria-hidden
-            style={{
-              display: 'inline-block',
-              width: 14,
-              borderTop: `3px dashed ${color}`,
-              marginRight: 8,
-              verticalAlign: 'middle',
-            }}
-          />
-        )}
+      <Text size="3" style={{ minWidth: 200 }}>
+        <span
+          aria-hidden
+          style={{
+            display: 'inline-block',
+            width: 14,
+            borderTop: `3px dashed ${color}`,
+            marginRight: 8,
+            verticalAlign: 'middle',
+          }}
+        />
         {label}
       </Text>
       <input
         type="range"
         aria-label={label}
-        min={min}
-        max={max}
-        step={step}
+        min={0}
+        max={SPEND_MAX}
+        step={25}
         value={value}
         onChange={e => onChange(Number(e.target.value))}
-        style={{ flex: '1 1 200px', accentColor: color ?? ROI_COLORS.positive }}
+        style={{ flex: '1 1 240px', accentColor: color }}
       />
-      <Text weight="bold" align="right" style={{ minWidth: 72 }}>
-        {format(value)}
+      <Text size="5" weight="bold" align="right" style={{ minWidth: 80 }}>
+        {usd(value)}
       </Text>
     </Row>
   );
@@ -115,13 +104,16 @@ function Result({
   );
 }
 
+/**
+ * "What if" for ad spend, kept simple: ad dollars buy website visits at what a
+ * visit cost before, and every visit turns into paying customers at the past
+ * overall rate. No attempt to say which customers came from ads.
+ */
 export function RoiProjection({
   history,
-  customerValue,
   plans,
 }: {
   history: ProjectionMonth[];
-  customerValue: CustomerValue;
   plans: PlanEconomics;
 }) {
   const { formatMessage, labels, messages } = useMessages();
@@ -136,7 +128,6 @@ export function RoiProjection({
 
   if (!history.length) return null;
 
-  const set = (k: keyof ProjectionInputs) => (v: number) => setInputs(i => ({ ...i, [k]: v }));
   const p = project(base, inputs);
   const vsToday = (n: number, f: (n: number) => string) =>
     formatMessage(messages.roiVsToday, { delta: signed(n, f) });
@@ -146,7 +137,8 @@ export function RoiProjection({
       ? `${monthName(base.months[0])} – ${monthName(base.months[base.months.length - 1])}`
       : monthName(base.months[0]);
   const adMonths = history.slice(-lookback).filter(m => m.metaSpend + m.googleSpend > 0).length;
-  const pctFmt = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
+  const rate = base.visitorToTrial * base.trialToPaying;
+  const oneIn = rate > 0 ? Math.round(1 / rate) : null;
 
   return (
     <Panel title={formatMessage(labels.roiWhatIf)}>
@@ -171,25 +163,17 @@ export function RoiProjection({
         </Row>
 
         <Column gap="3">
-          <Slider
+          <SpendSlider
             label={formatMessage(labels.roiMetaPerMonth)}
             value={inputs.metaSpend}
-            min={0}
-            max={SPEND_MAX}
-            step={25}
-            format={usd}
             color={ROI_COLORS.meta}
-            onChange={set('metaSpend')}
+            onChange={v => setInputs(i => ({ ...i, metaSpend: v }))}
           />
-          <Slider
+          <SpendSlider
             label={formatMessage(labels.roiGooglePerMonth)}
             value={inputs.googleSpend}
-            min={0}
-            max={SPEND_MAX}
-            step={25}
-            format={usd}
             color={ROI_COLORS.google}
-            onChange={set('googleSpend')}
+            onChange={v => setInputs(i => ({ ...i, googleSpend: v }))}
           />
         </Column>
 
@@ -200,14 +184,14 @@ export function RoiProjection({
             delta={vsToday(p.projected.visitors - p.today.visitors, int)}
           />
           <Result
-            label={formatMessage(labels.roiTrials)}
-            value={int(p.projected.trials)}
-            delta={vsToday(p.projected.trials - p.today.trials, int)}
-          />
-          <Result
             label={formatMessage(labels.roiNewPayingCustomers)}
             value={one(p.projected.newCustomers)}
             delta={vsToday(p.projected.newCustomers - p.today.newCustomers, one)}
+          />
+          <Result
+            label={formatMessage(labels.roiMoneyInPerMonth)}
+            value={usd(p.moneyIn)}
+            delta={vsToday(p.moneyIn - p.todayMoneyIn, usd)}
           />
           <Result
             label={formatMessage(labels.roiNetPerMonth)}
@@ -218,26 +202,12 @@ export function RoiProjection({
         </Grid>
 
         <Text size="3">
-          {p.spend <= 0
-            ? formatMessage(messages.roiProjNoAds, {
-                visitors: int(p.withoutAds.visitors),
-                customers: one(p.withoutAds.newCustomers),
-              })
-            : [
-                formatMessage(messages.roiProjStory, {
-                  spend: usd(p.spend),
-                  visitors: int(p.projected.visitors - p.withoutAds.visitors),
-                  customers: one(p.customersFromAds),
-                  cpa: p.costPerCustomerFromAds === null ? '—' : usd(p.costPerCustomerFromAds),
-                }),
-                formatMessage(
-                  p.firstYearReturn >= 0 ? messages.roiProjYearGain : messages.roiProjYearLoss,
-                  {
-                    revenue: usd(p.customersFromAds * valueOf(inputs).firstYear),
-                    amount: usd(Math.abs(p.firstYearReturn)),
-                  },
-                ),
-              ].join(' ')}
+          {formatMessage(messages.roiProjSimple, {
+            spend: usd(p.spend),
+            visitors: int(p.projected.visitors),
+            n: oneIn ?? '—',
+            customers: one(p.projected.newCustomers),
+          })}
         </Text>
         {(p.beyondHistory || adMonths < 3) && (
           <Text size="2" style={{ color: ROI_COLORS.google }}>
@@ -249,119 +219,17 @@ export function RoiProjection({
               .join(' ')}
           </Text>
         )}
-
-        <Column
-          gap="3"
-          paddingTop="4"
-          style={{ borderTop: '1px solid var(--border-color, rgba(128,128,128,0.25))' }}
-        >
-          <Text weight="bold">{formatMessage(labels.roiAssumptions)}</Text>
-          <Slider
-            label={formatMessage(labels.roiVisitorToTrial)}
-            value={inputs.visitorToTrial}
-            min={0.002}
-            max={0.08}
-            step={0.001}
-            format={pctFmt}
-            onChange={set('visitorToTrial')}
-          />
-          <Slider
-            label={formatMessage(labels.roiTrialToPaying)}
-            value={inputs.trialToPaying}
-            min={0.02}
-            max={0.8}
-            step={0.01}
-            format={pctFmt}
-            onChange={set('trialToPaying')}
-          />
-          <Slider
-            label={formatMessage(labels.roiAdVisitorQuality)}
-            value={inputs.adVisitorQuality}
-            min={0.1}
-            max={1.5}
-            step={0.05}
-            format={v => formatMessage(messages.roiOfNormal, { pct: Math.round(v * 100) })}
-            onChange={set('adVisitorQuality')}
-          />
-          <Slider
-            label={formatMessage(labels.roiYearlyShare)}
-            value={inputs.yearlyShare}
-            min={0}
-            max={1}
-            step={0.01}
-            format={pctFmt}
-            onChange={set('yearlyShare')}
-          />
-          <Slider
-            label={formatMessage(labels.roiYearlyPrice)}
-            value={inputs.yearlyPrice}
-            min={0}
-            max={300}
-            step={1}
-            format={usd}
-            onChange={set('yearlyPrice')}
-          />
-          <Slider
-            label={formatMessage(labels.roiMonthlyPrice)}
-            value={inputs.monthlyPrice}
-            min={0}
-            max={50}
-            step={0.5}
-            format={money}
-            onChange={set('monthlyPrice')}
-          />
-          <Slider
-            label={formatMessage(labels.roiMonthsKept)}
-            value={inputs.monthsKept}
-            min={1}
-            max={12}
-            step={0.1}
-            format={v => v.toFixed(1)}
-            onChange={set('monthsKept')}
-          />
-          <Slider
-            label={formatMessage(labels.roiKeepRate)}
-            value={inputs.keepRate}
-            min={0.5}
-            max={1}
-            step={0.01}
-            format={pctFmt}
-            onChange={set('keepRate')}
-          />
-          <Text color="muted" size="1">
-            {formatMessage(messages.roiValueNow, {
-              month: usd(valueOf(inputs).firstMonth),
-              year: usd(valueOf(inputs).firstYear),
-              past: customerValue.firstMonth === null ? '—' : usd(customerValue.firstMonth),
-            })}
-          </Text>
-          <Text color="muted" size="1">
-            {formatMessage(messages.roiPricesNote, {
-              stripe: plans.stripePricesMissing
-                ? formatMessage(messages.roiStripePricesMissing)
-                : `${money(plans.sources.stripeMonthly)} / ${money(plans.sources.stripeYearly)}`,
-              stores: `${money(plans.sources.storeMonthly)} / ${money(plans.sources.storeYearly)}`,
-              web: Math.round(plans.webShare * 100),
-              paid: money(plans.sources.recentYearlyPaid),
-            })}
-          </Text>
-          <Slider
-            label={formatMessage(labels.roiPricier)}
-            value={inputs.pricier}
-            min={0}
-            max={0.5}
-            step={0.05}
-            format={v => `${Math.round(v * 100)}%`}
-            onChange={set('pricier')}
-          />
-          <Text color="muted" size="1">
-            {formatMessage(messages.roiProjNote, {
-              months: monthsLabel,
-              meta: base.metaCpc === null ? '—' : `$${base.metaCpc.toFixed(2)}`,
-              google: base.googleCpc === null ? '—' : `$${base.googleCpc.toFixed(2)}`,
-            })}
-          </Text>
-        </Column>
+        <Text color="muted" size="1">
+          {formatMessage(messages.roiProjHow, {
+            meta: money(base.metaCpc),
+            google: money(base.googleCpc),
+            months: monthsLabel,
+            value: usd(customerValue(inputs).firstMonth),
+            monthly: money(plans.sources.stripeMonthly),
+            yearlyPrice: money(plans.sources.stripeYearly),
+            yearly: Math.round(inputs.yearlyShare * 100),
+          })}
+        </Text>
       </Column>
     </Panel>
   );

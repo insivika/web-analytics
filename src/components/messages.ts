@@ -1,28 +1,13 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
-  roiYearlyShare: { id: 'label.roi-yearly-share', defaultMessage: 'Share choosing yearly' },
-  roiYearlyPrice: { id: 'label.roi-yearly-price', defaultMessage: 'Yearly price' },
-  roiMonthlyPrice: { id: 'label.roi-monthly-price', defaultMessage: 'Monthly price' },
-  roiMonthsKept: {
-    id: 'label.roi-months-kept',
-    defaultMessage: 'Months a monthly customer pays in year one',
-  },
-  roiKeepRate: { id: 'label.roi-keep-rate', defaultMessage: 'Kept after fees and store cut' },
+  roiMoneyInPerMonth: { id: 'label.roi-money-in-per-month', defaultMessage: 'Money in per month' },
   roiWhatIf: { id: 'label.roi-what-if', defaultMessage: 'What if you spent more on ads?' },
   roiBasedOn: { id: 'label.roi-based-on', defaultMessage: 'Based on the last' },
   roiReset: { id: 'label.roi-reset', defaultMessage: 'Reset' },
   roiMetaPerMonth: { id: 'label.roi-meta-per-month', defaultMessage: 'Meta ads per month' },
   roiGooglePerMonth: { id: 'label.roi-google-per-month', defaultMessage: 'Google ads per month' },
   roiNetPerMonth: { id: 'label.roi-net-per-month', defaultMessage: 'Net income per month' },
-  roiAssumptions: { id: 'label.roi-assumptions', defaultMessage: 'Assumptions' },
-  roiVisitorToTrial: { id: 'label.roi-visitor-to-trial', defaultMessage: 'Visitor to trial' },
-  roiTrialToPaying: { id: 'label.roi-trial-to-paying', defaultMessage: 'Trial to paying' },
-  roiAdVisitorQuality: {
-    id: 'label.roi-ad-visitor-quality',
-    defaultMessage: 'Ad visitors convert at',
-  },
-  roiPricier: { id: 'label.roi-pricier', defaultMessage: 'Clicks get pricier per doubling' },
   roiThisMonth: { id: 'label.roi-this-month', defaultMessage: 'This month' },
   roiLastMonth: { id: 'label.roi-last-month', defaultMessage: 'Last month' },
   roiLast3Months: { id: 'label.roi-last-3-months', defaultMessage: 'Last 3 months' },
@@ -593,46 +578,21 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
-  roiValueNow: {
-    id: 'message.roi-value-now',
+  roiProjSimple: {
+    id: 'message.roi-proj-simple',
     defaultMessage:
-      'At these settings a new customer brings in {month} in their first month and {year} in their first year. Past new customers actually paid {past} in their first 30 days.',
+      'At {spend} a month in ads, about {visitors} people would visit the website each month. In the past, 1 in {n} visitors became a paying customer, so that would be about {customers} new paying customers a month.',
   },
-  roiPricesNote: {
-    id: 'message.roi-prices-note',
+  roiProjHow: {
+    id: 'message.roi-proj-how',
     defaultMessage:
-      'Prices per month / year: Stripe {stripe}, App Store and Google Play {stores} (from RevenueCat). {web}% of recent new customers paid on the web. Recent yearly buyers on the web paid {paid} on average, so check for discounts.',
-  },
-  roiStripePricesMissing: {
-    id: 'message.roi-stripe-prices-missing',
-    defaultMessage: 'unavailable (the Stripe key needs Read access to Prices)',
+      "How this works: ad dollars buy website visits at what a click cost before ({months}: Meta {meta}, Google {google}). Every visit, from ads or not, becomes a paying customer at your past rate. A new customer pays about {value} in their first month at today's prices (Stripe {monthly} a month or {yearlyPrice} a year; {yearly}% choose yearly).",
   },
   roiMonthsN: {
     id: 'message.roi-months-n',
     defaultMessage: '{n, plural, one {# month} other {# months}}',
   },
   roiVsToday: { id: 'message.roi-vs-today', defaultMessage: '{delta} vs today' },
-  roiOfNormal: { id: 'message.roi-of-normal', defaultMessage: '{pct}% of normal' },
-  roiProjNoAds: {
-    id: 'message.roi-proj-no-ads',
-    defaultMessage:
-      'With no ads, about {visitors} people still visit each month and {customers} become paying customers.',
-  },
-  roiProjStory: {
-    id: 'message.roi-proj-story',
-    defaultMessage:
-      '{spend} a month in ads brings about {visitors} extra visitors and {customers} extra paying customers, so each one costs {cpa} in ads.',
-  },
-  roiProjYearGain: {
-    id: 'message.roi-proj-year-gain',
-    defaultMessage:
-      'In their first year those customers pay about {revenue}, so each month of these ads earns back {amount} more than it costs.',
-  },
-  roiProjYearLoss: {
-    id: 'message.roi-proj-year-loss',
-    defaultMessage:
-      'In their first year those customers pay about {revenue}, so each month of these ads falls {amount} short of paying for itself.',
-  },
   roiProjBeyond: {
     id: 'message.roi-proj-beyond',
     defaultMessage:
@@ -642,11 +602,6 @@ export const messages = defineMessages({
     id: 'message.roi-proj-thin',
     defaultMessage:
       'Only {n, plural, one {# of these months} other {# of these months}} had ad spend, so these numbers will move as more months come in.',
-  },
-  roiProjNote: {
-    id: 'message.roi-proj-note',
-    defaultMessage:
-      "Starting values are what actually happened in {months}. Ad dollars become website visitors at each platform's cost per click for website campaigns (Meta {meta}, Google {google}); Meta app-install campaigns stay as they are. Net income adds first-month revenue from the extra customers.",
   },
   roiNetIncomeFor: { id: 'message.roi-net-income-for', defaultMessage: 'Net income, {period}' },
   roiSummary: {
