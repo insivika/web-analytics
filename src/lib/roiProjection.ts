@@ -26,6 +26,7 @@ export interface ProjectionMonth {
   otherSpend: number;
 }
 
+/** What past new customers actually paid (a check on the plan-based values). */
 export interface CustomerValue {
   /** Average net revenue in a new customer's first 30 days. */
   firstMonth: number | null;
@@ -114,8 +115,15 @@ export interface ProjectionInputs {
   trialToPaying: number;
   /** How well ad visitors convert compared with everyone else (1 = the same). */
   adVisitorQuality: number;
-  firstMonthValue: number;
-  firstYearValue: number;
+  /** Share of new customers picking the yearly plan (0..1). */
+  yearlyShare: number;
+  /** List prices per billing period. */
+  monthlyPrice: number;
+  yearlyPrice: number;
+  /** How many monthly payments a monthly customer makes in their first year. */
+  monthsKept: number;
+  /** Share of each payment kept after Stripe fees and store commission (0..1). */
+  keepRate: number;
   /** Extra cost per click for each doubling of spend (0.15 = 15%). */
   pricier: number;
 }
@@ -178,27 +186,134 @@ export function project(base: ProjectionBase, i: ProjectionInputs): Projection {
     spend,
     netIncome:
       base.moneyIn +
-      (projected.newCustomers - today.newCustomers) * i.firstMonthValue -
+      (projected.newCustomers - today.newCustomers) * customerValue(i).firstMonth -
       spend -
       base.otherSpend,
     todayNetIncome: base.moneyIn - todaySpend - base.otherSpend,
     customersFromAds,
     costPerCustomerFromAds: customersFromAds > 0.01 ? spend / customersFromAds : null,
-    firstYearReturn: customersFromAds * i.firstYearValue - spend,
+    firstYearReturn: customersFromAds * customerValue(i).firstYear - spend,
     beyondHistory: spend > 3 * Math.max(todaySpend, 100),
   };
 }
 
-/** Starting slider values: exactly what happened in the chosen months. */
-export function defaultInputs(base: ProjectionBase, value: CustomerValue): ProjectionInputs {
+/**
+ * What one new customer brings in, from the plan inputs: a yearly customer pays
+ * the yearly price up front; a monthly customer pays the monthly price for each
+ * month they stay. Both after fees.
+ */
+export function customerValue(i: ProjectionInputs) {
+  const yearly = i.yearlyPrice * i.keepRate;
+  const monthly = i.monthlyPrice * i.keepRate;
+  return {
+    firstMonth: i.yearlyShare * yearly + (1 - i.yearlyShare) * monthly,
+    firstYear: i.yearlyShare * yearly + (1 - i.yearlyShare) * monthly * i.monthsKept,
+  };
+}
+
+export interface PlanPrices {
+  month: { amount: number } | null;
+  year: { amount: number } | null;
+}
+
+export interface StorePrices {
+  monthly: number | null;
+  yearly: number | null;
+  keepRate: number | null;
+  yearlyShare: number | null;
+}
+
+export interface PlanSources {
+  stripePrices: PlanPrices | null;
+  storePrices: StorePrices | null;
+  stripeFeeRate: number | null;
+  stripeYearlyShare: number | null;
+  stripeNewCustomers: number;
+  storeNewCustomers: number;
+  monthsKept: number | null;
+  recentYearlyPaid: number | null;
+  recentMonthlyPaid: number | null;
+}
+
+export interface PlanEconomics {
+  /** Share of new customers who pay on the web (Stripe) rather than in the stores. */
+  webShare: number;
+  monthlyPrice: number | null;
+  yearlyPrice: number | null;
+  keepRate: number | null;
+  yearlyShare: number | null;
+  monthsKept: number | null;
+  sources: {
+    stripeMonthly: number | null;
+    stripeYearly: number | null;
+    storeMonthly: number | null;
+    storeYearly: number | null;
+    stripeKeepRate: number | null;
+    storeKeepRate: number | null;
+    recentYearlyPaid: number | null;
+    recentMonthlyPaid: number | null;
+  };
+  /** True when Stripe's price list couldn't be read (key lacks Prices access). */
+  stripePricesMissing: boolean;
+}
+
+/** Weighted mix of a web and a store value; either side may be unknown. */
+function blend(web: number | null, store: number | null, w: number) {
+  if (web === null && store === null) return null;
+  if (web === null) return store;
+  if (store === null) return web;
+  return w * web + (1 - w) * store;
+}
+
+const round = (n: number | null, d = 2) => (n === null ? null : Math.round(n * 10 ** d) / 10 ** d);
+
+/**
+ * Combines Stripe's and the stores' plan prices into one set of starting values,
+ * weighted by where recent new customers paid.
+ */
+export function planEconomics(src: PlanSources): PlanEconomics {
+  const totalNew = src.stripeNewCustomers + src.storeNewCustomers;
+  const w = totalNew > 0 ? src.stripeNewCustomers / totalNew : 1;
+  const stripeMonthly = src.stripePrices?.month?.amount ?? null;
+  const stripeYearly = src.stripePrices?.year?.amount ?? null;
+  const stripeKeep = src.stripeFeeRate === null ? null : 1 - src.stripeFeeRate;
+  return {
+    webShare: round(w, 3),
+    monthlyPrice: round(blend(stripeMonthly, src.storePrices?.monthly ?? null, w)),
+    yearlyPrice: round(blend(stripeYearly, src.storePrices?.yearly ?? null, w)),
+    keepRate: round(blend(stripeKeep, src.storePrices?.keepRate ?? null, w), 3),
+    yearlyShare: round(blend(src.stripeYearlyShare, src.storePrices?.yearlyShare ?? null, w), 3),
+    monthsKept: round(src.monthsKept, 1),
+    sources: {
+      stripeMonthly,
+      stripeYearly,
+      storeMonthly: src.storePrices?.monthly ?? null,
+      storeYearly: src.storePrices?.yearly ?? null,
+      stripeKeepRate: round(stripeKeep, 3),
+      storeKeepRate: src.storePrices?.keepRate ?? null,
+      recentYearlyPaid: round(src.recentYearlyPaid),
+      recentMonthlyPaid: round(src.recentMonthlyPaid),
+    },
+    stripePricesMissing: !src.stripePrices,
+  };
+}
+
+/** When a value is unknown (no data yet), the slider starts here. */
+export const PLAN_FALLBACKS = { yearlyShare: 0.3, monthsKept: 6, keepRate: 0.9 };
+
+/** Starting slider values: what actually happened in the chosen months, at current prices. */
+export function defaultInputs(base: ProjectionBase, plans: PlanEconomics): ProjectionInputs {
   return {
     metaSpend: base.metaSpend,
     googleSpend: base.googleSpend,
     visitorToTrial: base.visitorToTrial,
     trialToPaying: base.trialToPaying,
     adVisitorQuality: 1,
-    firstMonthValue: value.firstMonth ?? 0,
-    firstYearValue: value.firstYear ?? value.firstMonth ?? 0,
+    yearlyShare: plans.yearlyShare ?? PLAN_FALLBACKS.yearlyShare,
+    monthlyPrice: plans.monthlyPrice ?? plans.sources.recentMonthlyPaid ?? 0,
+    yearlyPrice: plans.yearlyPrice ?? plans.sources.recentYearlyPaid ?? 0,
+    monthsKept: plans.monthsKept ?? PLAN_FALLBACKS.monthsKept,
+    keepRate: plans.keepRate ?? PLAN_FALLBACKS.keepRate,
     pricier: 0.15,
   };
 }

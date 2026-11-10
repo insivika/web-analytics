@@ -4313,18 +4313,6 @@
       "value": "Based on the last"
     }
   ],
-  "label.roi-first-month-value": [
-    {
-      "type": 0,
-      "value": "First-month revenue per customer"
-    }
-  ],
-  "label.roi-first-year-value": [
-    {
-      "type": 0,
-      "value": "First-year revenue per customer"
-    }
-  ],
   "label.roi-google-per-month": [
     {
       "type": 0,
@@ -4753,6 +4741,110 @@
     {
       "type": 0,
       "value": "Current trials · not filtered by signup window"
+    }
+  ],
+  "label.roi-yearly-share": [
+    {
+      "type": 0,
+      "value": "Share choosing yearly"
+    }
+  ],
+  "label.roi-yearly-price": [
+    {
+      "type": 0,
+      "value": "Yearly price"
+    }
+  ],
+  "label.roi-monthly-price": [
+    {
+      "type": 0,
+      "value": "Monthly price"
+    }
+  ],
+  "label.roi-months-kept": [
+    {
+      "type": 0,
+      "value": "Months a monthly customer pays in year one"
+    }
+  ],
+  "label.roi-keep-rate": [
+    {
+      "type": 0,
+      "value": "Kept after fees and store cut"
+    }
+  ],
+  "message.roi-value-now": [
+    {
+      "type": 0,
+      "value": "At these settings a new customer brings in "
+    },
+    {
+      "type": 1,
+      "value": "month"
+    },
+    {
+      "type": 0,
+      "value": " in their first month and "
+    },
+    {
+      "type": 1,
+      "value": "year"
+    },
+    {
+      "type": 0,
+      "value": " in their first year. Past new customers actually paid "
+    },
+    {
+      "type": 1,
+      "value": "past"
+    },
+    {
+      "type": 0,
+      "value": " in their first 30 days."
+    }
+  ],
+  "message.roi-prices-note": [
+    {
+      "type": 0,
+      "value": "Prices per month / year: Stripe "
+    },
+    {
+      "type": 1,
+      "value": "stripe"
+    },
+    {
+      "type": 0,
+      "value": ", App Store and Google Play "
+    },
+    {
+      "type": 1,
+      "value": "stores"
+    },
+    {
+      "type": 0,
+      "value": " (from RevenueCat). "
+    },
+    {
+      "type": 1,
+      "value": "web"
+    },
+    {
+      "type": 0,
+      "value": "% of recent new customers paid on the web. Recent yearly buyers on the web paid "
+    },
+    {
+      "type": 1,
+      "value": "paid"
+    },
+    {
+      "type": 0,
+      "value": " on average, so check for discounts."
+    }
+  ],
+  "message.roi-stripe-prices-missing": [
+    {
+      "type": 0,
+      "value": "unavailable (the Stripe key needs Read access to Prices)"
     }
   ]
 }

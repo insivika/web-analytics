@@ -374,6 +374,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
               <RoiProjection
                 history={data.projection.history}
                 customerValue={data.projection.customerValue}
+                plans={data.projection.plans}
               />
             )}
 

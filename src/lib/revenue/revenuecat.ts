@@ -60,6 +60,7 @@ async function fetchRcRevenueChart(
   end: string,
   segment: 'transaction_type' | 'product_duration' | 'store',
   opts: RcOptions,
+  revenueType: 'proceeds' | 'revenue' = 'proceeds',
 ) {
   const params = new URLSearchParams({
     start_date: start,
@@ -67,7 +68,7 @@ async function fetchRcRevenueChart(
     resolution: '2', // month
     segment,
     currency: 'USD',
-    selectors: JSON.stringify({ revenue_type: 'proceeds' }),
+    selectors: JSON.stringify({ revenue_type: revenueType }),
   });
   const body: RcChartResponse | null = await rcGet(
     `/projects/${encodeURIComponent(opts.projectId)}/charts/revenue?${params}`,
@@ -117,4 +118,46 @@ export async function fetchRcMonthly(start: string, end: string, opts: RcOptions
     });
   }
   return months;
+}
+
+export interface StorePlanPrices {
+  /** Average gross price per monthly / yearly transaction (what buyers paid). */
+  monthly: number | null;
+  yearly: number | null;
+  /** Share of gross the business keeps after store commission and tax. */
+  keepRate: number | null;
+  /** Share of yearly among paid transactions. */
+  yearlyShare: number | null;
+}
+
+/**
+ * App Store and Google Play plan prices, read from RevenueCat's revenue chart:
+ * gross revenue per transaction for monthly and yearly plans, and proceeds as a
+ * share of gross. Stripe purchases RevenueCat may track are left out.
+ */
+export async function fetchRcPlanPrices(
+  start: string,
+  end: string,
+  opts: RcOptions,
+): Promise<StorePlanPrices> {
+  const [gross, proceeds] = await Promise.all([
+    fetchRcRevenueChart(start, end, 'product_duration', opts, 'revenue'),
+    fetchRcRevenueChart(start, end, 'product_duration', opts, 'proceeds'),
+  ]);
+  const total = (m: typeof gross, name: string, k: 'proceeds' | 'transactions') =>
+    [...m.values()].reduce((s, seg) => s + (seg.get(name)?.[k] ?? 0), 0);
+  const perTx = (name: string) => {
+    const tx = total(gross, name, 'transactions');
+    return tx > 0 ? Math.round((total(gross, name, 'proceeds') / tx) * 100) / 100 : null;
+  };
+  const g = total(gross, 'P1M', 'proceeds') + total(gross, 'P1Y', 'proceeds');
+  const p = total(proceeds, 'P1M', 'proceeds') + total(proceeds, 'P1Y', 'proceeds');
+  const txM = total(gross, 'P1M', 'transactions');
+  const txY = total(gross, 'P1Y', 'transactions');
+  return {
+    monthly: perTx('P1M'),
+    yearly: perTx('P1Y'),
+    keepRate: g > 0 ? Math.round((p / g) * 1000) / 1000 : null,
+    yearlyShare: txM + txY > 0 ? txY / (txM + txY) : null,
+  };
 }

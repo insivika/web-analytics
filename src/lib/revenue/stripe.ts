@@ -194,3 +194,59 @@ export async function fetchStripeRevenue(
     ...disputes.map(mapStripeDispute),
   ].filter((r): r is RevenueRow => r !== null);
 }
+
+export interface PlanPrice {
+  id: string;
+  /** Price per billing period, in the price's currency. */
+  amount: number;
+  currency: string;
+  interval: 'month' | 'year';
+  name: string | null;
+}
+
+/**
+ * The plan prices new customers see: for each of monthly and yearly, the most
+ * recently created active recurring price on an active product. Needs Read
+ * access to Prices (and Products) on the restricted key.
+ */
+export function pickPlanPrices(prices: any[]): { month: PlanPrice | null; year: PlanPrice | null } {
+  const out: { month: PlanPrice | null; year: PlanPrice | null } = { month: null, year: null };
+  const latest: Record<string, number> = {};
+  for (const p of prices) {
+    const r = p?.recurring;
+    if (!p?.active || !r || (r.interval_count ?? 1) !== 1) continue;
+    if (r.interval !== 'month' && r.interval !== 'year') continue;
+    if (p.product && typeof p.product === 'object' && p.product.active === false) continue;
+    if (p.unit_amount === null || p.unit_amount === undefined) continue;
+    if ((latest[r.interval] ?? -1) >= p.created) continue;
+    latest[r.interval] = p.created;
+    out[r.interval as 'month' | 'year'] = {
+      id: p.id,
+      amount: Math.round(Number(p.unit_amount)) / 100,
+      currency: String(p.currency || 'usd').toUpperCase(),
+      interval: r.interval,
+      name:
+        p.nickname ??
+        (p.product && typeof p.product === 'object' ? (p.product.name ?? null) : null),
+    };
+  }
+  return out;
+}
+
+export async function fetchStripePlanPrices(key: string, fetchImpl: typeof fetch = fetch) {
+  const params = new URLSearchParams({ active: 'true', type: 'recurring', limit: '100' });
+  params.append('expand[]', 'data.product');
+  const res = await fetchImpl(`https://api.stripe.com/v1/prices?${params}`, {
+    headers: { authorization: `Bearer ${key}` },
+  });
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new StripeApiError(
+      res.status === 401 || res.status === 403
+        ? 'The Stripe key has no Read access to Prices.'
+        : `Stripe API error (${res.status}): ${body?.error?.message ?? ''}`,
+      res.status,
+    );
+  }
+  return pickPlanPrices(body.data ?? []);
+}

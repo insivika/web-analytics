@@ -7,12 +7,14 @@ import { formatDate } from '@/lib/date';
 import {
   type CustomerValue,
   defaultInputs,
+  type PlanEconomics,
   PROJECTION_WINDOWS,
   type ProjectionInputs,
   type ProjectionMonth,
   type ProjectionWindow,
   project,
   projectionBase,
+  customerValue as valueOf,
 } from '@/lib/roiProjection';
 import { ROI_COLORS } from './RoiCharts';
 
@@ -21,6 +23,7 @@ const int = (n: number) => Math.round(n).toLocaleString('en-US');
 const one = (n: number) => n.toFixed(1);
 const signed = (n: number, f: (n: number) => string) => `${n >= 0 ? '+' : '−'}${f(Math.abs(n))}`;
 const SPEND_MAX = 3000;
+const money = (n: number | null) => (n === null ? '—' : `$${n.toFixed(2)}`);
 
 function Slider({
   label,
@@ -115,15 +118,17 @@ function Result({
 export function RoiProjection({
   history,
   customerValue,
+  plans,
 }: {
   history: ProjectionMonth[];
   customerValue: CustomerValue;
+  plans: PlanEconomics;
 }) {
   const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
   const [lookback, setLookback] = useState<ProjectionWindow>(3);
   const base = useMemo(() => projectionBase(history, lookback), [history, lookback]);
-  const defaults = useMemo(() => defaultInputs(base, customerValue), [base, customerValue]);
+  const defaults = useMemo(() => defaultInputs(base, plans), [base, plans]);
   const [inputs, setInputs] = useState<ProjectionInputs>(defaults);
 
   // Choosing other months restarts from what actually happened in them.
@@ -228,7 +233,7 @@ export function RoiProjection({
                 formatMessage(
                   p.firstYearReturn >= 0 ? messages.roiProjYearGain : messages.roiProjYearLoss,
                   {
-                    revenue: usd(p.customersFromAds * inputs.firstYearValue),
+                    revenue: usd(p.customersFromAds * valueOf(inputs).firstYear),
                     amount: usd(Math.abs(p.firstYearReturn)),
                   },
                 ),
@@ -279,23 +284,67 @@ export function RoiProjection({
             onChange={set('adVisitorQuality')}
           />
           <Slider
-            label={formatMessage(labels.roiFirstMonthValue)}
-            value={inputs.firstMonthValue}
+            label={formatMessage(labels.roiYearlyShare)}
+            value={inputs.yearlyShare}
             min={0}
-            max={150}
-            step={1}
-            format={usd}
-            onChange={set('firstMonthValue')}
+            max={1}
+            step={0.01}
+            format={pctFmt}
+            onChange={set('yearlyShare')}
           />
           <Slider
-            label={formatMessage(labels.roiFirstYearValue)}
-            value={inputs.firstYearValue}
+            label={formatMessage(labels.roiYearlyPrice)}
+            value={inputs.yearlyPrice}
             min={0}
             max={300}
             step={1}
             format={usd}
-            onChange={set('firstYearValue')}
+            onChange={set('yearlyPrice')}
           />
+          <Slider
+            label={formatMessage(labels.roiMonthlyPrice)}
+            value={inputs.monthlyPrice}
+            min={0}
+            max={50}
+            step={0.5}
+            format={money}
+            onChange={set('monthlyPrice')}
+          />
+          <Slider
+            label={formatMessage(labels.roiMonthsKept)}
+            value={inputs.monthsKept}
+            min={1}
+            max={12}
+            step={0.1}
+            format={v => v.toFixed(1)}
+            onChange={set('monthsKept')}
+          />
+          <Slider
+            label={formatMessage(labels.roiKeepRate)}
+            value={inputs.keepRate}
+            min={0.5}
+            max={1}
+            step={0.01}
+            format={pctFmt}
+            onChange={set('keepRate')}
+          />
+          <Text color="muted" size="1">
+            {formatMessage(messages.roiValueNow, {
+              month: usd(valueOf(inputs).firstMonth),
+              year: usd(valueOf(inputs).firstYear),
+              past: customerValue.firstMonth === null ? '—' : usd(customerValue.firstMonth),
+            })}
+          </Text>
+          <Text color="muted" size="1">
+            {formatMessage(messages.roiPricesNote, {
+              stripe: plans.stripePricesMissing
+                ? formatMessage(messages.roiStripePricesMissing)
+                : `${money(plans.sources.stripeMonthly)} / ${money(plans.sources.stripeYearly)}`,
+              stores: `${money(plans.sources.storeMonthly)} / ${money(plans.sources.storeYearly)}`,
+              web: Math.round(plans.webShare * 100),
+              paid: money(plans.sources.recentYearlyPaid),
+            })}
+          </Text>
           <Slider
             label={formatMessage(labels.roiPricier)}
             value={inputs.pricier}

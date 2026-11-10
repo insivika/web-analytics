@@ -1,7 +1,9 @@
 import {
+  customerValue,
   defaultInputs,
   type ProjectionMonth,
   paidVisitors,
+  planEconomics,
   project,
   projectionBase,
 } from '../roiProjection';
@@ -55,7 +57,62 @@ const history = [
     otherSpend: 55.18,
   }),
 ];
-const value = { firstMonth: 28, firstYear: 38 };
+const value = planEconomics({
+  stripePrices: { month: { amount: 12 }, year: { amount: 108 } },
+  storePrices: { monthly: 9.99, yearly: 99.99, keepRate: 0.7, yearlyShare: 0.1 },
+  stripeFeeRate: 0.06,
+  stripeYearlyShare: 0.33,
+  stripeNewCustomers: 30,
+  storeNewCustomers: 10,
+  monthsKept: 6.7,
+  recentYearlyPaid: 70.88,
+  recentMonthlyPaid: 8.75,
+});
+
+describe('plan economics', () => {
+  test('prices, fees and mix are weighted by where new customers paid', () => {
+    // 30 of 40 new customers paid on the web.
+    expect(value.webShare).toBe(0.75);
+    expect(value.monthlyPrice).toBeCloseTo(0.75 * 12 + 0.25 * 9.99, 2);
+    expect(value.yearlyPrice).toBeCloseTo(0.75 * 108 + 0.25 * 99.99, 2);
+    expect(value.keepRate).toBeCloseTo(0.75 * 0.94 + 0.25 * 0.7, 3);
+    expect(value.yearlyShare).toBeCloseTo(0.75 * 0.33 + 0.25 * 0.1, 2);
+    expect(value.stripePricesMissing).toBe(false);
+  });
+
+  test('without Stripe price access, store prices and recent payments fill in', () => {
+    const p = planEconomics({
+      stripePrices: null,
+      storePrices: null,
+      stripeFeeRate: 0.06,
+      stripeYearlyShare: 0.33,
+      stripeNewCustomers: 10,
+      storeNewCustomers: 0,
+      monthsKept: null,
+      recentYearlyPaid: 70.88,
+      recentMonthlyPaid: 8.75,
+    });
+    expect(p.stripePricesMissing).toBe(true);
+    expect(p.monthlyPrice).toBeNull();
+    const i = defaultInputs(projectionBase(history, 3), p);
+    expect(i.monthlyPrice).toBe(8.75);
+    expect(i.yearlyPrice).toBe(70.88);
+    expect(i.monthsKept).toBe(6);
+  });
+
+  test('a yearly customer pays up front, a monthly one for each month they stay', () => {
+    const v = customerValue({
+      ...defaultInputs(projectionBase(history, 3), value),
+      yearlyShare: 0.25,
+      yearlyPrice: 100,
+      monthlyPrice: 10,
+      monthsKept: 6,
+      keepRate: 0.9,
+    });
+    expect(v.firstMonth).toBeCloseTo(0.9 * (0.25 * 100 + 0.75 * 10), 6);
+    expect(v.firstYear).toBeCloseTo(0.9 * (0.25 * 100 + 0.75 * 60), 6);
+  });
+});
 
 describe('ad spend projection', () => {
   const base = projectionBase(history, 3);

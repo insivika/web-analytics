@@ -1,6 +1,14 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiYearlyShare: { id: 'label.roi-yearly-share', defaultMessage: 'Share choosing yearly' },
+  roiYearlyPrice: { id: 'label.roi-yearly-price', defaultMessage: 'Yearly price' },
+  roiMonthlyPrice: { id: 'label.roi-monthly-price', defaultMessage: 'Monthly price' },
+  roiMonthsKept: {
+    id: 'label.roi-months-kept',
+    defaultMessage: 'Months a monthly customer pays in year one',
+  },
+  roiKeepRate: { id: 'label.roi-keep-rate', defaultMessage: 'Kept after fees and store cut' },
   roiWhatIf: { id: 'label.roi-what-if', defaultMessage: 'What if you spent more on ads?' },
   roiBasedOn: { id: 'label.roi-based-on', defaultMessage: 'Based on the last' },
   roiReset: { id: 'label.roi-reset', defaultMessage: 'Reset' },
@@ -13,14 +21,6 @@ export const labels = defineMessages({
   roiAdVisitorQuality: {
     id: 'label.roi-ad-visitor-quality',
     defaultMessage: 'Ad visitors convert at',
-  },
-  roiFirstMonthValue: {
-    id: 'label.roi-first-month-value',
-    defaultMessage: 'First-month revenue per customer',
-  },
-  roiFirstYearValue: {
-    id: 'label.roi-first-year-value',
-    defaultMessage: 'First-year revenue per customer',
   },
   roiPricier: { id: 'label.roi-pricier', defaultMessage: 'Clicks get pricier per doubling' },
   roiThisMonth: { id: 'label.roi-this-month', defaultMessage: 'This month' },
@@ -593,6 +593,20 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiValueNow: {
+    id: 'message.roi-value-now',
+    defaultMessage:
+      'At these settings a new customer brings in {month} in their first month and {year} in their first year. Past new customers actually paid {past} in their first 30 days.',
+  },
+  roiPricesNote: {
+    id: 'message.roi-prices-note',
+    defaultMessage:
+      'Prices per month / year: Stripe {stripe}, App Store and Google Play {stores} (from RevenueCat). {web}% of recent new customers paid on the web. Recent yearly buyers on the web paid {paid} on average, so check for discounts.',
+  },
+  roiStripePricesMissing: {
+    id: 'message.roi-stripe-prices-missing',
+    defaultMessage: 'unavailable (the Stripe key needs Read access to Prices)',
+  },
   roiMonthsN: {
     id: 'message.roi-months-n',
     defaultMessage: '{n, plural, one {# month} other {# months}}',

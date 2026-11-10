@@ -546,8 +546,6 @@
   "label.roi-ad-visitor-quality": "Ad visitors convert at",
   "label.roi-assumptions": "Assumptions",
   "label.roi-based-on": "Based on the last",
-  "label.roi-first-month-value": "First-month revenue per customer",
-  "label.roi-first-year-value": "First-year revenue per customer",
   "label.roi-google-per-month": "Google ads per month",
   "label.roi-meta-per-month": "Meta ads per month",
   "label.roi-net-per-month": "Net income per month",
@@ -576,5 +574,13 @@
   "message.roi-vs-today": "{delta} vs today",
   "label.more-information": "More information",
   "message.forecast-scope-short": "Current trials · not filtered by signup window",
-  "message.forecast-p-detail": "Next 7 days: {p7} · next 14 days: {p14} · buys at all: {total}. Behavior group: {segment}."
+  "message.forecast-p-detail": "Next 7 days: {p7} · next 14 days: {p14} · buys at all: {total}. Behavior group: {segment}.",
+  "label.roi-yearly-share": "Share choosing yearly",
+  "label.roi-yearly-price": "Yearly price",
+  "label.roi-monthly-price": "Monthly price",
+  "label.roi-months-kept": "Months a monthly customer pays in year one",
+  "label.roi-keep-rate": "Kept after fees and store cut",
+  "message.roi-value-now": "At these settings a new customer brings in {month} in their first month and {year} in their first year. Past new customers actually paid {past} in their first 30 days.",
+  "message.roi-prices-note": "Prices per month / year: Stripe {stripe}, App Store and Google Play {stores} (from RevenueCat). {web}% of recent new customers paid on the web. Recent yearly buyers on the web paid {paid} on average, so check for discounts.",
+  "message.roi-stripe-prices-missing": "unavailable (the Stripe key needs Read access to Prices)"
 }

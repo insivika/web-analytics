@@ -1,6 +1,7 @@
 import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
-import { fetchRcMonthly } from '@/lib/revenue/revenuecat';
+import { fetchRcMonthly, fetchRcPlanPrices } from '@/lib/revenue/revenuecat';
+import { fetchStripePlanPrices } from '@/lib/revenue/stripe';
 import {
   type AppStoreMonth,
   buildMonths,
@@ -11,8 +12,14 @@ import {
   ROI_MONTHS,
   ROI_TIMEZONE,
   staleSources,
+  YEARLY_MIN_USD,
 } from '@/lib/roi';
-import type { CustomerValue, ProjectionMonth } from '@/lib/roiProjection';
+import {
+  type CustomerValue,
+  type PlanEconomics,
+  type ProjectionMonth,
+  planEconomics,
+} from '@/lib/roiProjection';
 import { resolveTrialStarts, type TrialSettings } from '@/lib/trial';
 import { getSyncStatus } from '@/queries/prisma/adSpend';
 import { getRevenueTxns } from '@/queries/prisma/revenue';
@@ -84,6 +91,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
       getSyncStatus(websiteId),
       getCustomerValue(websiteId),
     ]);
+  const plans = await getPlans(websiteId, now, appStores);
 
   const trials = new Map<string, number>();
   for (const start of trialStarts.values()) {
@@ -132,7 +140,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     updatedAt: latestSync(sources),
     stale: staleSources(sources, now),
     spendFxGaps: spend.fxGaps,
-    projection: { history: projectionHistory, customerValue },
+    projection: { history: projectionHistory, customerValue, plans },
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
       .map(s => ({ source: s.source, message: s.last?.message ?? '' })),
@@ -268,4 +276,116 @@ async function getMonthlyVisitors(websiteId: string, hostname: string, from: Dat
     'getRoiMonthlyVisitors',
   );
   return new Map<string, number>(rows.map((r: any) => [r.month, Number(r.n)]));
+}
+
+// Prices change rarely; cache them briefly per server instance.
+const priceCache = new Map<string, { at: number; value: unknown }>();
+async function cached<T>(key: string, load: () => Promise<T>, fallback: T): Promise<T> {
+  const hit = priceCache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.value as T;
+  try {
+    const value = await load();
+    priceCache.set(key, { at: Date.now(), value });
+    return value;
+  } catch {
+    return (hit?.value as T) ?? fallback;
+  }
+}
+
+/**
+ * Plan economics for the projection: list prices from Stripe and the stores
+ * (via RevenueCat), what each keeps after fees, the share picking yearly, how
+ * long monthly customers stay, and what recent yearly buyers actually paid.
+ */
+async function getPlans(
+  websiteId: string,
+  now: Date,
+  appStores: Map<string, AppStoreMonth> | null,
+): Promise<PlanEconomics> {
+  const stripeKey = process.env.STRIPE_RESTRICTED_KEY;
+  const rcKey = process.env.REVENUECAT_API_KEY;
+  const rcProject = process.env.REVENUECAT_PROJECT_ID;
+  const today = now.toISOString().slice(0, 10);
+  const halfYearAgo = new Date(+now - 182 * 86_400_000).toISOString().slice(0, 10);
+
+  const [stripePrices, storePrices, history] = await Promise.all([
+    stripeKey
+      ? cached('stripe-prices', () => fetchStripePlanPrices(stripeKey), null)
+      : Promise.resolve(null),
+    rcKey && rcProject
+      ? cached(
+          `rc-prices-${today}`,
+          () => fetchRcPlanPrices(halfYearAgo, today, { key: rcKey, projectId: rcProject }),
+          null,
+        )
+      : Promise.resolve(null),
+    getStripePlanHistory(websiteId),
+  ]);
+
+  // New app-store subscriptions over the same six months, to weigh web vs stores.
+  const sixMonths = new Set(lastMonths(6, now));
+  const storeNew = appStores
+    ? [...appStores].filter(([m]) => sixMonths.has(m)).reduce((s, [, v]) => s + v.newCustomers, 0)
+    : 0;
+
+  return planEconomics({
+    stripePrices,
+    storePrices,
+    stripeFeeRate: history.feeRate,
+    stripeYearlyShare: history.yearlyShare,
+    stripeNewCustomers: history.newCustomers,
+    storeNewCustomers: storeNew,
+    monthsKept: history.monthsKept,
+    recentYearlyPaid: history.recentYearlyPaid,
+    recentMonthlyPaid: history.recentMonthlyPaid,
+  });
+}
+
+async function getStripePlanHistory(websiteId: string) {
+  const rows = await prisma.rawQuery(
+    `
+    with t as (
+      select coalesce(user_id, customer_ref) as k, occurred_at, gross_usd, fee_usd, kind
+      from revenue_txn
+      where website_id = {{websiteId::uuid}} and source = 'stripe'
+    ),
+    f as (
+      select k, min(occurred_at) as first from t
+      where kind = 'payment' and gross_usd > 0 and k is not null group by 1
+    ),
+    v as (
+      select f.k, f.first,
+        (array_agg(t.gross_usd order by t.occurred_at)
+          filter (where t.kind = 'payment' and t.gross_usd > 0))[1] as first_amount,
+        count(*) filter (where t.kind = 'payment' and t.gross_usd > 0
+          and t.occurred_at < f.first + interval '365 days') as payments_year1
+      from f join t using (k) group by 1, 2
+    )
+    select
+      (select sum(fee_usd) / nullif(sum(gross_usd), 0) from t
+        where kind = 'payment' and occurred_at >= now() - interval '90 days')::float as "feeRate",
+      (count(*) filter (where first >= now() - interval '180 days' and first_amount >= {{yearlyMin}})::float
+        / nullif(count(*) filter (where first >= now() - interval '180 days'), 0)) as "yearlyShare",
+      count(*) filter (where first >= now() - interval '180 days')::int as "newCustomers",
+      (avg(first_amount) filter (where first >= now() - interval '180 days'
+        and first_amount >= {{yearlyMin}}))::float as "recentYearlyPaid",
+      (avg(first_amount) filter (where first >= now() - interval '180 days'
+        and first_amount < {{yearlyMin}}))::float as "recentMonthlyPaid",
+      (avg(least(payments_year1, 12)) filter (where first < now() - interval '365 days'
+        and first_amount < {{yearlyMin}}))::float as "monthsKept"
+    from v
+    `,
+    { websiteId, yearlyMin: YEARLY_MIN_USD },
+    'getRoiStripePlanHistory',
+  );
+  const r: any = rows[0] ?? {};
+  const n = (v: any) => (v === null || v === undefined ? null : Number(v));
+  return {
+    feeRate: n(r.feeRate),
+    yearlyShare: n(r.yearlyShare),
+    newCustomers: Number(r.newCustomers ?? 0),
+    recentYearlyPaid: n(r.recentYearlyPaid),
+    recentMonthlyPaid: n(r.recentMonthlyPaid),
+    monthsKept: n(r.monthsKept),
+  };
 }
