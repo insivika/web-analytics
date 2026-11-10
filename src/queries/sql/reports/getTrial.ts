@@ -132,7 +132,7 @@ async function getFirstEventAfterStart(
   );
 }
 
-async function getTrialStartOccurrences(
+export async function getTrialStartOccurrences(
   websiteId: string,
   settings: TrialSettings,
   endDate: Date,
@@ -171,7 +171,7 @@ async function getTrialStartOccurrences(
  * DISTINCT ON keeps the per-user pick in one sorted pass; the extra columns are
  * joined only for the chosen rows.
  */
-async function getTrialExpiresRows(
+export async function getTrialExpiresRows(
   websiteId: string,
   settings: TrialSettings,
 ): Promise<TrialExpiresRow[]> {
@@ -211,7 +211,10 @@ async function getTrialExpiresRows(
 }
 
 /** When an event-data property was first recorded for the website. */
-async function getPropertyFirstSeen(websiteId: string, property: string): Promise<Date | null> {
+export async function getPropertyFirstSeen(
+  websiteId: string,
+  property: string,
+): Promise<Date | null> {
   const [row] = await prisma.rawQuery(
     `
     select created_at as "firstSeen" from event_data

@@ -3,6 +3,7 @@ import { SideMenu } from '@/components/common/SideMenu';
 import { useMessages, useNavigation } from '@/components/hooks';
 import {
   AlignEndHorizontal,
+  BadgeDollarSign,
   ChartPie,
   Clock,
   Eye,
@@ -141,6 +142,12 @@ export function WebsiteNav({
           label: formatMessage(labels.revenue),
           icon: <Money />,
           path: renderPath('/revenue'),
+        },
+        {
+          id: 'roi',
+          label: formatMessage(labels.roi),
+          icon: <BadgeDollarSign />,
+          path: renderPath('/roi'),
         },
         {
           id: 'attribution',

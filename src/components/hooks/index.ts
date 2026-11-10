@@ -24,6 +24,7 @@ export * from './queries/useRealtimeQuery';
 export * from './queries/useReportQuery';
 export * from './queries/useReportsQuery';
 export * from './queries/useResultQuery';
+export * from './queries/useRoiQueries';
 export * from './queries/useSessionActivityQuery';
 export * from './queries/useSessionDataPropertiesQuery';
 export * from './queries/useSessionDataQuery';

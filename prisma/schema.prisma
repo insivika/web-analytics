@@ -85,6 +85,8 @@ model Website {
   segments    Segment[]
   savedViews  SavedView[]
   settings    WebsiteSetting[]
+  adSpend     AdSpend[]
+  adSyncRuns  AdSyncRun[]
   sessionData SessionData[]
 
   @@index([userId])
@@ -349,4 +351,65 @@ model Pixel {
   @@index([teamId])
   @@index([createdAt])
   @@map("pixel")
+}
+
+/// Daily ad-level spend from ad platforms (Meta Insights, Google Ads Script).
+model AdSpend {
+  id           String   @id() @unique() @map("ad_spend_id") @db.Uuid
+  websiteId    String   @map("website_id") @db.Uuid
+  date         DateTime @db.Date
+  channel      String   @db.VarChar(20)
+  accountId    String   @map("account_id") @db.VarChar(50)
+  campaignId   String   @map("campaign_id") @db.VarChar(50)
+  campaignName String?  @map("campaign_name") @db.VarChar(500)
+  adsetId      String?  @map("adset_id") @db.VarChar(50)
+  adsetName    String?  @map("adset_name") @db.VarChar(500)
+  adId         String   @map("ad_id") @db.VarChar(100)
+  adName       String?  @map("ad_name") @db.VarChar(500)
+  spend        Decimal  @db.Decimal(14, 4)
+  currency     String   @db.VarChar(3)
+  spendUsd     Decimal? @map("spend_usd") @db.Decimal(14, 4)
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  syncedAt     DateTime @map("synced_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, date, channel, adId])
+  @@index([websiteId, date])
+  @@index([websiteId, channel, campaignId])
+  @@map("ad_spend")
+}
+
+/// Daily FX rates: USD value of one unit of `currency` on `date`.
+model FxRate {
+  date      DateTime @db.Date
+  currency  String   @db.VarChar(3)
+  usdRate   Decimal  @map("usd_rate") @db.Decimal(18, 8)
+  /// 'frankfurter' (ECB) or 'manual' (editable override, wins over fetched).
+  source    String   @db.VarChar(20)
+  fetchedAt DateTime @map("fetched_at") @db.Timestamptz(6)
+
+  @@id([date, currency, source])
+  @@index([currency, date])
+  @@map("fx_rate")
+}
+
+/// One row per spend/FX sync attempt, for the ROI data-health panel.
+model AdSyncRun {
+  id         String    @id() @unique() @map("ad_sync_run_id") @db.Uuid
+  websiteId  String    @map("website_id") @db.Uuid
+  source     String    @db.VarChar(20)
+  status     String    @db.VarChar(20)
+  rangeStart DateTime? @map("range_start") @db.Date
+  rangeEnd   DateTime? @map("range_end") @db.Date
+  rows       Int       @default(0)
+  message    String?   @db.Text
+  startedAt  DateTime  @map("started_at") @db.Timestamptz(6)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@index([websiteId, source, startedAt])
+  @@map("ad_sync_run")
 }

@@ -480,6 +480,25 @@ export const labels = defineMessages({
     id: 'label.exclude-late-attached',
     defaultMessage: 'Exclude trials whose expiry was first seen at or after trial end',
   },
+  roi: { id: 'label.roi', defaultMessage: 'ROI' },
+  roiPeriod: { id: 'label.roi-period', defaultMessage: 'Trial-start period' },
+  adSpend: { id: 'label.ad-spend', defaultMessage: 'Ad spend' },
+  trialStartsAll: { id: 'label.trial-starts-all', defaultMessage: 'Trial starts (all)' },
+  payingCustomers: { id: 'label.paying-customers', defaultMessage: 'Paying customers' },
+  netRevenueWindow: { id: 'label.net-revenue-window', defaultMessage: 'Net revenue ({days}d)' },
+  costPerTrial: { id: 'label.cost-per-trial', defaultMessage: 'Cost per trial' },
+  paybackDays: { id: 'label.payback-days', defaultMessage: 'Payback' },
+  notYet: { id: 'label.not-yet', defaultMessage: 'Not yet' },
+  blended: { id: 'label.blended', defaultMessage: 'Blended (all trial starts)' },
+  projectedLtv: { id: 'label.projected-ltv', defaultMessage: 'Projected LTV' },
+  weeklyTrend: { id: 'label.weekly-trend', defaultMessage: 'Weekly trend by trial-start week' },
+  immature: { id: 'label.immature', defaultMessage: 'Immature' },
+  spendByCampaign: { id: 'label.spend-by-campaign', defaultMessage: 'Spend by campaign' },
+  campaign: { id: 'label.campaign', defaultMessage: 'Campaign' },
+  clicks: { id: 'label.clicks', defaultMessage: 'Clicks' },
+  dataHealth: { id: 'label.data-health', defaultMessage: 'Data health' },
+  syncNow: { id: 'label.sync-now', defaultMessage: 'Sync Meta now' },
+  backfill180: { id: 'label.backfill-180', defaultMessage: 'Backfill 180 days' },
 });
 
 export const messages = defineMessages({
@@ -716,5 +735,52 @@ export const messages = defineMessages({
   excludedLateAttached: {
     id: 'message.excluded-late-attached',
     defaultMessage: '{x} with trial expiry attached only after the trial excluded',
+  },
+  roiHeadline: {
+    id: 'message.roi-headline',
+    defaultMessage: 'Last {days} days: every $1 of ad spend returned {roas} within {window} days.',
+  },
+  roiHeadlineNoSpend: {
+    id: 'message.roi-headline-no-spend',
+    defaultMessage: 'Last {days} days: no ad spend recorded yet.',
+  },
+  roiSpendNeeded: {
+    id: 'message.roi-spend-needed',
+    defaultMessage: 'To earn {target} you would need to spend about {spend} at current efficiency.',
+  },
+  roiHeadlineImmature: {
+    id: 'message.roi-headline-immature',
+    defaultMessage:
+      'Immature: some trials started less than {days} days ago, so revenue is still coming in.',
+  },
+  roiImmature: {
+    id: 'message.roi-immature',
+    defaultMessage: 'immature: {mature} of {n} trials past {days} days',
+  },
+  roiBlendedNote: {
+    id: 'message.roi-blended-note',
+    defaultMessage: 'All trial starts, attributed or not',
+  },
+  roiLtvNote: {
+    id: 'message.roi-ltv-note',
+    defaultMessage: 'projected: {arpu}/month per payer ÷ {churn} monthly churn (n = {n})',
+  },
+  roiAttributionPending: {
+    id: 'message.roi-attribution-pending',
+    defaultMessage: 'Channel attribution not captured yet (blended view only).',
+  },
+  roiNoSpend: {
+    id: 'message.roi-no-spend',
+    defaultMessage: 'No ad spend synced for this period yet.',
+  },
+  roiSyncError: { id: 'message.roi-sync-error', defaultMessage: 'Last sync failed: {message}' },
+  roiLastSync: { id: 'message.roi-last-sync', defaultMessage: 'Last successful sync: {date}' },
+  roiRevenueSince: {
+    id: 'message.roi-revenue-since',
+    defaultMessage: 'Revenue events since {date}',
+  },
+  roiFxGaps: {
+    id: 'message.roi-fx-gaps',
+    defaultMessage: 'FX gaps: {revenue} revenue, {spend} spend rows',
   },
 });

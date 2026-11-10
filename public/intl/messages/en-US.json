@@ -51,6 +51,12 @@
       "value": "Activity"
     }
   ],
+  "label.ad-spend": [
+    {
+      "type": 0,
+      "value": "Ad spend"
+    }
+  ],
   "label.add": [
     {
       "type": 0,
@@ -159,6 +165,12 @@
       "value": "Back"
     }
   ],
+  "label.backfill-180": [
+    {
+      "type": 0,
+      "value": "Backfill 180 days"
+    }
+  ],
   "label.before": [
     {
       "type": 0,
@@ -175,6 +187,12 @@
     {
       "type": 0,
       "value": "Billing settling"
+    }
+  ],
+  "label.blended": [
+    {
+      "type": 0,
+      "value": "Blended (all trial starts)"
     }
   ],
   "label.boards": [
@@ -205,6 +223,12 @@
     {
       "type": 0,
       "value": "Browsers"
+    }
+  ],
+  "label.campaign": [
+    {
+      "type": 0,
+      "value": "Campaign"
     }
   ],
   "label.campaigns": [
@@ -247,6 +271,12 @@
     {
       "type": 0,
       "value": "Clear all"
+    }
+  ],
+  "label.clicks": [
+    {
+      "type": 0,
+      "value": "Clicks"
     }
   ],
   "label.cohort": [
@@ -365,6 +395,12 @@
       "value": "Converted to paid"
     }
   ],
+  "label.cost-per-trial": [
+    {
+      "type": 0,
+      "value": "Cost per trial"
+    }
+  ],
   "label.count": [
     {
       "type": 0,
@@ -459,6 +495,12 @@
     {
       "type": 0,
       "value": "Data"
+    }
+  ],
+  "label.data-health": [
+    {
+      "type": 0,
+      "value": "Data health"
     }
   ],
   "label.date": [
@@ -833,6 +875,12 @@
       "value": "Hostname"
     }
   ],
+  "label.immature": [
+    {
+      "type": 0,
+      "value": "Immature"
+    }
+  ],
   "label.in-progress": [
     {
       "type": 0,
@@ -1165,6 +1213,20 @@
       "value": "Name"
     }
   ],
+  "label.net-revenue-window": [
+    {
+      "type": 0,
+      "value": "Net revenue ("
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": "d)"
+    }
+  ],
   "label.new-password": [
     {
       "type": 0,
@@ -1175,6 +1237,12 @@
     {
       "type": 0,
       "value": "None"
+    }
+  ],
+  "label.not-yet": [
+    {
+      "type": 0,
+      "value": "Not yet"
     }
   ],
   "label.number-of-records": [
@@ -1367,6 +1435,18 @@
       "value": "Paths"
     }
   ],
+  "label.payback-days": [
+    {
+      "type": 0,
+      "value": "Payback"
+    }
+  ],
+  "label.paying-customers": [
+    {
+      "type": 0,
+      "value": "Paying customers"
+    }
+  ],
   "label.pixels": [
     {
       "type": 0,
@@ -1417,6 +1497,12 @@
     {
       "type": 0,
       "value": "Profile"
+    }
+  ],
+  "label.projected-ltv": [
+    {
+      "type": 0,
+      "value": "Projected LTV"
     }
   ],
   "label.prompt-shown": [
@@ -1629,6 +1715,18 @@
       "value": "Look into your revenue data and how users are spending."
     }
   ],
+  "label.roi": [
+    {
+      "type": 0,
+      "value": "ROI"
+    }
+  ],
+  "label.roi-period": [
+    {
+      "type": 0,
+      "value": "Trial-start period"
+    }
+  ],
   "label.role": [
     {
       "type": 0,
@@ -1767,6 +1865,12 @@
       "value": "Sources"
     }
   ],
+  "label.spend-by-campaign": [
+    {
+      "type": 0,
+      "value": "Spend by campaign"
+    }
+  ],
   "label.start-step": [
     {
       "type": 0,
@@ -1795,6 +1899,12 @@
     {
       "type": 0,
       "value": "Sum"
+    }
+  ],
+  "label.sync-now": [
+    {
+      "type": 0,
+      "value": "Sync Meta now"
     }
   ],
   "label.tablet": [
@@ -2037,6 +2147,12 @@
       "value": "Trial starts"
     }
   ],
+  "label.trial-starts-all": [
+    {
+      "type": 0,
+      "value": "Trial starts (all)"
+    }
+  ],
   "label.trial-users": [
     {
       "type": 0,
@@ -2209,6 +2325,12 @@
     {
       "type": 0,
       "value": "Weekly cohorts"
+    }
+  ],
+  "label.weekly-trend": [
+    {
+      "type": 0,
+      "value": "Weekly trend by trial-start week"
     }
   ],
   "label.window": [
@@ -2703,6 +2825,216 @@
     {
       "type": 0,
       "value": "All statistics for this website will be deleted, but your settings will remain intact."
+    }
+  ],
+  "message.roi-attribution-pending": [
+    {
+      "type": 0,
+      "value": "Channel attribution not captured yet (blended view only)."
+    }
+  ],
+  "message.roi-blended-note": [
+    {
+      "type": 0,
+      "value": "All trial starts, attributed or not"
+    }
+  ],
+  "message.roi-fx-gaps": [
+    {
+      "type": 0,
+      "value": "FX gaps: "
+    },
+    {
+      "type": 1,
+      "value": "revenue"
+    },
+    {
+      "type": 0,
+      "value": " revenue, "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " spend rows"
+    }
+  ],
+  "message.roi-headline": [
+    {
+      "type": 0,
+      "value": "Last "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days: every $1 of ad spend returned "
+    },
+    {
+      "type": 1,
+      "value": "roas"
+    },
+    {
+      "type": 0,
+      "value": " within "
+    },
+    {
+      "type": 1,
+      "value": "window"
+    },
+    {
+      "type": 0,
+      "value": " days."
+    }
+  ],
+  "message.roi-headline-immature": [
+    {
+      "type": 0,
+      "value": "Immature: some trials started less than "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days ago, so revenue is still coming in."
+    }
+  ],
+  "message.roi-headline-no-spend": [
+    {
+      "type": 0,
+      "value": "Last "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days: no ad spend recorded yet."
+    }
+  ],
+  "message.roi-immature": [
+    {
+      "type": 0,
+      "value": "immature: "
+    },
+    {
+      "type": 1,
+      "value": "mature"
+    },
+    {
+      "type": 0,
+      "value": " of "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " trials past "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days"
+    }
+  ],
+  "message.roi-last-sync": [
+    {
+      "type": 0,
+      "value": "Last successful sync: "
+    },
+    {
+      "type": 1,
+      "value": "date"
+    }
+  ],
+  "message.roi-ltv-note": [
+    {
+      "type": 0,
+      "value": "projected: "
+    },
+    {
+      "type": 1,
+      "value": "arpu"
+    },
+    {
+      "type": 0,
+      "value": "/month per payer ÷ "
+    },
+    {
+      "type": 1,
+      "value": "churn"
+    },
+    {
+      "type": 0,
+      "value": " monthly churn (n = "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": ")"
+    }
+  ],
+  "message.roi-no-spend": [
+    {
+      "type": 0,
+      "value": "No ad spend synced for this period yet."
+    }
+  ],
+  "message.roi-revenue-since": [
+    {
+      "type": 0,
+      "value": "Revenue events since "
+    },
+    {
+      "type": 1,
+      "value": "date"
+    }
+  ],
+  "message.roi-spend-needed": [
+    {
+      "type": 0,
+      "value": "To earn "
+    },
+    {
+      "type": 1,
+      "value": "target"
+    },
+    {
+      "type": 0,
+      "value": " you would need to spend about "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " at current efficiency."
+    }
+  ],
+  "message.roi-sync-error": [
+    {
+      "type": 0,
+      "value": "Last sync failed: "
+    },
+    {
+      "type": 1,
+      "value": "message"
     }
   ],
   "message.saved": [
