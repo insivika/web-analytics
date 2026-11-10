@@ -3,17 +3,23 @@ import { Box, Button, Column, Grid, Row, Text } from '@umami/react-zen';
 import { Fragment, type ReactNode, useState } from 'react';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { Panel } from '@/components/common/Panel';
-import { useLocale, useNavigation, useRoiReportQuery, useUpdateQuery } from '@/components/hooks';
+import {
+  useLocale,
+  useMessages,
+  useNavigation,
+  useRoiReportQuery,
+  useUpdateQuery,
+} from '@/components/hooks';
 import { formatDate } from '@/lib/date';
-import { type MonthRow, periodRows, ROI_PERIODS, type RoiPeriod, sumMonths } from '@/lib/roi';
+import {
+  type MonthRow,
+  periodBand,
+  periodRows,
+  ROI_PERIODS,
+  type RoiPeriod,
+  sumMonths,
+} from '@/lib/roi';
 import { type ChartMonth, FlowsChart, NetChart, ROI_COLORS } from './RoiCharts';
-
-const PERIOD_LABELS: Record<RoiPeriod, string> = {
-  'this-month': 'This month',
-  'last-month': 'Last month',
-  '3-months': 'Last 3 months',
-  '12-months': 'Last 12 months',
-};
 
 const usd = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -116,6 +122,7 @@ function Arrow({ rate }: { rate: string }) {
 }
 
 export function RoiPage({ websiteId }: { websiteId: string }) {
+  const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
   const { query, router, updateParams } = useNavigation();
   const period: RoiPeriod = (ROI_PERIODS as readonly string[]).includes(query.period)
@@ -124,6 +131,19 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
   const { data, error, isLoading } = useRoiReportQuery(websiteId);
   const sync = useUpdateQuery(`/websites/${websiteId}/roi/sync`);
   const [syncing, setSyncing] = useState(false);
+
+  const periodLabels: Record<RoiPeriod, string> = {
+    'this-month': formatMessage(labels.roiThisMonth),
+    'last-month': formatMessage(labels.roiLastMonth),
+    '3-months': formatMessage(labels.roiLast3Months),
+    '12-months': formatMessage(labels.roiLast12Months),
+  };
+  const sourceNames: Record<string, string> = {
+    meta: formatMessage(labels.roiMeta),
+    google: formatMessage(labels.roiGoogle),
+    stripe: formatMessage(labels.roiStripe),
+    fx: 'FX',
+  };
 
   const runSync = async () => {
     setSyncing(true);
@@ -147,9 +167,18 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
     0,
   );
   const shown = months.slice(firstActive);
+  const band = periodBand(
+    months.map(m => m.month),
+    firstActive,
+    selected.map(m => m.month),
+  );
+  const monthDate = (m: string) => new Date(`${m}-01T12:00:00`);
   const short = (m: string) =>
-    `${formatDate(new Date(`${m}-01T12:00:00`), 'MMM', locale)}${m === currentMonth ? '*' : ''}`;
-  const long = (m: string) => formatDate(new Date(`${m}-01T12:00:00`), 'MMMM yyyy', locale);
+    `${formatDate(monthDate(m), 'MMM', locale)}${m === currentMonth ? '*' : ''}`;
+  const long = (m: string) => {
+    const name = formatDate(monthDate(m), 'MMMM yyyy', locale);
+    return m === currentMonth ? formatMessage(messages.roiSoFar, { month: name }) : name;
+  };
   const chartMonths: ChartMonth[] = shown.map(m => ({
     label: short(m.month),
     stripe: m.moneyStripe,
@@ -158,12 +187,11 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
     google: m.spendGoogle,
     net: m.netIncome,
   }));
-  const firstSel = shown.findIndex(m => m.month === selected[0]?.month);
-  const band: [number, number] = [firstSel, firstSel + selected.length - 1];
 
   const positive = p.netIncome >= 0;
   const adShare = p.moneyIn > 0 ? Math.round((p.spend / p.moneyIn) * 100) : null;
-  const periodName = PERIOD_LABELS[period].toLowerCase();
+  const periodName = periodLabels[period].toLowerCase();
+  const fmtDateTime = (d: string | Date) => formatDate(new Date(d), 'PP p', locale);
 
   return (
     <Column gap="6" style={{ minWidth: 0 }}>
@@ -174,7 +202,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
             variant={id === period ? 'primary' : 'outline'}
             onPress={() => router.push(updateParams({ period: id }))}
           >
-            {PERIOD_LABELS[id]}
+            {periodLabels[id]}
           </Button>
         ))}
       </Row>
@@ -188,8 +216,43 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
       >
         {data && (
           <Column gap="6">
+            {(data.stale?.length > 0 || data.spendFxGaps > 0 || data.syncErrors?.length > 0) && (
+              <Column
+                gap="1"
+                paddingX="5"
+                paddingY="3"
+                borderRadius="3"
+                border
+                style={{ borderColor: ROI_COLORS.google }}
+              >
+                {data.stale?.map((s: any) => (
+                  <Text key={s.source} size="2">
+                    {formatMessage(messages.roiStale, {
+                      source: sourceNames[s.source] ?? s.source,
+                      date: fmtDateTime(s.lastSuccessAt),
+                    })}
+                  </Text>
+                ))}
+                {data.spendFxGaps > 0 && (
+                  <Text size="2">
+                    {formatMessage(messages.roiFxGapsWarning, { n: data.spendFxGaps })}
+                  </Text>
+                )}
+                {data.syncErrors?.map((e: any) => (
+                  <Text key={e.source} size="2">
+                    {formatMessage(messages.roiSyncFailed, {
+                      source: sourceNames[e.source] ?? e.source,
+                      message: e.message,
+                    })}
+                  </Text>
+                ))}
+              </Column>
+            )}
+
             <Column gap="2">
-              <Text color="muted">Net income, {periodName}</Text>
+              <Text color="muted">
+                {formatMessage(messages.roiNetIncomeFor, { period: periodName })}
+              </Text>
               <Text
                 size="10"
                 weight="bold"
@@ -201,122 +264,162 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                 {usd(p.netIncome)}
               </Text>
               <Text size="4">
-                {usd(p.moneyIn)} came in from customers and {usd(p.spend)} went to ads
-                {adShare !== null ? `, so ads cost ${adShare}¢ of every dollar that came in.` : '.'}
+                {adShare !== null
+                  ? formatMessage(messages.roiSummaryShare, {
+                      moneyIn: usd(p.moneyIn),
+                      spend: usd(p.spend),
+                      share: adShare,
+                    })
+                  : formatMessage(messages.roiSummary, {
+                      moneyIn: usd(p.moneyIn),
+                      spend: usd(p.spend),
+                    })}
               </Text>
             </Column>
 
             <Row gap="2" wrap="wrap" alignItems="stretch">
               <Term
-                label="Stripe"
+                label={formatMessage(labels.roiStripe)}
                 value={usd(p.moneyStripe)}
                 color={ROI_COLORS.stripe}
-                sub="Web, after Stripe fees"
+                sub={formatMessage(messages.roiStripeSub)}
               />
               <Op>+</Op>
               <Term
-                label="App Store and Google Play"
-                value={data.appStoresAvailable ? usd(p.moneyAppStores) : 'unavailable'}
+                label={formatMessage(labels.roiAppStores)}
+                value={
+                  data.appStoresAvailable
+                    ? usd(p.moneyAppStores)
+                    : formatMessage(labels.roiUnavailable)
+                }
                 color={ROI_COLORS.appStores}
-                sub="Via RevenueCat, after store cut"
+                sub={formatMessage(messages.roiAppStoresSub)}
               />
               <Op>−</Op>
-              <Term label="Meta ads" value={usd(p.spendMeta)} color={ROI_COLORS.meta} dashed />
+              <Term
+                label={formatMessage(labels.roiMetaAds)}
+                value={usd(p.spendMeta)}
+                color={ROI_COLORS.meta}
+                dashed
+              />
               <Op>−</Op>
               <Term
-                label="Google ads"
-                value={data.googleConnected ? usd(p.spendGoogle) : 'not connected'}
+                label={formatMessage(labels.roiGoogleAds)}
+                value={
+                  data.googleConnected ? usd(p.spendGoogle) : formatMessage(labels.roiNotConnected)
+                }
                 color={ROI_COLORS.google}
                 dashed
               />
               <Op>=</Op>
               <Term
-                label="Net income"
+                label={formatMessage(labels.roiNetIncome)}
                 value={usd(p.netIncome)}
                 color={positive ? ROI_COLORS.positive : ROI_COLORS.negative}
-                sub={`${usd(p.yearly)} of money in from yearly plans`}
+                sub={formatMessage(messages.roiYearlySub, { amount: usd(p.yearly) })}
               />
             </Row>
 
-            <Panel title="Money in and ad spend, month by month">
+            <Panel title={formatMessage(labels.roiFlowsTitle)}>
               <Column gap="4">
                 <Row gap="5" wrap="wrap">
                   <Text size="2">
                     <Dot color={ROI_COLORS.stripe} />
-                    Stripe
+                    {formatMessage(labels.roiStripe)}
                   </Text>
                   <Text size="2">
                     <Dot color={ROI_COLORS.appStores} />
-                    App Store and Google Play
+                    {formatMessage(labels.roiAppStores)}
                   </Text>
                   <Text size="2">
                     <Dot color={ROI_COLORS.meta} dashed />
-                    Meta ads
+                    {formatMessage(labels.roiMetaAds)}
                   </Text>
                   <Text size="2">
                     <Dot color={ROI_COLORS.google} dashed />
-                    Google ads
+                    {formatMessage(labels.roiGoogleAds)}
                   </Text>
                 </Row>
-                <FlowsChart months={chartMonths} band={band} />
+                <FlowsChart
+                  months={chartMonths}
+                  band={band}
+                  labels={{
+                    stripe: formatMessage(labels.roiStripe),
+                    appStores: formatMessage(labels.roiAppStores),
+                    meta: formatMessage(labels.roiMetaAds),
+                    google: formatMessage(labels.roiGoogleAds),
+                  }}
+                />
                 <Text color="muted" size="1">
-                  Solid lines are money coming in, dashed lines are money going to ads. The shaded
-                  area is {periodName}. * = month so far.
+                  {formatMessage(messages.roiFlowsNote, { period: periodName })}
                 </Text>
               </Column>
             </Panel>
 
-            <Panel title="Net income, month by month">
+            <Panel title={formatMessage(labels.roiNetTitle)}>
               <Column gap="3">
-                <NetChart months={chartMonths} band={band} />
+                <NetChart
+                  months={chartMonths}
+                  band={band}
+                  label={formatMessage(labels.roiNetIncome)}
+                />
                 <Text color="muted" size="1">
-                  Money in minus ad spend for each month. Brighter bars are {periodName}.
+                  {formatMessage(messages.roiNetNote, { period: periodName })}
                 </Text>
               </Column>
             </Panel>
 
-            <Panel title="From website visitor to paying customer">
+            <Panel title={formatMessage(labels.roiFunnelTitle)}>
               <Column gap="3">
                 <Row gap="2" alignItems="stretch" wrap="wrap">
-                  <Step label="Visited the website" value={int(p.visitors)} />
+                  <Step label={formatMessage(labels.roiVisitedSite)} value={int(p.visitors)} />
                   <Arrow rate={pct(p.trials, p.visitors)} />
-                  <Step label="Started a trial" value={int(p.trials)} />
+                  <Step label={formatMessage(labels.roiStartedTrial)} value={int(p.trials)} />
                   <Arrow rate={pct(p.newCustomers, p.trials)} />
-                  <Step label="New paying customers" value={int(p.newCustomers)} />
+                  <Step
+                    label={formatMessage(labels.roiNewPayingCustomers)}
+                    value={int(p.newCustomers)}
+                  />
                 </Row>
                 <Text color="muted" size="2">
                   {p.costPerCustomer === null
-                    ? 'No ad spend in this period.'
-                    : `${usd(p.costPerCustomer)} of ad spend per new paying customer.`}{' '}
-                  Visitors are sessions on {data.hostname}. A new paying customer is someone whose
-                  first payment fell in this period.
+                    ? formatMessage(messages.roiNoSpendPeriod)
+                    : formatMessage(messages.roiCostPerCustomer, {
+                        amount: usd(p.costPerCustomer),
+                      })}{' '}
+                  {formatMessage(messages.roiFunnelNote, { hostname: data.hostname })}
                 </Text>
               </Column>
             </Panel>
 
-            <Panel title="All months">
+            <Panel title={formatMessage(labels.roiAllMonths)}>
               <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
                 <Grid
-                  columns="minmax(130px,1.3fr) repeat(8, minmax(80px,1fr))"
+                  columns="minmax(150px,1.3fr) repeat(8, minmax(80px,1fr))"
                   gap="3"
-                  style={{ minWidth: 860 }}
+                  style={{ minWidth: 880 }}
                 >
                   {(
                     [
-                      ['Month', null],
-                      ['Stripe', ROI_COLORS.stripe],
-                      ['App stores', ROI_COLORS.appStores],
-                      ['Meta', ROI_COLORS.meta],
-                      ['Google', ROI_COLORS.google],
-                      ['Net income', null],
-                      ['Visitors', null],
-                      ['Trials', null],
-                      ['New paying', null],
-                    ] as [string, string | null][]
-                  ).map(([h, color], i) => (
-                    <Text key={h} color="muted" align={i === 0 ? 'left' : 'right'} wrap="nowrap">
-                      {color && <Dot color={color} dashed={h === 'Meta' || h === 'Google'} />}
-                      {h}
+                      [labels.roiMonth, null, false],
+                      [labels.roiStripe, ROI_COLORS.stripe, false],
+                      [labels.roiAppStoresShort, ROI_COLORS.appStores, false],
+                      [labels.roiMeta, ROI_COLORS.meta, true],
+                      [labels.roiGoogle, ROI_COLORS.google, true],
+                      [labels.roiNetIncome, null, false],
+                      [labels.roiVisitors, null, false],
+                      [labels.roiTrials, null, false],
+                      [labels.roiNewPaying, null, false],
+                    ] as [any, string | null, boolean][]
+                  ).map(([label, color, dashed], i) => (
+                    <Text
+                      key={label.id}
+                      color="muted"
+                      align={i === 0 ? 'left' : 'right'}
+                      wrap="nowrap"
+                    >
+                      {color && <Dot color={color} dashed={dashed} />}
+                      {formatMessage(label)}
                     </Text>
                   ))}
                   {shown
@@ -326,10 +429,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                       const inPeriod = selected.some(s => s.month === r.month);
                       return (
                         <Fragment key={r.month}>
-                          <Text weight={inPeriod ? 'bold' : undefined}>
-                            {long(r.month)}
-                            {r.month === currentMonth ? ' (so far)' : ''}
-                          </Text>
+                          <Text weight={inPeriod ? 'bold' : undefined}>{long(r.month)}</Text>
                           <Text align="right">{usd(r.moneyStripe)}</Text>
                           <Text align="right">{usd(r.moneyAppStores)}</Text>
                           <Text align="right">{usd(r.spendMeta)}</Text>
@@ -355,20 +455,14 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
 
             <Row gap="3" alignItems="center" wrap="wrap">
               <Text color="muted" size="2">
-                Money in is everything Stripe, the App Store and Google Play paid out, after fees,
-                commission, tax and refunds. Ad spend is Meta and Google as billed.{' '}
+                {formatMessage(messages.roiFooter)}{' '}
                 {data.updatedAt &&
-                  `Updated ${formatDate(new Date(data.updatedAt), 'PP p', locale)}.`}
+                  formatMessage(messages.roiUpdated, { date: fmtDateTime(data.updatedAt) })}
               </Text>
               <Button variant="quiet" isDisabled={syncing} onPress={runSync}>
-                {syncing ? 'Syncing…' : 'Sync now'}
+                {formatMessage(syncing ? labels.roiSyncing : labels.roiSyncNow)}
               </Button>
             </Row>
-            {data.syncErrors?.length > 0 && (
-              <Text size="2" color="muted">
-                {data.syncErrors.map((e: any) => `${e.source}: ${e.message}`).join(' · ')}
-              </Text>
-            )}
           </Column>
         )}
       </LoadingPanel>

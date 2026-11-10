@@ -90,7 +90,9 @@ export function mapStripeDispute(dispute: any): RevenueRow | null {
   const usd = bts.filter(b => String(b.currency).toUpperCase() === 'USD');
   const charge = dispute.charge && typeof dispute.charge === 'object' ? dispute.charge : null;
   const sum = (key: string) =>
-    usd.length === bts.length && bts.length ? usd.reduce((s, b) => s + cents(b[key]), 0) : null;
+    usd.length === bts.length && bts.length
+      ? Math.round(usd.reduce((s, b) => s + Number(b[key] ?? 0), 0)) / 100
+      : null;
   return {
     source: 'stripe',
     externalId: dispute.id,
@@ -157,11 +159,16 @@ export async function listStripe(
   return items;
 }
 
-/** All Stripe money movements (charges, refunds, disputes) since `since`. */
+/**
+ * All Stripe money movements (charges, refunds, disputes) since `since`.
+ * Disputes are re-read from `disputeSince` (earlier), because a dispute keeps
+ * changing for weeks: a won dispute adds a reinstatement balance transaction.
+ */
 export async function fetchStripeRevenue(
   key: string,
   since: number,
   fetchImpl: typeof fetch = fetch,
+  disputeSince = since,
 ): Promise<RevenueRow[]> {
   const [charges, refunds, disputes] = await Promise.all([
     listStripe('/v1/charges', key, since, ['data.balance_transaction', 'data.customer'], fetchImpl),
@@ -172,7 +179,13 @@ export async function fetchStripeRevenue(
       ['data.balance_transaction', 'data.charge.customer'],
       fetchImpl,
     ),
-    listStripe('/v1/disputes', key, since, ['data.charge.customer'], fetchImpl),
+    listStripe(
+      '/v1/disputes',
+      key,
+      Math.min(since, disputeSince),
+      ['data.charge.customer'],
+      fetchImpl,
+    ),
   ]);
 
   return [

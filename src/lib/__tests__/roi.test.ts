@@ -1,12 +1,7 @@
 import { buildFxLookup, fetchFrankfurterRates, toUsd } from '../ads/fx';
 import { isValidScriptSecret, mapGoogleRows, normalizeCustomerId } from '../ads/google';
 import { fetchMetaInsights, MetaApiError, parseAccountIds } from '../ads/meta';
-import {
-  fetchRcCustomerRevenue,
-  fetchRcMonthly,
-  mapRcPurchase,
-  mapRcSubscription,
-} from '../revenue/revenuecat';
+import { fetchRcMonthly } from '../revenue/revenuecat';
 import {
   fetchStripeRevenue,
   mapStripeCharge,
@@ -14,7 +9,17 @@ import {
   mapStripeRefund,
 } from '../revenue/stripe';
 import { buildUserMap } from '../revenue/userMap';
-import { buildMonths, lastMonths, periodRows, sumMonths } from '../roi';
+import {
+  buildMonths,
+  lastMonths,
+  latestSync,
+  monthOf,
+  periodBand,
+  periodRows,
+  STALE_AFTER_HOURS,
+  staleSources,
+  sumMonths,
+} from '../roi';
 
 const now = new Date('2026-11-10T12:00:00Z');
 const fx = buildFxLookup([
@@ -158,10 +163,71 @@ describe('monthly ROI', () => {
     });
   });
 
+  test('months are UTC, matching RevenueCat', () => {
+    // 9 PM in Chicago on Oct 31 is already November in UTC.
+    expect(monthOf('2026-11-01T02:00:00Z')).toBe('2026-11');
+    expect(monthOf('2026-10-31T23:59:00Z')).toBe('2026-10');
+  });
+
+  test('yearly refunds come off the yearly-plan total', () => {
+    const rows = buildMonths(months, {
+      ...input,
+      stripe: [
+        ...stripe,
+        {
+          kind: 'refund',
+          userId: 'y',
+          customerRef: 'cus_y',
+          occurredAt: '2026-11-08T15:00:00Z',
+          grossUsd: -72,
+          netUsd: -72,
+        },
+      ],
+    });
+    expect(rows[2].yearly).toBe(-72);
+    expect(rows[2].moneyStripe).toBe(-69.53);
+  });
+
   test('no App Store data: money in is Stripe only and flagged', () => {
     const rows = buildMonths(months, { ...input, appStores: null });
     expect(rows[1]).toMatchObject({ moneyAppStores: null, moneyIn: 74.16 });
     expect(sumMonths(rows).moneyAppStores).toBeNull();
+  });
+});
+
+describe('sync health and chart band', () => {
+  const now = new Date('2026-11-10T12:00:00Z');
+  const hoursAgo = (h: number) => new Date(+now - h * 3_600_000);
+
+  test('latest sync compares times, not strings', () => {
+    // As strings "Wed…" sorts after "Tue…", but Tuesday Nov 10 is later than Wednesday Nov 4.
+    const sources = [
+      { source: 'fx', lastSuccessAt: new Date('2026-11-04T10:00:00Z') },
+      { source: 'stripe', lastSuccessAt: new Date('2026-11-10T10:00:00Z') },
+      { source: 'google', lastSuccessAt: null },
+    ];
+    expect(latestSync(sources)?.toISOString()).toBe('2026-11-10T10:00:00.000Z');
+    expect(latestSync([{ source: 'x', lastSuccessAt: null }])).toBeNull();
+  });
+
+  test('sources not synced within the stale window are flagged', () => {
+    const stale = staleSources(
+      [
+        { source: 'meta', lastSuccessAt: hoursAgo(2) },
+        { source: 'google', lastSuccessAt: hoursAgo(STALE_AFTER_HOURS + 1) },
+        { source: 'stripe', lastSuccessAt: null },
+      ],
+      now,
+    );
+    expect(stale.map(s => s.source)).toEqual(['google']);
+  });
+
+  test('period band is relative to the first shown month and clamped', () => {
+    const all = ['2025-12', '2026-01', '2026-02', '2026-03'];
+    expect(periodBand(all, 1, ['2026-02', '2026-03'])).toEqual([1, 2]);
+    // Period starts before the first shown month: shade from the first shown one.
+    expect(periodBand(all, 2, all)).toEqual([0, 1]);
+    expect(periodBand(all, 0, [])).toEqual([-1, -1]);
   });
 });
 
@@ -275,72 +341,36 @@ describe('Stripe revenue', () => {
   });
 });
 
-describe('RevenueCat revenue', () => {
-  test('uses cumulative subscription revenue and skips sandbox and trial-only', () => {
-    const sub = (extra: any) => ({
-      id: 'sub_1',
-      environment: 'production',
-      starts_at: 1762000000000,
-      product_id: 'pro_monthly',
-      total_revenue_in_usd: { gross: 29.97, commission: 4.5, tax: 2, proceeds: 23.47 },
-      ...extra,
-    });
-    expect(mapRcSubscription(sub({}), 'fb-1')).toMatchObject({
-      kind: 'subscription',
-      grossUsd: 29.97,
-      feeUsd: 6.5,
-      netUsd: 23.47,
-      userRef: 'fb-1',
-    });
-    expect(mapRcSubscription(sub({ environment: 'sandbox' }), 'fb-1')).toBeNull();
-    expect(mapRcSubscription(sub({ total_revenue_in_usd: { gross: 0 } }), 'fb-1')).toBeNull();
-  });
-
-  test('refunded purchases carry no net revenue', () => {
-    expect(
-      mapRcPurchase(
-        {
-          id: 'p1',
-          environment: 'production',
-          purchased_at: 1,
-          status: 'refunded',
-          revenue_in_usd: { gross: 50, commission: 7.5, tax: 0, proceeds: 42.5 },
-        },
-        'fb-1',
-      ),
-    ).toMatchObject({ grossUsd: 50, netUsd: 0, refunded: true });
-  });
-
-  test('retries after a rate limit and treats unknown customers as empty', async () => {
-    let hits = 0;
+describe('Stripe disputes', () => {
+  test('disputes are re-read from an earlier date than charges', async () => {
+    const urls: string[] = [];
     const fetchImpl: any = async (url: string) => {
-      if (url.includes('/customers/missing/'))
-        return { ok: false, status: 404, json: async () => ({}) };
-      hits++;
-      if (hits === 1)
-        return {
-          ok: false,
-          status: 429,
-          headers: { get: () => '1' },
-          json: async () => ({ backoff_ms: 10 }),
-        };
-      const items = url.includes('/subscriptions')
-        ? [
-            {
-              id: 's',
-              environment: 'production',
-              starts_at: 1,
-              total_revenue_in_usd: { gross: 10, commission: 1.5, tax: 0, proceeds: 8.5 },
-            },
-          ]
-        : [];
-      return { ok: true, status: 200, json: async () => ({ items, next_page: null }) };
+      urls.push(url);
+      return { ok: true, status: 200, json: async () => ({ data: [], has_more: false }) };
     };
-    const opts = { key: 'sk_x', projectId: 'proj', fetchImpl, sleep: async () => {} };
-    expect(await fetchRcCustomerRevenue('fb-1', opts)).toHaveLength(1);
-    expect(await fetchRcCustomerRevenue('missing', opts)).toEqual([]);
+    await fetchStripeRevenue('rk_test_x', 2000, fetchImpl, 1000);
+    const created = (path: string) =>
+      new URL(urls.find(u => u.includes(path))).searchParams.get('created[gte]');
+    expect(created('/v1/charges')).toBe('2000');
+    expect(created('/v1/disputes')).toBe('1000');
   });
 
+  test('a won dispute nets to just the fee', () => {
+    const row = mapStripeDispute({
+      id: 'dp_won',
+      amount: 999,
+      currency: 'usd',
+      created: 1762000000,
+      balance_transactions: [
+        { amount: -999, fee: 1500, net: -2499, currency: 'usd' },
+        { amount: 999, fee: 0, net: 999, currency: 'usd' },
+      ],
+    });
+    expect(row).toMatchObject({ grossUsd: 0, feeUsd: 15, netUsd: -15 });
+  });
+});
+
+describe('RevenueCat revenue', () => {
   test('reads monthly proceeds, yearly part and new subscriptions from the revenue chart', async () => {
     const chart = (segments: string[], vals: [number, number, number, number][]) => ({
       ok: true,
@@ -357,28 +387,37 @@ describe('RevenueCat revenue', () => {
     });
     const oct = 1790812800;
     const fetchImpl: any = async (url: string) =>
-      url.includes('transaction_type')
+      url.includes('segment=store')
         ? chart(
-            ['Total', 'New', 'Renewal'],
+            ['Total', 'App Store', 'Stripe'],
             [
-              [oct, 0, 0, 367.9],
-              [oct, 1, 1, 14],
-              [oct, 0, 1, 344.11],
+              [oct, 0, 1, 347.9],
+              [oct, 0, 2, 20],
             ],
           )
-        : chart(
-            ['Total', 'P1Y', 'P1M'],
-            [
-              [oct, 0, 1, 245.37],
-              [oct, 0, 2, 122.53],
-            ],
-          );
+        : url.includes('transaction_type')
+          ? chart(
+              ['Total', 'New', 'Renewal'],
+              [
+                [oct, 0, 0, 367.9],
+                [oct, 1, 1, 14],
+                [oct, 0, 1, 344.11],
+              ],
+            )
+          : chart(
+              ['Total', 'P1Y', 'P1M'],
+              [
+                [oct, 0, 1, 245.37],
+                [oct, 0, 2, 122.53],
+              ],
+            );
     const months = await fetchRcMonthly('2026-10-01', '2026-10-31', {
       key: 'k',
       projectId: 'p',
       fetchImpl,
     });
-    expect(months.get('2026-10')).toEqual({ proceeds: 367.9, yearly: 245.37, newCustomers: 14 });
+    // Purchases RevenueCat tracks through Stripe are left out (Stripe is counted on its own).
+    expect(months.get('2026-10')).toEqual({ proceeds: 347.9, yearly: 245.37, newCustomers: 14 });
   });
 });
 

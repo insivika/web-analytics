@@ -5,10 +5,12 @@ import {
   type AppStoreMonth,
   buildMonths,
   lastMonths,
+  latestSync,
   monthOf,
   monthStart,
   ROI_MONTHS,
   ROI_TIMEZONE,
+  staleSources,
 } from '@/lib/roi';
 import { resolveTrialStarts, type TrialSettings } from '@/lib/trial';
 import { getSyncStatus } from '@/queries/prisma/adSpend';
@@ -49,12 +51,6 @@ async function getInternalUsers(websiteId: string): Promise<Set<string>> {
   return new Set(rows.map((r: any) => r.userId).filter(Boolean));
 }
 
-/** Trial starters (all time, newest first) for the RevenueCat per-customer sync. */
-export async function getTrialStarterIds(websiteId: string, trialSettings: TrialSettings) {
-  const starts = await getTrialStarts(websiteId, trialSettings);
-  return [...starts].sort((a, b) => +b[1] - +a[1]).map(([id]) => id);
-}
-
 async function getTrialStarts(websiteId: string, trialSettings: TrialSettings) {
   const now = new Date();
   const [occurrences, expiresRows, internal] = await Promise.all([
@@ -93,7 +89,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
   }
 
   const rows = buildMonths(months, {
-    spend,
+    spend: spend.byMonth,
     visitors,
     trials,
     // All Stripe history, so "new customer" means first payment ever.
@@ -101,20 +97,21 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     appStores,
   });
 
-  const lastSync = (source: string) => syncStatus.find(s => s.source === source);
-  const google = lastSync('google');
+  // Sources the page depends on. Google pushes from its own script, so a stopped
+  // script shows up only as an old last-success time.
+  const sources = ['meta', 'google', 'stripe'].map(source => ({
+    source,
+    lastSuccessAt: syncStatus.find(s => s.source === source)?.lastSuccess?.finishedAt ?? null,
+  }));
 
   return {
     hostname,
     months: rows,
     appStoresAvailable: appStores !== null,
-    googleConnected: !!google?.lastSuccess,
-    updatedAt:
-      syncStatus
-        .map(s => s.lastSuccess?.finishedAt)
-        .filter(Boolean)
-        .sort()
-        .pop() ?? null,
+    googleConnected: !!sources.find(s => s.source === 'google')?.lastSuccessAt,
+    updatedAt: latestSync(sources),
+    stale: staleSources(sources, now),
+    spendFxGaps: spend.fxGaps,
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
       .map(s => ({ source: s.source, message: s.last?.message ?? '' })),
@@ -142,7 +139,8 @@ async function getAppStoresCached(start: string, end: string) {
 async function getMonthlySpend(websiteId: string, from: string) {
   const rows = await prisma.rawQuery(
     `
-    select to_char(date, 'YYYY-MM') as month, channel, sum(spend_usd)::float as usd
+    select to_char(date, 'YYYY-MM') as month, channel, sum(spend_usd)::float as usd,
+      count(*) filter (where spend_usd is null and spend > 0)::int as gaps
     from ad_spend
     where website_id = {{websiteId::uuid}} and date >= {{from}}::date
     group by 1, 2
@@ -150,14 +148,17 @@ async function getMonthlySpend(websiteId: string, from: string) {
     { websiteId, from },
     'getRoiMonthlySpend',
   );
-  const out = new Map<string, { meta: number; google: number }>();
+  const byMonth = new Map<string, { meta: number; google: number }>();
+  let fxGaps = 0;
   for (const r of rows as any[]) {
-    const cur = out.get(r.month) ?? { meta: 0, google: 0 };
+    fxGaps += Number(r.gaps ?? 0);
+    const cur = byMonth.get(r.month) ?? { meta: 0, google: 0 };
     if (r.channel === 'google') cur.google += Number(r.usd ?? 0);
     else cur.meta += Number(r.usd ?? 0);
-    out.set(r.month, cur);
+    byMonth.set(r.month, cur);
   }
-  return out;
+  // Rows whose currency had no FX rate add $0; the page reports how many.
+  return { byMonth, fxGaps };
 }
 
 async function getMonthlyVisitors(websiteId: string, hostname: string, from: Date) {

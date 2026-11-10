@@ -1,6 +1,42 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiThisMonth: { id: 'label.roi-this-month', defaultMessage: 'This month' },
+  roiLastMonth: { id: 'label.roi-last-month', defaultMessage: 'Last month' },
+  roiLast3Months: { id: 'label.roi-last-3-months', defaultMessage: 'Last 3 months' },
+  roiLast12Months: { id: 'label.roi-last-12-months', defaultMessage: 'Last 12 months' },
+  roiStripe: { id: 'label.roi-stripe', defaultMessage: 'Stripe' },
+  roiAppStores: { id: 'label.roi-app-stores', defaultMessage: 'App Store and Google Play' },
+  roiAppStoresShort: { id: 'label.roi-app-stores-short', defaultMessage: 'App stores' },
+  roiMetaAds: { id: 'label.roi-meta-ads', defaultMessage: 'Meta ads' },
+  roiGoogleAds: { id: 'label.roi-google-ads', defaultMessage: 'Google ads' },
+  roiMeta: { id: 'label.roi-meta', defaultMessage: 'Meta' },
+  roiGoogle: { id: 'label.roi-google', defaultMessage: 'Google' },
+  roiNetIncome: { id: 'label.roi-net-income', defaultMessage: 'Net income' },
+  roiMonth: { id: 'label.roi-month', defaultMessage: 'Month' },
+  roiVisitors: { id: 'label.roi-visitors', defaultMessage: 'Visitors' },
+  roiTrials: { id: 'label.roi-trials', defaultMessage: 'Trials' },
+  roiNewPaying: { id: 'label.roi-new-paying', defaultMessage: 'New paying' },
+  roiVisitedSite: { id: 'label.roi-visited-site', defaultMessage: 'Visited the website' },
+  roiStartedTrial: { id: 'label.roi-started-trial', defaultMessage: 'Started a trial' },
+  roiNewPayingCustomers: {
+    id: 'label.roi-new-paying-customers',
+    defaultMessage: 'New paying customers',
+  },
+  roiUnavailable: { id: 'label.roi-unavailable', defaultMessage: 'unavailable' },
+  roiNotConnected: { id: 'label.roi-not-connected', defaultMessage: 'not connected' },
+  roiSyncNow: { id: 'label.roi-sync-now', defaultMessage: 'Sync now' },
+  roiSyncing: { id: 'label.roi-syncing', defaultMessage: 'Syncing…' },
+  roiFlowsTitle: {
+    id: 'label.roi-flows-title',
+    defaultMessage: 'Money in and ad spend, month by month',
+  },
+  roiNetTitle: { id: 'label.roi-net-title', defaultMessage: 'Net income, month by month' },
+  roiFunnelTitle: {
+    id: 'label.roi-funnel-title',
+    defaultMessage: 'From website visitor to paying customer',
+  },
+  roiAllMonths: { id: 'label.roi-all-months', defaultMessage: 'All months' },
   ok: { id: 'label.ok', defaultMessage: 'OK' },
   unknown: { id: 'label.unknown', defaultMessage: 'Unknown' },
   required: { id: 'label.required', defaultMessage: 'Required' },
@@ -481,67 +517,70 @@ export const labels = defineMessages({
     defaultMessage: 'Exclude trials whose expiry was first seen at or after trial end',
   },
   roi: { id: 'label.roi', defaultMessage: 'ROI' },
-  roiPeriod: { id: 'label.roi-period', defaultMessage: 'Trial-start period' },
-  adSpend: { id: 'label.ad-spend', defaultMessage: 'Ad spend' },
-  trialStartsAll: { id: 'label.trial-starts-all', defaultMessage: 'Trial starts (all)' },
-  payingCustomers: { id: 'label.paying-customers', defaultMessage: 'Paying customers' },
   netRevenueWindow: { id: 'label.net-revenue-window', defaultMessage: 'Net revenue ({days}d)' },
-  costPerTrial: { id: 'label.cost-per-trial', defaultMessage: 'Cost per trial' },
-  paybackDays: { id: 'label.payback-days', defaultMessage: 'Payback' },
-  notYet: { id: 'label.not-yet', defaultMessage: 'Not yet' },
-  blended: { id: 'label.blended', defaultMessage: 'Blended (all trial starts)' },
-  projectedLtv: { id: 'label.projected-ltv', defaultMessage: 'Projected LTV' },
-  weeklyTrend: { id: 'label.weekly-trend', defaultMessage: 'Weekly trend by trial-start week' },
-  immature: { id: 'label.immature', defaultMessage: 'Immature' },
-  spendByCampaign: { id: 'label.spend-by-campaign', defaultMessage: 'Spend by campaign' },
-  campaign: { id: 'label.campaign', defaultMessage: 'Campaign' },
-  clicks: { id: 'label.clicks', defaultMessage: 'Clicks' },
-  dataHealth: { id: 'label.data-health', defaultMessage: 'Data health' },
-  syncNow: { id: 'label.sync-now', defaultMessage: 'Sync Meta now' },
-  backfill180: { id: 'label.backfill-180', defaultMessage: 'Backfill 180 days' },
-  websiteVisitors: {
-    id: 'label.website-visitors',
-    defaultMessage: 'Website visitors',
-  },
-  netRevenueToDate: {
-    id: 'label.net-revenue-to-date',
-    defaultMessage: 'Net revenue to date',
-  },
-  grossRevenue: {
-    id: 'label.gross-revenue',
-    defaultMessage: 'Gross revenue',
-  },
-  feesAndCommission: {
-    id: 'label.fees-and-commission',
-    defaultMessage: 'Fees, commission & tax',
-  },
-  costPerVisitor: {
-    id: 'label.cost-per-visitor',
-    defaultMessage: 'Cost per visitor',
-  },
-  cashIn: {
-    id: 'label.cash-in',
-    defaultMessage: 'All money in this period',
-  },
-  marketingFunnel: {
-    id: 'label.marketing-funnel',
-    defaultMessage: 'Marketing funnel',
-  },
-  syncRevenue: {
-    id: 'label.sync-revenue',
-    defaultMessage: 'Sync revenue now',
-  },
-  backfillRevenue: {
-    id: 'label.backfill-revenue',
-    defaultMessage: 'Backfill revenue (2 years)',
-  },
-  revenuePerCustomer: {
-    id: 'label.revenue-per-customer',
-    defaultMessage: 'Net revenue per customer',
-  },
 });
 
 export const messages = defineMessages({
+  roiNetIncomeFor: { id: 'message.roi-net-income-for', defaultMessage: 'Net income, {period}' },
+  roiSummary: {
+    id: 'message.roi-summary',
+    defaultMessage: '{moneyIn} came in from customers and {spend} went to ads.',
+  },
+  roiSummaryShare: {
+    id: 'message.roi-summary-share',
+    defaultMessage:
+      '{moneyIn} came in from customers and {spend} went to ads, so ads cost {share}¢ of every dollar that came in.',
+  },
+  roiStripeSub: { id: 'message.roi-stripe-sub', defaultMessage: 'Web, after Stripe fees' },
+  roiAppStoresSub: {
+    id: 'message.roi-app-stores-sub',
+    defaultMessage: 'Via RevenueCat, after store cut',
+  },
+  roiYearlySub: {
+    id: 'message.roi-yearly-sub',
+    defaultMessage: '{amount} of money in from yearly plans',
+  },
+  roiFlowsNote: {
+    id: 'message.roi-flows-note',
+    defaultMessage:
+      'Solid lines are money coming in, dashed lines are money going to ads. The shaded area is {period}. * = month so far.',
+  },
+  roiNetNote: {
+    id: 'message.roi-net-note',
+    defaultMessage: 'Money in minus ad spend for each month. Brighter bars are {period}.',
+  },
+  roiCostPerCustomer: {
+    id: 'message.roi-cost-per-customer',
+    defaultMessage: '{amount} of ad spend per new paying customer.',
+  },
+  roiNoSpendPeriod: {
+    id: 'message.roi-no-spend-period',
+    defaultMessage: 'No ad spend in this period.',
+  },
+  roiFunnelNote: {
+    id: 'message.roi-funnel-note',
+    defaultMessage:
+      'Visitors are sessions on {hostname}. A new paying customer is someone whose first payment fell in this period.',
+  },
+  roiSoFar: { id: 'message.roi-so-far', defaultMessage: '{month} (so far)' },
+  roiFooter: {
+    id: 'message.roi-footer',
+    defaultMessage:
+      'Money in is everything Stripe, the App Store and Google Play paid out, after fees, commission, tax and refunds. Ad spend is Meta and Google as billed. Months are UTC calendar months.',
+  },
+  roiUpdated: { id: 'message.roi-updated', defaultMessage: 'Updated {date}.' },
+  roiStale: {
+    id: 'message.roi-stale',
+    defaultMessage: '{source} last synced {date}, so its numbers may be out of date.',
+  },
+  roiFxGapsWarning: {
+    id: 'message.roi-fx-gaps-warning',
+    defaultMessage: '{n} ad spend rows have no exchange rate and count as $0.',
+  },
+  roiSyncFailed: {
+    id: 'message.roi-sync-failed',
+    defaultMessage: '{source} sync failed: {message}',
+  },
   error: { id: 'message.error', defaultMessage: 'Something went wrong.' },
   saved: { id: 'message.saved', defaultMessage: 'Saved successfully.' },
   noUsers: { id: 'message.no-users', defaultMessage: 'There are no users.' },
@@ -797,21 +836,9 @@ export const messages = defineMessages({
     id: 'message.roi-immature',
     defaultMessage: 'immature: {mature} of {n} trials past {days} days',
   },
-  roiBlendedNote: {
-    id: 'message.roi-blended-note',
-    defaultMessage: 'All trial starts, attributed or not',
-  },
   roiLtvNote: {
     id: 'message.roi-ltv-note',
     defaultMessage: 'projected: {arpu}/month per payer ÷ {churn} monthly churn (n = {n})',
-  },
-  roiAttributionPending: {
-    id: 'message.roi-attribution-pending',
-    defaultMessage: 'Channel attribution not captured yet (blended view only).',
-  },
-  roiNoSpend: {
-    id: 'message.roi-no-spend',
-    defaultMessage: 'No ad spend synced for this period yet.',
   },
   roiSyncError: { id: 'message.roi-sync-error', defaultMessage: 'Last sync failed: {message}' },
   roiLastSync: { id: 'message.roi-last-sync', defaultMessage: 'Last successful sync: {date}' },
@@ -841,11 +868,6 @@ export const messages = defineMessages({
     id: 'message.roi-cash-in-note',
     defaultMessage:
       'Stripe net {stripe} + RevenueCat proceeds {revenuecat}, from all customers, not only this funnel.',
-  },
-  roiRevenueSource: {
-    id: 'message.roi-revenue-source',
-    defaultMessage:
-      'Revenue is what Stripe and RevenueCat actually booked: after Stripe fees, store commission and tax, minus refunds and chargebacks.',
   },
   roiUnmatched: {
     id: 'message.roi-unmatched',

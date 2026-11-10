@@ -125,7 +125,7 @@ export async function finishSyncRun(
 
 /** Latest run and latest successful run per source, for the data-health panel. */
 export async function getSyncStatus(websiteId: string) {
-  const sources = ['meta', 'google', 'stripe', 'revenuecat', 'fx'];
+  const sources = ['meta', 'google', 'stripe', 'fx'];
 
   return Promise.all(
     sources.map(async source => {

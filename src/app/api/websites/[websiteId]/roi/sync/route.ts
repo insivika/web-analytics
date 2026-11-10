@@ -2,19 +2,11 @@ import { z } from 'zod';
 import { getAdsWebsiteId, MAX_BACKFILL_DAYS, syncFxRates, syncMetaSpend } from '@/lib/ads/sync';
 import { parseRequest } from '@/lib/request';
 import { badRequest, json, unauthorized } from '@/lib/response';
-import {
-  MAX_REVENUE_BACKFILL_DAYS,
-  syncRevenueCatRevenue,
-  syncStripeRevenue,
-} from '@/lib/revenue/sync';
-import { normalizeTrialSettings, TRIAL_SETTINGS_KEY } from '@/lib/trial';
+import { MAX_REVENUE_BACKFILL_DAYS, syncStripeRevenue } from '@/lib/revenue/sync';
 import { canUpdateWebsite } from '@/permissions';
-import { getWebsiteSetting } from '@/queries/prisma';
-import { getTrialStarterIds } from '@/queries/sql/reports/getRoi';
 
 // "Sync now" / backfill from the ROI page. 60s keeps each request within Vercel
-// Hobby limits: Meta backfills run as 30-day chunks, RevenueCat pages through
-// trial starters with `offset` (the response carries nextOffset).
+// Hobby limits; Meta backfills run as 30-day chunks.
 export const maxDuration = 60;
 
 export async function POST(
@@ -22,10 +14,9 @@ export async function POST(
   { params }: { params: Promise<{ websiteId: string }> },
 ) {
   const schema = z.object({
-    source: z.enum(['meta', 'fx', 'stripe', 'revenuecat']).default('meta'),
+    source: z.enum(['meta', 'fx', 'stripe']).default('meta'),
     days: z.coerce.number().int().min(1).max(MAX_REVENUE_BACKFILL_DAYS).default(7),
     offsetDays: z.coerce.number().int().min(0).max(MAX_BACKFILL_DAYS).default(0),
-    offset: z.coerce.number().int().min(0).default(0),
   });
 
   const { auth, body, error } = await parseRequest(request, schema);
@@ -61,13 +52,5 @@ export async function POST(
       );
     case 'stripe':
       return json(await syncStripeRevenue(websiteId, body.days));
-    case 'revenuecat': {
-      const setting = await getWebsiteSetting(websiteId, TRIAL_SETTINGS_KEY);
-      const userIds = await getTrialStarterIds(
-        websiteId,
-        normalizeTrialSettings(setting?.value as any),
-      );
-      return json(await syncRevenueCatRevenue(websiteId, userIds, body.offset));
-    }
   }
 }

@@ -47,7 +47,6 @@ function useChart(config: () => ChartConfiguration, deps: unknown[]) {
     if (!canvas.current) return;
     const chart = new ChartJS(canvas.current, config());
     return () => chart.destroy();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: deps are passed explicitly
   }, deps);
   return canvas;
 }
@@ -87,7 +86,22 @@ export interface ChartMonth {
 }
 
 /** Money in (solid) and ad spend (dashed), one line per source. */
-export function FlowsChart({ months, band }: { months: ChartMonth[]; band: [number, number] }) {
+export interface FlowsLabels {
+  stripe: string;
+  appStores: string;
+  meta: string;
+  google: string;
+}
+
+export function FlowsChart({
+  months,
+  band,
+  labels,
+}: {
+  months: ChartMonth[];
+  band: [number, number];
+  labels: FlowsLabels;
+}) {
   const canvas = useChart(
     () => ({
       type: 'line',
@@ -95,25 +109,25 @@ export function FlowsChart({ months, band }: { months: ChartMonth[]; band: [numb
         labels: months.map(m => m.label),
         datasets: [
           line(
-            'Stripe',
+            labels.stripe,
             months.map(m => m.stripe),
             ROI_COLORS.stripe,
             false,
           ),
           line(
-            'App Store and Google Play',
+            labels.appStores,
             months.map(m => m.appStores),
             ROI_COLORS.appStores,
             false,
           ),
           line(
-            'Meta ads',
+            labels.meta,
             months.map(m => m.meta),
             ROI_COLORS.meta,
             true,
           ),
           line(
-            'Google ads',
+            labels.google,
             months.map(m => m.google),
             ROI_COLORS.google,
             true,
@@ -123,7 +137,7 @@ export function FlowsChart({ months, band }: { months: ChartMonth[]; band: [numb
       options: baseOptions as any,
       plugins: [periodBand(band[0], band[1])],
     }),
-    [JSON.stringify(months), band[0], band[1]],
+    [JSON.stringify(months), band[0], band[1], JSON.stringify(labels)],
   );
   return (
     <div style={{ position: 'relative', height: 300 }}>
@@ -147,7 +161,15 @@ function line(label: string, data: number[], color: string, dashed: boolean) {
 }
 
 /** Net income per month: green above zero, red below. */
-export function NetChart({ months, band }: { months: ChartMonth[]; band: [number, number] }) {
+export function NetChart({
+  months,
+  band,
+  label,
+}: {
+  months: ChartMonth[];
+  band: [number, number];
+  label: string;
+}) {
   const canvas = useChart(
     () => ({
       type: 'bar',
@@ -155,7 +177,7 @@ export function NetChart({ months, band }: { months: ChartMonth[]; band: [number
         labels: months.map(m => m.label),
         datasets: [
           {
-            label: 'Net income',
+            label,
             data: months.map(m => m.net),
             backgroundColor: months.map((m, i) => {
               const inBand = i >= band[0] && i <= band[1];
@@ -169,7 +191,7 @@ export function NetChart({ months, band }: { months: ChartMonth[]; band: [number
       },
       options: baseOptions as any,
     }),
-    [JSON.stringify(months), band[0], band[1]],
+    [JSON.stringify(months), band[0], band[1], label],
   );
   return (
     <div style={{ position: 'relative', height: 220 }}>

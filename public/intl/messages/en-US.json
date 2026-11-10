@@ -51,12 +51,6 @@
       "value": "Activity"
     }
   ],
-  "label.ad-spend": [
-    {
-      "type": 0,
-      "value": "Ad spend"
-    }
-  ],
   "label.add": [
     {
       "type": 0,
@@ -165,18 +159,6 @@
       "value": "Back"
     }
   ],
-  "label.backfill-180": [
-    {
-      "type": 0,
-      "value": "Backfill 180 days"
-    }
-  ],
-  "label.backfill-revenue": [
-    {
-      "type": 0,
-      "value": "Backfill revenue (2 years)"
-    }
-  ],
   "label.before": [
     {
       "type": 0,
@@ -193,12 +175,6 @@
     {
       "type": 0,
       "value": "Billing settling"
-    }
-  ],
-  "label.blended": [
-    {
-      "type": 0,
-      "value": "Blended (all trial starts)"
     }
   ],
   "label.boards": [
@@ -231,12 +207,6 @@
       "value": "Browsers"
     }
   ],
-  "label.campaign": [
-    {
-      "type": 0,
-      "value": "Campaign"
-    }
-  ],
   "label.campaigns": [
     {
       "type": 0,
@@ -247,12 +217,6 @@
     {
       "type": 0,
       "value": "Cancel"
-    }
-  ],
-  "label.cash-in": [
-    {
-      "type": 0,
-      "value": "All money in this period"
     }
   ],
   "label.change-password": [
@@ -283,12 +247,6 @@
     {
       "type": 0,
       "value": "Clear all"
-    }
-  ],
-  "label.clicks": [
-    {
-      "type": 0,
-      "value": "Clicks"
     }
   ],
   "label.cohort": [
@@ -407,18 +365,6 @@
       "value": "Converted to paid"
     }
   ],
-  "label.cost-per-trial": [
-    {
-      "type": 0,
-      "value": "Cost per trial"
-    }
-  ],
-  "label.cost-per-visitor": [
-    {
-      "type": 0,
-      "value": "Cost per visitor"
-    }
-  ],
   "label.count": [
     {
       "type": 0,
@@ -513,12 +459,6 @@
     {
       "type": 0,
       "value": "Data"
-    }
-  ],
-  "label.data-health": [
-    {
-      "type": 0,
-      "value": "Data health"
     }
   ],
   "label.date": [
@@ -785,12 +725,6 @@
       "value": "False"
     }
   ],
-  "label.fees-and-commission": [
-    {
-      "type": 0,
-      "value": "Fees, commission & tax"
-    }
-  ],
   "label.field": [
     {
       "type": 0,
@@ -887,12 +821,6 @@
       "value": "Greater than or equals"
     }
   ],
-  "label.gross-revenue": [
-    {
-      "type": 0,
-      "value": "Gross revenue"
-    }
-  ],
   "label.grouped": [
     {
       "type": 0,
@@ -903,12 +831,6 @@
     {
       "type": 0,
       "value": "Hostname"
-    }
-  ],
-  "label.immature": [
-    {
-      "type": 0,
-      "value": "Immature"
     }
   ],
   "label.in-progress": [
@@ -1153,12 +1075,6 @@
       "value": "Manager"
     }
   ],
-  "label.marketing-funnel": [
-    {
-      "type": 0,
-      "value": "Marketing funnel"
-    }
-  ],
   "label.max": [
     {
       "type": 0,
@@ -1249,12 +1165,6 @@
       "value": "Name"
     }
   ],
-  "label.net-revenue-to-date": [
-    {
-      "type": 0,
-      "value": "Net revenue to date"
-    }
-  ],
   "label.net-revenue-window": [
     {
       "type": 0,
@@ -1279,12 +1189,6 @@
     {
       "type": 0,
       "value": "None"
-    }
-  ],
-  "label.not-yet": [
-    {
-      "type": 0,
-      "value": "Not yet"
     }
   ],
   "label.number-of-records": [
@@ -1477,18 +1381,6 @@
       "value": "Paths"
     }
   ],
-  "label.payback-days": [
-    {
-      "type": 0,
-      "value": "Payback"
-    }
-  ],
-  "label.paying-customers": [
-    {
-      "type": 0,
-      "value": "Paying customers"
-    }
-  ],
   "label.pixels": [
     {
       "type": 0,
@@ -1539,12 +1431,6 @@
     {
       "type": 0,
       "value": "Profile"
-    }
-  ],
-  "label.projected-ltv": [
-    {
-      "type": 0,
-      "value": "Projected LTV"
     }
   ],
   "label.prompt-shown": [
@@ -1757,22 +1643,10 @@
       "value": "Look into your revenue data and how users are spending."
     }
   ],
-  "label.revenue-per-customer": [
-    {
-      "type": 0,
-      "value": "Net revenue per customer"
-    }
-  ],
   "label.roi": [
     {
       "type": 0,
       "value": "ROI"
-    }
-  ],
-  "label.roi-period": [
-    {
-      "type": 0,
-      "value": "Trial-start period"
     }
   ],
   "label.role": [
@@ -1913,12 +1787,6 @@
       "value": "Sources"
     }
   ],
-  "label.spend-by-campaign": [
-    {
-      "type": 0,
-      "value": "Spend by campaign"
-    }
-  ],
   "label.start-step": [
     {
       "type": 0,
@@ -1947,18 +1815,6 @@
     {
       "type": 0,
       "value": "Sum"
-    }
-  ],
-  "label.sync-now": [
-    {
-      "type": 0,
-      "value": "Sync Meta now"
-    }
-  ],
-  "label.sync-revenue": [
-    {
-      "type": 0,
-      "value": "Sync revenue now"
     }
   ],
   "label.tablet": [
@@ -2201,12 +2057,6 @@
       "value": "Trial starts"
     }
   ],
-  "label.trial-starts-all": [
-    {
-      "type": 0,
-      "value": "Trial starts (all)"
-    }
-  ],
   "label.trial-users": [
     {
       "type": 0,
@@ -2369,12 +2219,6 @@
       "value": "Website ID"
     }
   ],
-  "label.website-visitors": [
-    {
-      "type": 0,
-      "value": "Website visitors"
-    }
-  ],
   "label.websites": [
     {
       "type": 0,
@@ -2385,12 +2229,6 @@
     {
       "type": 0,
       "value": "Weekly cohorts"
-    }
-  ],
-  "label.weekly-trend": [
-    {
-      "type": 0,
-      "value": "Weekly trend by trial-start week"
     }
   ],
   "label.window": [
@@ -2887,18 +2725,6 @@
       "value": "All statistics for this website will be deleted, but your settings will remain intact."
     }
   ],
-  "message.roi-attribution-pending": [
-    {
-      "type": 0,
-      "value": "Channel attribution not captured yet (blended view only)."
-    }
-  ],
-  "message.roi-blended-note": [
-    {
-      "type": 0,
-      "value": "All trial starts, attributed or not"
-    }
-  ],
   "message.roi-cash-in-note": [
     {
       "type": 0,
@@ -3125,12 +2951,6 @@
       "value": ")"
     }
   ],
-  "message.roi-no-spend": [
-    {
-      "type": 0,
-      "value": "No ad spend synced for this period yet."
-    }
-  ],
   "message.roi-of-completed-trials": [
     {
       "type": 1,
@@ -3181,12 +3001,6 @@
     {
       "type": 1,
       "value": "date"
-    }
-  ],
-  "message.roi-revenue-source": [
-    {
-      "type": 0,
-      "value": "Revenue is what Stripe and RevenueCat actually booked: after Stripe fees, store commission and tax, minus refunds and chargebacks."
     }
   ],
   "message.roi-sessions-on": [
@@ -3477,6 +3291,374 @@
     {
       "type": 1,
       "value": "device"
+    }
+  ],
+  "label.roi-all-months": [
+    {
+      "type": 0,
+      "value": "All months"
+    }
+  ],
+  "label.roi-app-stores": [
+    {
+      "type": 0,
+      "value": "App Store and Google Play"
+    }
+  ],
+  "label.roi-app-stores-short": [
+    {
+      "type": 0,
+      "value": "App stores"
+    }
+  ],
+  "label.roi-flows-title": [
+    {
+      "type": 0,
+      "value": "Money in and ad spend, month by month"
+    }
+  ],
+  "label.roi-funnel-title": [
+    {
+      "type": 0,
+      "value": "From website visitor to paying customer"
+    }
+  ],
+  "label.roi-google": [
+    {
+      "type": 0,
+      "value": "Google"
+    }
+  ],
+  "label.roi-google-ads": [
+    {
+      "type": 0,
+      "value": "Google ads"
+    }
+  ],
+  "label.roi-last-12-months": [
+    {
+      "type": 0,
+      "value": "Last 12 months"
+    }
+  ],
+  "label.roi-last-3-months": [
+    {
+      "type": 0,
+      "value": "Last 3 months"
+    }
+  ],
+  "label.roi-last-month": [
+    {
+      "type": 0,
+      "value": "Last month"
+    }
+  ],
+  "label.roi-meta": [
+    {
+      "type": 0,
+      "value": "Meta"
+    }
+  ],
+  "label.roi-meta-ads": [
+    {
+      "type": 0,
+      "value": "Meta ads"
+    }
+  ],
+  "label.roi-month": [
+    {
+      "type": 0,
+      "value": "Month"
+    }
+  ],
+  "label.roi-net-income": [
+    {
+      "type": 0,
+      "value": "Net income"
+    }
+  ],
+  "label.roi-net-title": [
+    {
+      "type": 0,
+      "value": "Net income, month by month"
+    }
+  ],
+  "label.roi-new-paying": [
+    {
+      "type": 0,
+      "value": "New paying"
+    }
+  ],
+  "label.roi-new-paying-customers": [
+    {
+      "type": 0,
+      "value": "New paying customers"
+    }
+  ],
+  "label.roi-not-connected": [
+    {
+      "type": 0,
+      "value": "not connected"
+    }
+  ],
+  "label.roi-started-trial": [
+    {
+      "type": 0,
+      "value": "Started a trial"
+    }
+  ],
+  "label.roi-stripe": [
+    {
+      "type": 0,
+      "value": "Stripe"
+    }
+  ],
+  "label.roi-sync-now": [
+    {
+      "type": 0,
+      "value": "Sync now"
+    }
+  ],
+  "label.roi-syncing": [
+    {
+      "type": 0,
+      "value": "Syncing…"
+    }
+  ],
+  "label.roi-this-month": [
+    {
+      "type": 0,
+      "value": "This month"
+    }
+  ],
+  "label.roi-trials": [
+    {
+      "type": 0,
+      "value": "Trials"
+    }
+  ],
+  "label.roi-unavailable": [
+    {
+      "type": 0,
+      "value": "unavailable"
+    }
+  ],
+  "label.roi-visited-site": [
+    {
+      "type": 0,
+      "value": "Visited the website"
+    }
+  ],
+  "label.roi-visitors": [
+    {
+      "type": 0,
+      "value": "Visitors"
+    }
+  ],
+  "message.roi-app-stores-sub": [
+    {
+      "type": 0,
+      "value": "Via RevenueCat, after store cut"
+    }
+  ],
+  "message.roi-cost-per-customer": [
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " of ad spend per new paying customer."
+    }
+  ],
+  "message.roi-flows-note": [
+    {
+      "type": 0,
+      "value": "Solid lines are money coming in, dashed lines are money going to ads. The shaded area is "
+    },
+    {
+      "type": 1,
+      "value": "period"
+    },
+    {
+      "type": 0,
+      "value": ". * = month so far."
+    }
+  ],
+  "message.roi-footer": [
+    {
+      "type": 0,
+      "value": "Money in is everything Stripe, the App Store and Google Play paid out, after fees, commission, tax and refunds. Ad spend is Meta and Google as billed. Months are UTC calendar months."
+    }
+  ],
+  "message.roi-funnel-note": [
+    {
+      "type": 0,
+      "value": "Visitors are sessions on "
+    },
+    {
+      "type": 1,
+      "value": "hostname"
+    },
+    {
+      "type": 0,
+      "value": ". A new paying customer is someone whose first payment fell in this period."
+    }
+  ],
+  "message.roi-fx-gaps-warning": [
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " ad spend rows have no exchange rate and count as $0."
+    }
+  ],
+  "message.roi-net-income-for": [
+    {
+      "type": 0,
+      "value": "Net income, "
+    },
+    {
+      "type": 1,
+      "value": "period"
+    }
+  ],
+  "message.roi-net-note": [
+    {
+      "type": 0,
+      "value": "Money in minus ad spend for each month. Brighter bars are "
+    },
+    {
+      "type": 1,
+      "value": "period"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-no-spend-period": [
+    {
+      "type": 0,
+      "value": "No ad spend in this period."
+    }
+  ],
+  "message.roi-so-far": [
+    {
+      "type": 1,
+      "value": "month"
+    },
+    {
+      "type": 0,
+      "value": " (so far)"
+    }
+  ],
+  "message.roi-stale": [
+    {
+      "type": 1,
+      "value": "source"
+    },
+    {
+      "type": 0,
+      "value": " last synced "
+    },
+    {
+      "type": 1,
+      "value": "date"
+    },
+    {
+      "type": 0,
+      "value": ", so its numbers may be out of date."
+    }
+  ],
+  "message.roi-stripe-sub": [
+    {
+      "type": 0,
+      "value": "Web, after Stripe fees"
+    }
+  ],
+  "message.roi-summary": [
+    {
+      "type": 1,
+      "value": "moneyIn"
+    },
+    {
+      "type": 0,
+      "value": " came in from customers and "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " went to ads."
+    }
+  ],
+  "message.roi-summary-share": [
+    {
+      "type": 1,
+      "value": "moneyIn"
+    },
+    {
+      "type": 0,
+      "value": " came in from customers and "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " went to ads, so ads cost "
+    },
+    {
+      "type": 1,
+      "value": "share"
+    },
+    {
+      "type": 0,
+      "value": "¢ of every dollar that came in."
+    }
+  ],
+  "message.roi-sync-failed": [
+    {
+      "type": 1,
+      "value": "source"
+    },
+    {
+      "type": 0,
+      "value": " sync failed: "
+    },
+    {
+      "type": 1,
+      "value": "message"
+    }
+  ],
+  "message.roi-updated": [
+    {
+      "type": 0,
+      "value": "Updated "
+    },
+    {
+      "type": 1,
+      "value": "date"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-yearly-sub": [
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " of money in from yearly plans"
     }
   ]
 }

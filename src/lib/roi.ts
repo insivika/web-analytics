@@ -1,11 +1,14 @@
 // Marketing ROI by calendar month: pure computations (unit-tested).
+// Months are UTC calendar months, because RevenueCat's charts only report UTC
+// months; Stripe, visitors and trials are bucketed the same way so a month's
+// money in always covers the same hours from every source.
 // Net income = money in (Stripe + App Store/Google Play, after fees and refunds)
 // minus ad spend (Meta + Google). Every number is per calendar month, so any
 // period on the page is just a sum of months.
 
 import { formatInTimeZone } from 'date-fns-tz';
 
-export const ROI_TIMEZONE = 'America/Chicago';
+export const ROI_TIMEZONE = 'UTC';
 export const ROI_MONTHS = 12;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -79,10 +82,12 @@ export function buildMonths(months: string[], input: MonthInputs, tz = ROI_TIMEZ
     const month = monthOf(t.occurredAt, tz);
     const net = t.netUsd ?? t.grossUsd ?? 0;
     stripeNet.set(month, (stripeNet.get(month) ?? 0) + net);
+    // Yearly-size payments count toward yearly plans; yearly-size refunds and
+    // chargebacks come off again.
+    if (Math.abs(t.grossUsd ?? 0) >= YEARLY_MIN_USD) {
+      stripeYearly.set(month, (stripeYearly.get(month) ?? 0) + net);
+    }
     if (t.kind === 'payment' && (t.grossUsd ?? 0) > 0) {
-      if ((t.grossUsd ?? 0) >= YEARLY_MIN_USD) {
-        stripeYearly.set(month, (stripeYearly.get(month) ?? 0) + net);
-      }
       const key = t.userId ?? t.customerRef;
       if (key && !firstPayment.has(key)) firstPayment.set(key, month);
     }
@@ -161,4 +166,46 @@ export function periodRows(rows: MonthRow[], period: RoiPeriod): MonthRow[] {
     default:
       return rows.slice(-12);
   }
+}
+
+/** A sync source whose last success is older than this is shown as out of date. */
+export const STALE_AFTER_HOURS = 48;
+
+export interface SourceSync {
+  source: string;
+  lastSuccessAt: Date | string | null;
+}
+
+/** Latest successful sync across sources (by time, not by string order). */
+export function latestSync(sources: SourceSync[]): Date | null {
+  const times = sources
+    .map(s => (s.lastSuccessAt ? +new Date(s.lastSuccessAt) : Number.NaN))
+    .filter(t => Number.isFinite(t));
+  return times.length ? new Date(Math.max(...times)) : null;
+}
+
+/** Sources that have synced before but not within STALE_AFTER_HOURS. */
+export function staleSources(sources: SourceSync[], now = new Date()) {
+  return sources
+    .filter(
+      s => s.lastSuccessAt && +now - +new Date(s.lastSuccessAt) > STALE_AFTER_HOURS * 3_600_000,
+    )
+    .map(s => ({ source: s.source, lastSuccessAt: new Date(s.lastSuccessAt) }));
+}
+
+/**
+ * Index range of the selected period within the months a chart shows (which
+ * start at the first active month). Clamped so a period starting before the
+ * chart still shades from the first shown month.
+ */
+export function periodBand(
+  allMonths: string[],
+  shownFrom: number,
+  selected: string[],
+): [number, number] {
+  if (!selected.length) return [-1, -1];
+  const first = allMonths.indexOf(selected[0]) - shownFrom;
+  const last = allMonths.indexOf(selected[selected.length - 1]) - shownFrom;
+  if (last < 0) return [-1, -1];
+  return [Math.max(first, 0), last];
 }
