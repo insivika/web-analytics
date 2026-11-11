@@ -1,6 +1,17 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiAdVisitorsWhoPay: {
+    id: 'label.roi-ad-visitors-who-pay',
+    defaultMessage: 'Ad visitors who pay',
+  },
+  roiNeededToBreakEven: {
+    id: 'label.roi-needed-to-break-even',
+    defaultMessage: 'Needed to break even',
+  },
+  roiAllAds: { id: 'label.roi-all-ads', defaultMessage: 'All ads' },
+  roiAbove: { id: 'label.roi-above', defaultMessage: 'Above' },
+  roiBelow: { id: 'label.roi-below', defaultMessage: 'Below' },
   roiPayoffTitle: { id: 'label.roi-payoff-title', defaultMessage: 'Do ads pay off?' },
   roiExtraOverYear: {
     id: 'label.roi-extra-over-year',

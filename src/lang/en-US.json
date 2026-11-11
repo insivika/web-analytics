@@ -647,5 +647,10 @@
   "message.roi-payoff-how-visits": "Ad money buys website visits at what a visit from each ad cost in {period}: Meta {meta}, Google {google}.",
   "message.roi-payoff-how-convert": "About 1 in {meta} Meta visitors and 1 in {google} Google visitors become paying customers. That comes from what ad visitors did: signed up on the website, or tapped an App Store or Google Play button (assuming 1 in {taps} of those sign up in the app), times the share of trials that end up paying ({paying}%).",
   "message.roi-payoff-how-value": "A paying customer brings in about {value} in their first year, after fees: {yearly}% pay for a year up front, the rest pay monthly while they stay ({m12}% are still paying after 12 months).",
-  "message.roi-payoff-how-today": "The sliders only change new customers from ads; everyone already paying stays as is. Only {n, plural, one {# month has} other {# months have}} had real ad spend so far, so expect these numbers to move."
+  "message.roi-payoff-how-today": "The sliders only change new customers from ads; everyone already paying stays as is. Only {n, plural, one {# month has} other {# months have}} had real ad spend so far, so expect these numbers to move.",
+  "label.roi-ad-visitors-who-pay": "Ad visitors who pay",
+  "label.roi-needed-to-break-even": "Needed to break even",
+  "label.roi-all-ads": "All ads",
+  "label.roi-above": "Above",
+  "label.roi-below": "Below"
 }

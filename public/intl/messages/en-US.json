@@ -6002,5 +6002,35 @@
       "type": 0,
       "value": " had real ad spend so far, so expect these numbers to move."
     }
+  ],
+  "label.roi-ad-visitors-who-pay": [
+    {
+      "type": 0,
+      "value": "Ad visitors who pay"
+    }
+  ],
+  "label.roi-needed-to-break-even": [
+    {
+      "type": 0,
+      "value": "Needed to break even"
+    }
+  ],
+  "label.roi-all-ads": [
+    {
+      "type": 0,
+      "value": "All ads"
+    }
+  ],
+  "label.roi-above": [
+    {
+      "type": 0,
+      "value": "Above"
+    }
+  ],
+  "label.roi-below": [
+    {
+      "type": 0,
+      "value": "Below"
+    }
   ]
 }

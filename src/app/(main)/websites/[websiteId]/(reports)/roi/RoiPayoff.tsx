@@ -1,6 +1,6 @@
 'use client';
 import { Button, Column, Grid, Row, Text } from '@umami/react-zen';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { InfoTip } from '@/components/common/InfoTip';
 import { Panel } from '@/components/common/Panel';
 import { useMessages } from '@/components/hooks';
@@ -19,12 +19,13 @@ import {
   type Retention,
   withPaidVisits,
 } from '@/lib/roiProjection';
-import { ROI_COLORS } from './RoiCharts';
+import { OutlookChart, ROI_COLORS } from './RoiCharts';
 
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 const signedUsd = (n: number) => `${n >= 0 ? '+' : '−'}${usd(Math.abs(n))}`;
 const money = (n: number | null) => (n === null ? '—' : `$${n.toFixed(2)}`);
 const oneIn = (r: number | null) => (r && r > 0 ? Math.round(1 / r).toLocaleString('en-US') : '—');
+const pct = (r: number | null) => (r === null ? '—' : `${(r * 100).toFixed(1)}%`);
 const SPEND_MAX = 3000;
 const LOOKBACK_CHOICES: Lookback[] = [LAST_30_DAYS, 3];
 
@@ -204,6 +205,69 @@ export function RoiPayoff({
           </Column>
         )}
 
+        {blended.breakEven[12] !== null && (
+          <Grid
+            columns="minmax(80px,1fr) minmax(120px,1.2fr) minmax(120px,1.2fr) minmax(90px,1fr)"
+            gap="3"
+            alignItems="center"
+          >
+            <Text color="muted" size="2" />
+            <Text color="muted" size="2" align="right">
+              {formatMessage(labels.roiAdVisitorsWhoPay)}
+            </Text>
+            <Text color="muted" size="2" align="right">
+              {formatMessage(labels.roiNeededToBreakEven)}
+            </Text>
+            <Text color="muted" size="2" align="right" />
+            {(
+              [
+                ['meta', labels.roiMeta],
+                ['google', labels.roiGoogle],
+                ['blended', labels.roiAllAds],
+              ] as const
+            ).map(([key, label]) => {
+              const c = e.channels[key];
+              const need = c.breakEven[12];
+              const above = c.rate !== null && need !== null && c.rate >= need;
+              return (
+                <Fragment key={key}>
+                  <Text weight="bold">{formatMessage(label)}</Text>
+                  <Column alignItems="end">
+                    <Text size="4" weight="bold">
+                      {pct(c.rate)}
+                    </Text>
+                    <Text color="muted" size="1">
+                      {formatMessage(messages.roiOneIn, { n: oneIn(c.rate) })}
+                    </Text>
+                  </Column>
+                  <Column alignItems="end">
+                    <Text size="4">{pct(need)}</Text>
+                    <Text color="muted" size="1">
+                      {formatMessage(messages.roiOneIn, { n: oneIn(need) })}
+                    </Text>
+                  </Column>
+                  <Text
+                    align="right"
+                    weight="bold"
+                    style={{
+                      color:
+                        c.rate === null || need === null
+                          ? undefined
+                          : above
+                            ? ROI_COLORS.positive
+                            : ROI_COLORS.negative,
+                    }}
+                  >
+                    {c.rate === null || need === null
+                      ? '—'
+                      : formatMessage(above ? labels.roiAbove : labels.roiBelow)}
+                  </Text>
+                </Fragment>
+              );
+            })}
+          </Grid>
+        )}
+
         <Column gap="3">
           <SpendSlider
             label={formatMessage(labels.roiMetaPerMonth)}
@@ -243,14 +307,15 @@ export function RoiPayoff({
           />
         </Grid>
 
-        {blended.breakEven[12] !== null && blended.rate !== null && (
-          <Text size="3">
-            {formatMessage(messages.roiPayoffBreakEven, {
-              need: oneIn(blended.breakEven[12]),
-              have: oneIn(blended.rate),
-            })}
-          </Text>
-        )}
+        <OutlookChart
+          labels={o.months.map(m => formatMessage(messages.roiMonthN, { n: m.month }))}
+          today={o.months.map(m => Math.round(m.today))}
+          projected={o.months.map(m => Math.round(m.projected))}
+          todayLabel={formatMessage(labels.roiAtTodaySpend)}
+          projectedLabel={formatMessage(messages.roiAtSpend, {
+            spend: usd(inputs.metaSpend + inputs.googleSpend),
+          })}
+        />
       </Column>
     </Panel>
   );
