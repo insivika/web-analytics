@@ -171,8 +171,8 @@ export function RoiBreakEven({
       formatMessage(messages.roiBeMoveCost, {
         channel: names[key],
         cost: money(cheaper),
-        rate: pct(breakEvenAtCost(cheaper, e.value[payback])),
-        now: pct(c.breakEven[payback]),
+        rate: pct(breakEvenAtCost(cheaper, e.value[payback]), 2),
+        now: pct(c.breakEven[payback], 2),
       }),
     );
   }
@@ -184,8 +184,8 @@ export function RoiBreakEven({
       formatMessage(messages.roiBeMoveYearly, {
         from: Math.round(share * 100),
         to: Math.round(target * 100),
-        rate: pct(breakEvenAtCost(blended.costPerVisit, v)),
-        now: pct(blended.breakEven[payback]),
+        rate: pct(breakEvenAtCost(blended.costPerVisit, v), 2),
+        now: pct(blended.breakEven[payback], 2),
       }),
     );
   }
@@ -321,8 +321,8 @@ export function RoiBreakEven({
                     {c.status[payback] !== 'notEnoughData' && (
                       <Text size="1" color="muted" align="right">
                         {formatMessage(messages.roiBeMargin, {
-                          need: pct(need),
-                          have: pct(c.rate),
+                          need: pct(need, 2),
+                          have: pct(c.rate, 2),
                         })}
                       </Text>
                     )}
