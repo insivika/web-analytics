@@ -1,6 +1,43 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiBlended: { id: 'label.roi-blended', defaultMessage: 'Blended' },
+  roiProfitable: { id: 'label.roi-profitable', defaultMessage: 'Profitable' },
+  roiNotYet: { id: 'label.roi-not-yet', defaultMessage: 'Not yet' },
+  roiNotEnoughData: { id: 'label.roi-not-enough-data', defaultMessage: 'Not enough data' },
+  roiMeasured: { id: 'label.roi-measured', defaultMessage: 'Measured' },
+  roiEstimated: { id: 'label.roi-estimated', defaultMessage: 'Estimated' },
+  roiEstimatedShort: { id: 'label.roi-estimated-short', defaultMessage: 'est.' },
+  roiBreakEvenTitle: {
+    id: 'label.roi-break-even-title',
+    defaultMessage: 'Break-even: when do ads pay for themselves?',
+  },
+  roiPaybackWithin: { id: 'label.roi-payback-within', defaultMessage: 'Pay back within' },
+  roiBeChannel: { id: 'label.roi-be-channel', defaultMessage: 'Channel' },
+  roiBeCostPerVisit: { id: 'label.roi-be-cost-per-visit', defaultMessage: 'Cost per visit' },
+  roiBeNeeded1: { id: 'label.roi-be-needed-1', defaultMessage: 'Break-even (1 month)' },
+  roiBeNeeded12: { id: 'label.roi-be-needed-12', defaultMessage: 'Break-even (12 months)' },
+  roiBeCurrent: { id: 'label.roi-be-current', defaultMessage: 'Current rate' },
+  roiBeMaxCac: { id: 'label.roi-be-max-cac', defaultMessage: 'Max cost per customer (12 months)' },
+  roiBeActualCac: { id: 'label.roi-be-actual-cac', defaultMessage: 'Actual cost per customer' },
+  roiBeRoas12: { id: 'label.roi-be-roas-12', defaultMessage: 'Return on ad spend (12 months)' },
+  roiBeStatus: { id: 'label.roi-be-status', defaultMessage: 'Status' },
+  roiNoneTracedYet: { id: 'label.roi-none-traced-yet', defaultMessage: 'None traced yet' },
+  roiBeChartTitle: {
+    id: 'label.roi-be-chart-title',
+    defaultMessage: 'Net income per $100 of ads within 12 months (blended)',
+  },
+  roiBreakEven: { id: 'label.roi-break-even', defaultMessage: 'Break-even' },
+  roiYouAreHere: { id: 'label.roi-you-are-here', defaultMessage: 'You' },
+  roiBeChartSeries: { id: 'label.roi-be-chart-series', defaultMessage: 'Net income per $100' },
+  roiBeMoveTitle: { id: 'label.roi-be-move-title', defaultMessage: 'What would move the bar' },
+  roiOtherCostsPerCustomer: {
+    id: 'label.roi-other-costs-per-customer',
+    defaultMessage: 'Other costs per paying customer',
+  },
+  roiPerMonthShort: { id: 'label.roi-per-month-short', defaultMessage: 'a month' },
+  roiFixedCosts: { id: 'label.roi-fixed-costs', defaultMessage: 'Fixed costs' },
+  roiTapToSignup: { id: 'label.roi-tap-to-signup', defaultMessage: 'Store tap → app signup' },
   roiAppUsers: { id: 'label.roi-app-users', defaultMessage: 'Web app users' },
   roiNetNextMonth: { id: 'label.roi-net-next-month', defaultMessage: 'Net income next month' },
   roiNetMonth12: { id: 'label.roi-net-month-12', defaultMessage: 'Net income in month 12' },
@@ -585,6 +622,134 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiBeHeadline: {
+    id: 'message.roi-be-headline',
+    defaultMessage:
+      "Your ads pay for themselves within {window} if at least {need} of ad visitors become paying customers. You're at {have} ({source}).",
+  },
+  roiBeNoSpend: {
+    id: 'message.roi-be-no-spend',
+    defaultMessage:
+      'No paid website visits with ad spend in these months, so there is no break-even to show yet.',
+  },
+  roiBeVisits: { id: 'message.roi-be-visits', defaultMessage: '{n} paid visits' },
+  roiOneIn: { id: 'message.roi-one-in', defaultMessage: '1 in {n}' },
+  roiBeMeasuredN: {
+    id: 'message.roi-be-measured-n',
+    defaultMessage: '{n, plural, one {# payer} other {# payers}}',
+  },
+  roiBeImmature: {
+    id: 'message.roi-be-immature',
+    defaultMessage: 'Includes visits under {days} days old (immature)',
+  },
+  roiBeMargin: { id: 'message.roi-be-margin', defaultMessage: 'needs {need}, currently {have}' },
+  roiBeMeasuredHow: {
+    id: 'message.roi-be-measured-how',
+    defaultMessage:
+      'Measured: {payers, plural, one {# paying customer} other {# paying customers}} traced back to a paid click (the UTMs their signup recorded, then their first payment on the web or in the app stores), out of {visits} paid visits at least {days} days old, long enough for the trial and first billing to play out. It replaces the estimate once {min} paying customers are traced. App signups from iOS never carry UTMs, so this undercounts until more customers sign up on the web or on Android.',
+  },
+  roiBeEstimateHow: {
+    id: 'message.roi-be-estimate-how',
+    defaultMessage:
+      'Estimated: paid visits × (web signups + store taps × tap-to-signup) ÷ visits × trial-to-paying.',
+  },
+  roiBeEstimateWeb: {
+    id: 'message.roi-be-estimate-web',
+    defaultMessage: '{rate} of paid visits signed up on the web (observed).',
+  },
+  roiBeEstimateTaps: {
+    id: 'message.roi-be-estimate-taps',
+    defaultMessage:
+      "{rate} of paid visits tapped an App Store or Google Play badge (observed), and {tapToSignup} of taps are taken to end in an app signup ({assumed, select, yes {assumed default; all traffic's app signups ÷ taps is {ceiling}, but that counts installs from store search too} other {your setting}}).",
+  },
+  roiBeEstimatePaying: {
+    id: 'message.roi-be-estimate-paying',
+    defaultMessage:
+      '{rate} of trials became paying customers over the last {months} completed months (observed, all trials; a shorter window swings because recent trials have not all had the chance to pay).',
+  },
+  roiBeChartNote: {
+    id: 'message.roi-be-chart-note',
+    defaultMessage:
+      'Each paying customer is worth about {value} within 12 months. Left of the break-even line, $100 of ads brings in less than $100 within a year.',
+  },
+  roiBeMoveCost: {
+    id: 'message.roi-be-move-cost',
+    defaultMessage:
+      'Cutting {channel} cost per visit to {cost} lowers its break-even rate to {rate} (now {now}).',
+  },
+  roiBeMoveYearly: {
+    id: 'message.roi-be-move-yearly',
+    defaultMessage:
+      'Raising the yearly plan share from {from}% to {to}% lowers the blended break-even to {rate} (now {now}).',
+  },
+  roiOtherCostsTip: {
+    id: 'message.roi-other-costs-tip',
+    defaultMessage:
+      'Hosting, email and other costs per paying customer per month. Subtracted from what a customer is worth, so they raise the break-even rate.',
+  },
+  roiFixedCostsTip: {
+    id: 'message.roi-fixed-costs-tip',
+    defaultMessage:
+      'Costs you pay every month regardless of customers. They don\'t change the break-even rate per visit; they\'re taken off net income in the "What if" outlook.',
+  },
+  roiTapToSignupTip: {
+    id: 'message.roi-tap-to-signup-tip',
+    defaultMessage:
+      "Share of store-badge taps that end in an app signup. Leave empty for the default (20%: about 30% of store page visits install, about 65% of installs sign up). All traffic's app signups ÷ taps is {ceiling}, but that includes people who found the app in store search.",
+  },
+  roiBeFewMonths: {
+    id: 'message.roi-be-few-months',
+    defaultMessage:
+      'Only {n, plural, one {# month has} other {# months have}} had meaningful ad spend so far, so these rates will move as more months come in.',
+  },
+  roiBeValueHow: {
+    id: 'message.roi-be-value-how',
+    defaultMessage:
+      'A new paying customer brings in about {v1} in the first month and {v12} within 12 months: {yearly}% choose yearly ({yearlyNet} after fees, up front), the rest pay {monthlyNet} a month while they stay ({m6}% still paying after 6 months, {m12}% after 12, from {n} past monthly customers). Yearly renewals ({renewal}%) only come in month 13, so they are not counted.',
+  },
+  roiBeAdRetention: {
+    id: 'message.roi-be-ad-retention',
+    defaultMessage:
+      'Ad-acquired customers ({n} with 3+ months of history) keep paying like this: {m6}% after 6 months, {m12}% after 12.',
+  },
+  roiBeAdRetentionPending: {
+    id: 'message.roi-be-ad-retention-pending',
+    defaultMessage:
+      'The retention curve is from all past customers, not ad-acquired ones: {n} customers are traced to ads so far, {three} with 3+ months of history; their own curve shows once {min} have.',
+  },
+  roiBeCostsIncluded: {
+    id: 'message.roi-be-costs-included',
+    defaultMessage: 'Break-even includes other costs of {amount} per paying customer a month.',
+  },
+  roiBeCostsExcluded: {
+    id: 'message.roi-be-costs-excluded',
+    defaultMessage: 'Break-even does not include other costs (none set).',
+  },
+  roiBePaidVisitsHow: {
+    id: 'message.roi-be-paid-visits-how',
+    defaultMessage:
+      "Paid visits are the first page of a session on the marketing site from a Google ad (gclid, or tagged google / cpc) or a Meta ad (tagged utm_medium=paid from Facebook, Instagram, Audience Network, Threads or Messenger), leaving out bots and logged-in app sessions. Cost per visit is that channel's website-campaign spend over its paid visits; app-install campaigns are left out because their clicks go straight to the stores.",
+  },
+  roiProjPaid: {
+    id: 'message.roi-proj-paid',
+    defaultMessage:
+      'At {spend} a month in ads, about {paid} of the {visitors} monthly website visitors would come from ads. Ad visitors become paying customers at about 1 in {meta} (Meta) and 1 in {google} (Google), {source}, rather than the 1 in {all} of all visitors, so that would be about {customers} new paying customers a month.',
+  },
+  roiPer100: {
+    id: 'message.roi-per-100',
+    defaultMessage:
+      'Each extra $100 on Meta returns about {meta} within 12 months; on Google about {google}.',
+  },
+  roiProjCosts: {
+    id: 'message.roi-proj-costs',
+    defaultMessage:
+      'Includes other costs of {perCustomer} per paying customer a month and {fixed} of fixed costs a month.',
+  },
+  roiOutlookHowPaid: {
+    id: 'message.roi-outlook-how-paid',
+    defaultMessage:
+      "How this works: ad dollars buy paid website visits at what a paid visit cost in {months} (Meta {meta}, Google {google}), and those visits become paying customers at their channel's rate from the break-even panel. Today's money in, from all your current customers, stays flat. Extra customers keep paying: {yearly}% choose yearly and pay {yearlyPrice} up front; the rest pay {monthly} a month, and like your past monthly customers {m6}% are still paying after 6 months and {m12}% after 12. Yearly renewals fall after month 12 ({renewal}% of {renewalN} past yearly customers renewed).",
+  },
   roiPaybackIn: { id: 'message.roi-payback-in', defaultMessage: 'Pays for itself by month {n}' },
   roiPaybackNone: {
     id: 'message.roi-payback-none',

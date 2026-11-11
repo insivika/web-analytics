@@ -15,6 +15,13 @@ import {
   YEARLY_MIN_USD,
 } from '@/lib/roi';
 import {
+  type Channel,
+  type ChannelData,
+  type ChannelMonth,
+  MATURE_DAYS,
+  MIN_AD_RETENTION_CUSTOMERS,
+} from '@/lib/roiBreakEven';
+import {
   buildRetention,
   type CustomerValue,
   type PlanEconomics,
@@ -93,9 +100,10 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
       getSyncStatus(websiteId),
       getCustomerValue(websiteId),
     ]);
-  const [plans, retention] = await Promise.all([
+  const [plans, retention, channels] = await Promise.all([
     getPlans(websiteId, now, appStores),
     getRetention(websiteId),
+    getChannelData(websiteId, hostname, fromDate, now),
   ]);
 
   const trials = new Map<string, number>();
@@ -147,7 +155,7 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     stale: staleSources(sources, now),
     spendFxGaps: spend.fxGaps,
     botCountries: getBotCountries(),
-    projection: { history: projectionHistory, customerValue, plans, retention },
+    projection: { history: projectionHistory, customerValue, plans, retention, channels },
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
       .map(s => ({ source: s.source, message: s.last?.message ?? '' })),
@@ -447,7 +455,7 @@ async function getStripePlanHistory(websiteId: string) {
  *   (monthly[0] = 1), each month measured on customers old enough to have reached it
  * - yearlyRenewal: share of yearly customers who paid a second year
  */
-async function getRetention(websiteId: string): Promise<Retention> {
+async function getRetention(websiteId: string, userIds?: string[]): Promise<Retention> {
   const rows = await prisma.rawQuery(
     `
     with t as (
@@ -455,6 +463,7 @@ async function getRetention(websiteId: string): Promise<Retention> {
       from revenue_txn
       where website_id = {{websiteId::uuid}} and source = 'stripe'
         and kind = 'payment' and gross_usd > 0
+        ${userIds ? `and user_id = any(string_to_array({{userIds}}, ','))` : ''}
     ),
     f as (select k, min(occurred_at) as first from t where k is not null group by 1),
     v as (
@@ -478,8 +487,198 @@ async function getRetention(websiteId: string): Promise<Retention> {
     from v where amount >= {{yearlyMin}}
     order by 1, 2
     `,
-    { websiteId, yearlyMin: YEARLY_MIN_USD },
+    { websiteId, yearlyMin: YEARLY_MIN_USD, userIds: userIds?.join(',') ?? '' },
     'getRoiRetention',
   );
   return buildRetention(rows as any[]);
+}
+
+// Paid clicks: Google adds a gclid (or the campaign is tagged google / cpc);
+// Meta ads are tagged utm_medium=paid with the placement as utm_source (fb,
+// ig, an = Audience Network, th = Threads, msg = Messenger). Facebook also adds
+// an fbclid to organic link clicks, so an fbclid alone isn't a paid visit.
+const META_SOURCES = `('fb','ig','an','th','msg','facebook','instagram','meta')`;
+const PAID_MEDIUMS = `('paid','cpc','ppc','paid_social','paidsocial')`;
+const channelOf = (src: string, med: string, gclid?: string) => `
+  case
+    when ${gclid ? `${gclid} is not null or ` : ''}(${src} = 'google' and ${med} in ${PAID_MEDIUMS}) then 'google'
+    when ${med} in ${PAID_MEDIUMS} and ${src} in ${META_SOURCES} then 'meta'
+  end`;
+const STORE_TAPS = `('apple_app_store_button_click','google_play_button_click')`;
+
+/**
+ * Paid website traffic per month and channel (first page of each session,
+ * bots and logged-in app sessions left out), with how many of those visits
+ * tapped a store badge or signed up on the web; paying customers traced back
+ * to a paid signup; and store taps vs app signups from all traffic.
+ */
+async function getChannelData(
+  websiteId: string,
+  hostname: string,
+  from: Date,
+  now: Date,
+): Promise<ChannelData> {
+  const matureBefore = new Date(+now - MATURE_DAYS * 86_400_000);
+  const botCountries = getBotCountries().join(',');
+  const [funnel, payers, app] = await Promise.all([
+    prisma.rawQuery(
+      `
+      with fv as (
+        select distinct on (e.session_id) e.session_id, e.created_at, e.url_path, e.gclid,
+          lower(coalesce(e.utm_source, '')) as src, lower(coalesce(e.utm_medium, '')) as med, s.country
+        from website_event e
+        join session s on s.session_id = e.session_id
+        where e.website_id = {{websiteId::uuid}} and e.hostname = {{hostname}}
+          and e.event_type = 1 and e.created_at >= {{from}}
+        order by e.session_id, e.created_at
+      ),
+      p as (
+        select session_id, created_at, ${channelOf('src', 'med', 'gclid')} as channel
+        from fv
+        where not (url_path like '/dashboard%' or url_path like '/auth%' or url_path like '/onboarding%')
+          and not (coalesce(country, '') = any(string_to_array({{botCountries}}, ',')))
+      ),
+      act as (
+        select e.session_id,
+          bool_or(e.event_name in ${STORE_TAPS}) as tapped,
+          bool_or(e.event_name = 'signed_up') as signed
+        from website_event e
+        join p on p.session_id = e.session_id and p.channel is not null
+        where e.website_id = {{websiteId::uuid}} and e.event_type = 2 and e.created_at >= {{from}}
+        group by 1
+      )
+      select to_char(p.created_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month, p.channel,
+        count(*)::int as visits,
+        count(*) filter (where p.created_at <= {{matureBefore}})::int as "matureVisits",
+        count(*) filter (where act.tapped)::int as taps,
+        count(*) filter (where act.signed)::int as "webSignups"
+      from p left join act on act.session_id = p.session_id
+      where p.channel is not null
+      group by 1, 2
+      `,
+      { websiteId, hostname, from, matureBefore, botCountries },
+      'getRoiChannelFunnel',
+    ),
+    // First-touch: the UTMs a signup recorded (the first landing's), linked to
+    // the user through the signup event or another event in its session, then
+    // to their first payment on the web (Stripe) or in the stores.
+    prisma.rawQuery(
+      `
+      with su as (
+        select e.event_id, e.session_id, e.created_at,
+          lower(max(d.string_value) filter (where d.data_key = 'utmSource')) as src,
+          lower(max(d.string_value) filter (where d.data_key = 'utmMedium')) as med,
+          max(d.string_value) filter (where d.data_key = 'user_id') as uid
+        from website_event e
+        join event_data d on d.website_event_id = e.event_id
+        where e.website_id = {{websiteId::uuid}} and e.event_name = 'signed_up'
+          and e.created_at >= {{from}}
+        group by 1, 2, 3
+      ),
+      sess as (
+        select e.session_id, min(u.string_value) as uid
+        from website_event e
+        join event_data u on u.website_event_id = e.event_id and u.data_key = 'user_id'
+        where e.website_id = {{websiteId::uuid}} and e.session_id in (select session_id from su)
+        group by 1
+      ),
+      att as (
+        select distinct on (coalesce(su.uid, sess.uid)) coalesce(su.uid, sess.uid) as uid,
+          su.created_at as signup_at, ${channelOf('su.src', 'su.med')} as channel
+        from su left join sess on sess.session_id = su.session_id
+        where coalesce(su.uid, sess.uid) is not null
+        order by coalesce(su.uid, sess.uid), su.created_at
+      ),
+      paid as (
+        select user_id as uid, min(occurred_at) as first
+        from revenue_txn
+        where website_id = {{websiteId::uuid}} and source = 'stripe' and kind = 'payment'
+          and gross_usd > 0 and user_id is not null
+        group by 1
+        union all
+        select u.string_value, min(e.created_at)
+        from website_event e
+        join event_data u on u.website_event_id = e.event_id and u.data_key = 'user_id'
+        where e.website_id = {{websiteId::uuid}} and e.event_name = 'subscription_started'
+          and not exists (
+            select 1 from event_data x
+            where x.website_event_id = e.event_id and x.data_key = 'is_internal' and x.string_value = 'true'
+          )
+        group by 1
+      )
+      select att.uid, att.channel,
+        to_char(att.signup_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month,
+        att.signup_at <= {{matureBefore}} as mature,
+        min(paid.first) as "firstPaid"
+      from att join paid on paid.uid = att.uid
+      where att.channel is not null
+      group by 1, 2, 3, 4
+      `,
+      { websiteId, from, matureBefore },
+      'getRoiChannelPayers',
+    ),
+    prisma.rawQuery(
+      `
+      select to_char(e.created_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month,
+        count(distinct e.session_id) filter (where e.event_name in ${STORE_TAPS})::int as taps,
+        count(distinct e.event_id) filter (where e.event_name = 'signed_up' and d.string_value in ('ios', 'android'))::int as "appSignups"
+      from website_event e
+      left join event_data d on d.website_event_id = e.event_id and d.data_key = 'platform'
+      where e.website_id = {{websiteId::uuid}} and e.event_type = 2 and e.created_at >= {{from}}
+        and (e.event_name in ${STORE_TAPS} or e.event_name = 'signed_up')
+      group by 1
+      `,
+      { websiteId, from },
+      'getRoiAppSignups',
+    ),
+  ]);
+
+  const months = new Map<string, ChannelMonth>();
+  const row = (month: string, channel: Channel) => {
+    const key = `${month}|${channel}`;
+    if (!months.has(key)) {
+      months.set(key, {
+        month,
+        channel,
+        visits: 0,
+        matureVisits: 0,
+        taps: 0,
+        webSignups: 0,
+        payers: 0,
+      });
+    }
+    return months.get(key);
+  };
+  for (const r of funnel as any[]) {
+    Object.assign(row(r.month, r.channel), {
+      visits: Number(r.visits),
+      matureVisits: Number(r.matureVisits),
+      taps: Number(r.taps),
+      webSignups: Number(r.webSignups),
+    });
+  }
+  const threeMonthsAgo = new Date(now);
+  threeMonthsAgo.setUTCMonth(threeMonthsAgo.getUTCMonth() - 3);
+  const adUsers = new Set<string>();
+  const adUsersThreeMonths = new Set<string>();
+  for (const r of payers as any[]) {
+    adUsers.add(r.uid);
+    if (new Date(r.firstPaid) <= threeMonthsAgo) adUsersThreeMonths.add(r.uid);
+    if (r.mature) row(r.month, r.channel).payers += 1;
+  }
+
+  return {
+    months: [...months.values()],
+    app: (app as any[]).map(r => ({
+      month: r.month,
+      taps: Number(r.taps),
+      appSignups: Number(r.appSignups),
+    })),
+    adCustomers: adUsers.size,
+    adCustomersThreeMonths: adUsersThreeMonths.size,
+    adRetention:
+      adUsersThreeMonths.size >= MIN_AD_RETENTION_CUSTOMERS
+        ? await getRetention(websiteId, [...adUsers])
+        : null,
+  };
 }

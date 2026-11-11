@@ -262,3 +262,108 @@ export function OutlookChart({
     </div>
   );
 }
+
+/** Dashed vertical lines at given x values, each with a small label on top. */
+const verticalMarks = (marks: { x: number; label: string; color: string }[]): Plugin => ({
+  id: 'verticalMarks',
+  afterDatasetsDraw(chart) {
+    const x = chart.scales.x;
+    const { top, bottom } = chart.chartArea;
+    if (!x) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    for (const m of marks) {
+      if (!Number.isFinite(m.x) || m.x < x.min || m.x > x.max) continue;
+      const px = x.getPixelForValue(m.x);
+      ctx.strokeStyle = m.color;
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px, top + 14);
+      ctx.lineTo(px, bottom);
+      ctx.stroke();
+      ctx.fillStyle = m.color;
+      ctx.fillText(m.label, px, top + 10);
+    }
+    ctx.restore();
+  },
+});
+
+/**
+ * Net income per $100 of ads (y) by the share of ad visitors who become paying
+ * customers (x, 0–5%), with the break-even and the current rate marked.
+ */
+export function SensitivityChart({
+  points,
+  breakEven,
+  current,
+  breakEvenLabel,
+  currentLabel,
+  seriesLabel,
+}: {
+  points: { rate: number; net: number }[];
+  breakEven: number | null;
+  current: number | null;
+  breakEvenLabel: string;
+  currentLabel: string;
+  seriesLabel: string;
+}) {
+  const marks = [
+    breakEven !== null && { x: breakEven * 100, label: breakEvenLabel, color: TICK },
+    current !== null && { x: current * 100, label: currentLabel, color: ROI_COLORS.stripe },
+  ].filter(Boolean) as { x: number; label: string; color: string }[];
+  const canvas = useChart(
+    () => ({
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: seriesLabel,
+            data: points.map(p => ({ x: p.rate * 100, y: p.net })),
+            borderColor: ROI_COLORS.positive,
+            borderWidth: 3,
+            pointRadius: 0,
+            segment: {
+              borderColor: (c: any) =>
+                c.p1.parsed.y < 0 ? ROI_COLORS.negative : ROI_COLORS.positive,
+            },
+          },
+        ],
+      },
+      options: {
+        ...(baseOptions as any),
+        animation: { duration: 0 },
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        plugins: {
+          ...(baseOptions as any).plugins,
+          tooltip: {
+            ...(baseOptions as any).plugins.tooltip,
+            callbacks: {
+              title: (items: any[]) => `${Number(items[0]?.parsed.x ?? 0).toFixed(1)}%`,
+              label: (c: any) => ` ${c.dataset.label}: ${fullUsd(c.parsed.y)}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: points.length ? points[points.length - 1].rate * 100 : 5,
+            grid: { display: false },
+            ticks: { color: TICK, callback: (v: any) => `${v}%` },
+          },
+          y: (baseOptions as any).scales.y,
+        },
+      },
+      plugins: [verticalMarks(marks)],
+    }),
+    [JSON.stringify(points), JSON.stringify(marks), seriesLabel],
+  );
+  return (
+    <div style={{ position: 'relative', height: 220 }}>
+      <canvas ref={canvas} />
+    </div>
+  );
+}

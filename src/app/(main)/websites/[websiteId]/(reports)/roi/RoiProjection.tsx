@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Panel } from '@/components/common/Panel';
 import { useLocale, useMessages } from '@/components/hooks';
 import { formatDate } from '@/lib/date';
+import { type Economics, returnPer100 } from '@/lib/roiBreakEven';
 import {
   defaultInputs,
   outlook,
@@ -15,6 +16,7 @@ import {
   project,
   projectionBase,
   type Retention,
+  withPaidVisits,
 } from '@/lib/roiProjection';
 import { OutlookChart, ROI_COLORS } from './RoiCharts';
 
@@ -106,25 +108,48 @@ function Result({
 }
 
 /**
- * "What if" for ad spend: ad dollars buy website visits at what a visit cost
- * before, and every visit turns into paying customers at the past overall rate
- * (no ad attribution). The 12-month outlook keeps today's money in flat and lets
- * each month's extra customers keep paying along the real drop-off curve.
+ * "What if" for ad spend: ad dollars buy paid website visits at what a paid
+ * visit cost in the chosen months, and those visits become paying customers at
+ * their own channel's rate (from the break-even model: measured once enough
+ * customers are traced to a paid click, estimated until then), not the overall
+ * visitor rate. The 12-month outlook keeps today's money in flat and lets each
+ * month's extra customers keep paying along the real drop-off curve.
  */
 export function RoiProjection({
   history,
   plans,
   retention,
+  economics,
+  lookback,
+  onLookback,
 }: {
   history: ProjectionMonth[];
   plans: PlanEconomics;
   retention: Retention;
+  economics: Economics | null;
+  lookback: ProjectionWindow;
+  onLookback: (w: ProjectionWindow) => void;
 }) {
   const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
-  const [lookback, setLookback] = useState<ProjectionWindow>(3);
-  const base = useMemo(() => projectionBase(history, lookback), [history, lookback]);
-  const defaults = useMemo(() => defaultInputs(base, plans), [base, plans]);
+  const meta = economics?.channels.meta;
+  const google = economics?.channels.google;
+  const base = useMemo(() => {
+    const b = projectionBase(history, lookback);
+    return meta && google
+      ? withPaidVisits(b, { meta: meta.costPerVisit, google: google.costPerVisit })
+      : b;
+  }, [history, lookback, meta, google]);
+  const defaults = useMemo<ProjectionInputs>(
+    () => ({
+      ...defaultInputs(base, plans),
+      metaPaidConversion: meta?.rate ?? null,
+      googlePaidConversion: google?.rate ?? null,
+      otherCostPerCustomerMonth: economics?.settings.otherCostPerCustomerMonth ?? 0,
+      fixedMonthlyCosts: economics?.settings.fixedMonthlyCosts ?? 0,
+    }),
+    [base, plans, meta, google, economics],
+  );
   const [inputs, setInputs] = useState<ProjectionInputs>(defaults);
 
   // Choosing other months restarts from what actually happened in them.
@@ -146,6 +171,14 @@ export function RoiProjection({
   const adMonths = history.slice(-lookback).filter(m => m.metaSpend + m.googleSpend > 0).length;
   const rate = base.visitorToTrial * base.trialToPaying;
   const oneIn = rate > 0 ? Math.round(1 / rate) : null;
+  const paidOneIn = (r: number | null | undefined) => (r && r > 0 ? Math.round(1 / r) : '—');
+  const v12 = economics?.value[12] ?? 0;
+  const per100 = {
+    meta: returnPer100(meta?.costPerVisit ?? null, meta?.rate ?? null, v12),
+    google: returnPer100(google?.costPerVisit ?? null, google?.rate ?? null, v12),
+  };
+  const perCustomerCost = inputs.otherCostPerCustomerMonth ?? 0;
+  const fixedCost = inputs.fixedMonthlyCosts ?? 0;
 
   return (
     <Panel title={formatMessage(labels.roiWhatIf)}>
@@ -159,7 +192,7 @@ export function RoiProjection({
               key={w}
               size="sm"
               variant={w === lookback ? 'primary' : 'outline'}
-              onPress={() => setLookback(w)}
+              onPress={() => onLookback(w)}
             >
               {formatMessage(messages.roiMonthsN, { n: w })}
             </Button>
@@ -227,13 +260,44 @@ export function RoiProjection({
         />
 
         <Text size="3">
-          {formatMessage(messages.roiProjSimple, {
-            spend: usd(p.spend),
-            visitors: int(p.projected.visitors),
-            n: oneIn ?? '—',
-            customers: one(p.projected.newCustomers),
-          })}
+          {economics
+            ? formatMessage(messages.roiProjPaid, {
+                spend: usd(p.spend),
+                paid: int(p.projected.paidVisitors),
+                visitors: int(p.projected.visitors),
+                meta: paidOneIn(meta?.rate),
+                google: paidOneIn(google?.rate),
+                source: formatMessage(
+                  meta?.rateSource === 'measured' && google?.rateSource === 'measured'
+                    ? labels.roiMeasured
+                    : labels.roiEstimated,
+                ).toLowerCase(),
+                all: oneIn ?? '—',
+                customers: one(p.projected.newCustomers),
+              })
+            : formatMessage(messages.roiProjSimple, {
+                spend: usd(p.spend),
+                visitors: int(p.projected.visitors),
+                n: oneIn ?? '—',
+                customers: one(p.projected.newCustomers),
+              })}
         </Text>
+        {economics && (per100.meta !== null || per100.google !== null) && (
+          <Text size="3" weight="bold">
+            {formatMessage(messages.roiPer100, {
+              meta: per100.meta === null ? '—' : usd(per100.meta),
+              google: per100.google === null ? '—' : usd(per100.google),
+            })}
+          </Text>
+        )}
+        {economics && (perCustomerCost > 0 || fixedCost > 0) && (
+          <Text color="muted" size="2">
+            {formatMessage(messages.roiProjCosts, {
+              perCustomer: `$${perCustomerCost.toFixed(2)}`,
+              fixed: usd(fixedCost),
+            })}
+          </Text>
+        )}
         {(p.beyondHistory || adMonths < 3) && (
           <Text size="2" style={{ color: ROI_COLORS.google }}>
             {[
@@ -245,7 +309,7 @@ export function RoiProjection({
           </Text>
         )}
         <Text color="muted" size="1">
-          {formatMessage(messages.roiOutlookHow, {
+          {formatMessage(economics ? messages.roiOutlookHowPaid : messages.roiOutlookHow, {
             meta: money(base.metaCpc),
             google: money(base.googleCpc),
             months: monthsLabel,

@@ -89,6 +89,22 @@ export function projectionBase(history: ProjectionMonth[], window: number): Proj
   };
 }
 
+/**
+ * The base with ad dollars buying paid landing visits (cost per paid visit,
+ * from the break-even model) instead of clicks, where known. Visitors not
+ * bought by today's spend stay as the organic baseline.
+ */
+export function withPaidVisits(
+  base: ProjectionBase,
+  costPerVisit: { meta: number | null; google: number | null },
+): ProjectionBase {
+  const metaCpc = costPerVisit.meta ?? base.metaCpc;
+  const googleCpc = costPerVisit.google ?? base.googleCpc;
+  const bought =
+    (metaCpc ? base.metaSpend / metaCpc : 0) + (googleCpc ? base.googleSpend / googleCpc : 0);
+  return { ...base, metaCpc, googleCpc, organicVisitors: Math.max(base.visitors - bought, 0) };
+}
+
 /** Below this monthly spend, clicks are assumed to cost the same as before. */
 export const MIN_REFERENCE_SPEND = 50;
 
@@ -126,6 +142,17 @@ export interface ProjectionInputs {
   keepRate: number;
   /** Extra cost per click for each doubling of spend (0.15 = 15%). */
   pricier: number;
+  /**
+   * Visit → paying customer for paid visits, per channel (from the break-even
+   * model: measured, else estimated). When unset, paid visits convert like any
+   * visit (visitorToTrial × trialToPaying × adVisitorQuality).
+   */
+  metaPaidConversion?: number | null;
+  googlePaidConversion?: number | null;
+  /** Hosting, email etc. per paying customer per month. */
+  otherCostPerCustomerMonth?: number;
+  /** Fixed costs per month, taken off net income. */
+  fixedMonthlyCosts?: number;
 }
 
 export interface ProjectionPoint {
@@ -141,17 +168,21 @@ export function projectFunnel(
   metaSpend = i.metaSpend,
   googleSpend = i.googleSpend,
 ): ProjectionPoint {
-  const paid =
-    paidVisitors(metaSpend, base.metaCpc, base.metaSpend, i.pricier) +
-    paidVisitors(googleSpend, base.googleCpc, base.googleSpend, i.pricier);
+  const metaPaid = paidVisitors(metaSpend, base.metaCpc, base.metaSpend, i.pricier);
+  const googlePaid = paidVisitors(googleSpend, base.googleCpc, base.googleSpend, i.pricier);
+  const paid = metaPaid + googlePaid;
   const organicTrials = base.organicVisitors * i.visitorToTrial;
-  const paidTrials = paid * i.visitorToTrial * i.adVisitorQuality;
-  const trials = organicTrials + paidTrials;
+  const anyVisit = i.visitorToTrial * i.trialToPaying * i.adVisitorQuality;
+  // Paid visitors convert at their own channel's rate, not the all-visitor one.
+  const paidCustomers =
+    metaPaid * (i.metaPaidConversion ?? anyVisit) +
+    googlePaid * (i.googlePaidConversion ?? anyVisit);
+  const paidTrials = i.trialToPaying > 0 ? paidCustomers / i.trialToPaying : 0;
   return {
     visitors: base.organicVisitors + paid,
     paidVisitors: paid,
-    trials,
-    newCustomers: trials * i.trialToPaying,
+    trials: organicTrials + paidTrials,
+    newCustomers: organicTrials * i.trialToPaying + paidCustomers,
   };
 }
 
@@ -182,8 +213,9 @@ export function project(base: ProjectionBase, i: ProjectionInputs): Projection {
   const spend = i.metaSpend + i.googleSpend;
   const todaySpend = base.metaSpend + base.googleSpend;
   const customersFromAds = projected.newCustomers - withoutAds.newCustomers;
-  const moneyIn =
-    base.moneyIn + (projected.newCustomers - today.newCustomers) * customerValue(i).firstMonth;
+  const fixed = i.fixedMonthlyCosts ?? 0;
+  const firstMonth = customerValue(i).firstMonth - (i.otherCostPerCustomerMonth ?? 0);
+  const moneyIn = base.moneyIn + (projected.newCustomers - today.newCustomers) * firstMonth;
   return {
     moneyIn,
     todayMoneyIn: base.moneyIn,
@@ -191,8 +223,8 @@ export function project(base: ProjectionBase, i: ProjectionInputs): Projection {
     today,
     withoutAds,
     spend,
-    netIncome: moneyIn - spend - base.otherSpend,
-    todayNetIncome: base.moneyIn - todaySpend - base.otherSpend,
+    netIncome: moneyIn - spend - base.otherSpend - fixed,
+    todayNetIncome: base.moneyIn - todaySpend - base.otherSpend - fixed,
     customersFromAds,
     costPerCustomerFromAds: customersFromAds > 0.01 ? spend / customersFromAds : null,
     firstYearReturn: customersFromAds * customerValue(i).firstYear - spend,
@@ -329,6 +361,8 @@ export interface Retention {
   /** Share of yearly customers who paid a second year; null with too little history. */
   yearlyRenewal: number | null;
   yearlyRenewalSample: number;
+  /** Monthly-plan customers behind the curve (those at least a month old). */
+  monthlySample?: number;
 }
 
 /** Below this many customers a month's share is too noisy; the curve stops dropping there. */
@@ -348,12 +382,17 @@ export function buildRetention(
         : prev;
     monthly.push(Math.min(prev, share));
   }
+  const monthlySample = Math.max(
+    0,
+    ...rows.filter(x => x.kind === 'monthly').map(x => Number(x.eligible)),
+  );
   const y = rows.find(x => x.kind === 'yearly');
   const sample = Number(y?.eligible ?? 0);
   return {
     monthly: monthly.map(v => Math.round(v * 1000) / 1000),
     yearlyRenewal: sample > 0 ? Math.round((Number(y.paying) / sample) * 1000) / 1000 : null,
     yearlyRenewalSample: sample,
+    monthlySample,
   };
 }
 
@@ -391,6 +430,7 @@ export function outlook(base: ProjectionBase, i: ProjectionInputs, retention: Re
   const extraSpend = p.spend - (base.metaSpend + base.googleSpend);
   const yearly = i.yearlyPrice * i.keepRate;
   const monthly = i.monthlyPrice * i.keepRate;
+  const cost = i.otherCostPerCustomerMonth ?? 0;
   const curve = (age: number) =>
     retention.monthly[Math.min(age, retention.monthly.length) - 1] ?? 0;
 
@@ -406,6 +446,8 @@ export function outlook(base: ProjectionBase, i: ProjectionInputs, retention: Re
       const monthlyStill = extra * (1 - i.yearlyShare) * curve(age);
       revenue += monthlyStill * monthly + (age === 1 ? extra * i.yearlyShare * yearly : 0);
       paying += monthlyStill + extra * i.yearlyShare;
+      // Yearly customers stay active (and cost) all 12 months.
+      revenue -= (monthlyStill + extra * i.yearlyShare) * cost;
     }
     const change = revenue - extraSpend;
     running += change;

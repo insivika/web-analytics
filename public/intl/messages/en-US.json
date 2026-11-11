@@ -4790,5 +4790,971 @@
       "type": 0,
       "value": "Web app users"
     }
+  ],
+  "label.roi-blended": [
+    {
+      "type": 0,
+      "value": "Blended"
+    }
+  ],
+  "label.roi-profitable": [
+    {
+      "type": 0,
+      "value": "Profitable"
+    }
+  ],
+  "label.roi-not-yet": [
+    {
+      "type": 0,
+      "value": "Not yet"
+    }
+  ],
+  "label.roi-not-enough-data": [
+    {
+      "type": 0,
+      "value": "Not enough data"
+    }
+  ],
+  "label.roi-measured": [
+    {
+      "type": 0,
+      "value": "Measured"
+    }
+  ],
+  "label.roi-estimated": [
+    {
+      "type": 0,
+      "value": "Estimated"
+    }
+  ],
+  "label.roi-estimated-short": [
+    {
+      "type": 0,
+      "value": "est."
+    }
+  ],
+  "label.roi-break-even-title": [
+    {
+      "type": 0,
+      "value": "Break-even: when do ads pay for themselves?"
+    }
+  ],
+  "label.roi-payback-within": [
+    {
+      "type": 0,
+      "value": "Pay back within"
+    }
+  ],
+  "label.roi-be-channel": [
+    {
+      "type": 0,
+      "value": "Channel"
+    }
+  ],
+  "label.roi-be-cost-per-visit": [
+    {
+      "type": 0,
+      "value": "Cost per visit"
+    }
+  ],
+  "label.roi-be-needed-1": [
+    {
+      "type": 0,
+      "value": "Break-even (1 month)"
+    }
+  ],
+  "label.roi-be-needed-12": [
+    {
+      "type": 0,
+      "value": "Break-even (12 months)"
+    }
+  ],
+  "label.roi-be-current": [
+    {
+      "type": 0,
+      "value": "Current rate"
+    }
+  ],
+  "label.roi-be-max-cac": [
+    {
+      "type": 0,
+      "value": "Max cost per customer (12 months)"
+    }
+  ],
+  "label.roi-be-actual-cac": [
+    {
+      "type": 0,
+      "value": "Actual cost per customer"
+    }
+  ],
+  "label.roi-be-roas-12": [
+    {
+      "type": 0,
+      "value": "Return on ad spend (12 months)"
+    }
+  ],
+  "label.roi-be-status": [
+    {
+      "type": 0,
+      "value": "Status"
+    }
+  ],
+  "label.roi-none-traced-yet": [
+    {
+      "type": 0,
+      "value": "None traced yet"
+    }
+  ],
+  "label.roi-be-chart-title": [
+    {
+      "type": 0,
+      "value": "Net income per $100 of ads within 12 months (blended)"
+    }
+  ],
+  "label.roi-break-even": [
+    {
+      "type": 0,
+      "value": "Break-even"
+    }
+  ],
+  "label.roi-you-are-here": [
+    {
+      "type": 0,
+      "value": "You"
+    }
+  ],
+  "label.roi-be-chart-series": [
+    {
+      "type": 0,
+      "value": "Net income per $100"
+    }
+  ],
+  "label.roi-be-move-title": [
+    {
+      "type": 0,
+      "value": "What would move the bar"
+    }
+  ],
+  "label.roi-other-costs-per-customer": [
+    {
+      "type": 0,
+      "value": "Other costs per paying customer"
+    }
+  ],
+  "label.roi-per-month-short": [
+    {
+      "type": 0,
+      "value": "a month"
+    }
+  ],
+  "label.roi-fixed-costs": [
+    {
+      "type": 0,
+      "value": "Fixed costs"
+    }
+  ],
+  "label.roi-tap-to-signup": [
+    {
+      "type": 0,
+      "value": "Store tap → app signup"
+    }
+  ],
+  "message.roi-be-headline": [
+    {
+      "type": 0,
+      "value": "Your ads pay for themselves within "
+    },
+    {
+      "type": 1,
+      "value": "window"
+    },
+    {
+      "type": 0,
+      "value": " if at least "
+    },
+    {
+      "type": 1,
+      "value": "need"
+    },
+    {
+      "type": 0,
+      "value": " of ad visitors become paying customers. You're at "
+    },
+    {
+      "type": 1,
+      "value": "have"
+    },
+    {
+      "type": 0,
+      "value": " ("
+    },
+    {
+      "type": 1,
+      "value": "source"
+    },
+    {
+      "type": 0,
+      "value": ")."
+    }
+  ],
+  "message.roi-be-no-spend": [
+    {
+      "type": 0,
+      "value": "No paid website visits with ad spend in these months, so there is no break-even to show yet."
+    }
+  ],
+  "message.roi-be-visits": [
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " paid visits"
+    }
+  ],
+  "message.roi-one-in": [
+    {
+      "type": 0,
+      "value": "1 in "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    }
+  ],
+  "message.roi-be-measured-n": [
+    {
+      "type": 6,
+      "value": "n",
+      "options": {
+        "one": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " payer"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " payers"
+            }
+          ]
+        }
+      },
+      "offset": 0,
+      "pluralType": "cardinal"
+    }
+  ],
+  "message.roi-be-immature": [
+    {
+      "type": 0,
+      "value": "Includes visits under "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days old (immature)"
+    }
+  ],
+  "message.roi-be-margin": [
+    {
+      "type": 0,
+      "value": "needs "
+    },
+    {
+      "type": 1,
+      "value": "need"
+    },
+    {
+      "type": 0,
+      "value": ", currently "
+    },
+    {
+      "type": 1,
+      "value": "have"
+    }
+  ],
+  "message.roi-be-measured-how": [
+    {
+      "type": 0,
+      "value": "Measured: "
+    },
+    {
+      "type": 6,
+      "value": "payers",
+      "options": {
+        "one": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " paying customer"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " paying customers"
+            }
+          ]
+        }
+      },
+      "offset": 0,
+      "pluralType": "cardinal"
+    },
+    {
+      "type": 0,
+      "value": " traced back to a paid click (the UTMs their signup recorded, then their first payment on the web or in the app stores), out of "
+    },
+    {
+      "type": 1,
+      "value": "visits"
+    },
+    {
+      "type": 0,
+      "value": " paid visits at least "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days old, long enough for the trial and first billing to play out. It replaces the estimate once "
+    },
+    {
+      "type": 1,
+      "value": "min"
+    },
+    {
+      "type": 0,
+      "value": " paying customers are traced. App signups from iOS never carry UTMs, so this undercounts until more customers sign up on the web or on Android."
+    }
+  ],
+  "message.roi-be-estimate-how": [
+    {
+      "type": 0,
+      "value": "Estimated: paid visits × (web signups + store taps × tap-to-signup) ÷ visits × trial-to-paying."
+    }
+  ],
+  "message.roi-be-estimate-web": [
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " of paid visits signed up on the web (observed)."
+    }
+  ],
+  "message.roi-be-estimate-taps": [
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " of paid visits tapped an App Store or Google Play badge (observed), and "
+    },
+    {
+      "type": 1,
+      "value": "tapToSignup"
+    },
+    {
+      "type": 0,
+      "value": " of taps are taken to end in an app signup ("
+    },
+    {
+      "type": 5,
+      "value": "assumed",
+      "options": {
+        "yes": {
+          "value": [
+            {
+              "type": 0,
+              "value": "assumed default; all traffic's app signups ÷ taps is "
+            },
+            {
+              "type": 1,
+              "value": "ceiling"
+            },
+            {
+              "type": 0,
+              "value": ", but that counts installs from store search too"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 0,
+              "value": "your setting"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": 0,
+      "value": ")."
+    }
+  ],
+  "message.roi-be-estimate-paying": [
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " of trials became paying customers over the last "
+    },
+    {
+      "type": 1,
+      "value": "months"
+    },
+    {
+      "type": 0,
+      "value": " completed months (observed, all trials; a shorter window swings because recent trials have not all had the chance to pay)."
+    }
+  ],
+  "message.roi-be-chart-note": [
+    {
+      "type": 0,
+      "value": "Each paying customer is worth about "
+    },
+    {
+      "type": 1,
+      "value": "value"
+    },
+    {
+      "type": 0,
+      "value": " within 12 months. Left of the break-even line, $100 of ads brings in less than $100 within a year."
+    }
+  ],
+  "message.roi-be-move-cost": [
+    {
+      "type": 0,
+      "value": "Cutting "
+    },
+    {
+      "type": 1,
+      "value": "channel"
+    },
+    {
+      "type": 0,
+      "value": " cost per visit to "
+    },
+    {
+      "type": 1,
+      "value": "cost"
+    },
+    {
+      "type": 0,
+      "value": " lowers its break-even rate to "
+    },
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " (now "
+    },
+    {
+      "type": 1,
+      "value": "now"
+    },
+    {
+      "type": 0,
+      "value": ")."
+    }
+  ],
+  "message.roi-be-move-yearly": [
+    {
+      "type": 0,
+      "value": "Raising the yearly plan share from "
+    },
+    {
+      "type": 1,
+      "value": "from"
+    },
+    {
+      "type": 0,
+      "value": "% to "
+    },
+    {
+      "type": 1,
+      "value": "to"
+    },
+    {
+      "type": 0,
+      "value": "% lowers the blended break-even to "
+    },
+    {
+      "type": 1,
+      "value": "rate"
+    },
+    {
+      "type": 0,
+      "value": " (now "
+    },
+    {
+      "type": 1,
+      "value": "now"
+    },
+    {
+      "type": 0,
+      "value": ")."
+    }
+  ],
+  "message.roi-other-costs-tip": [
+    {
+      "type": 0,
+      "value": "Hosting, email and other costs per paying customer per month. Subtracted from what a customer is worth, so they raise the break-even rate."
+    }
+  ],
+  "message.roi-fixed-costs-tip": [
+    {
+      "type": 0,
+      "value": "Costs you pay every month regardless of customers. They don't change the break-even rate per visit; they're taken off net income in the \"What if\" outlook."
+    }
+  ],
+  "message.roi-tap-to-signup-tip": [
+    {
+      "type": 0,
+      "value": "Share of store-badge taps that end in an app signup. Leave empty for the default (20%: about 30% of store page visits install, about 65% of installs sign up). All traffic's app signups ÷ taps is "
+    },
+    {
+      "type": 1,
+      "value": "ceiling"
+    },
+    {
+      "type": 0,
+      "value": ", but that includes people who found the app in store search."
+    }
+  ],
+  "message.roi-be-few-months": [
+    {
+      "type": 0,
+      "value": "Only "
+    },
+    {
+      "type": 6,
+      "value": "n",
+      "options": {
+        "one": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " month has"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " months have"
+            }
+          ]
+        }
+      },
+      "offset": 0,
+      "pluralType": "cardinal"
+    },
+    {
+      "type": 0,
+      "value": " had meaningful ad spend so far, so these rates will move as more months come in."
+    }
+  ],
+  "message.roi-be-value-how": [
+    {
+      "type": 0,
+      "value": "A new paying customer brings in about "
+    },
+    {
+      "type": 1,
+      "value": "v1"
+    },
+    {
+      "type": 0,
+      "value": " in the first month and "
+    },
+    {
+      "type": 1,
+      "value": "v12"
+    },
+    {
+      "type": 0,
+      "value": " within 12 months: "
+    },
+    {
+      "type": 1,
+      "value": "yearly"
+    },
+    {
+      "type": 0,
+      "value": "% choose yearly ("
+    },
+    {
+      "type": 1,
+      "value": "yearlyNet"
+    },
+    {
+      "type": 0,
+      "value": " after fees, up front), the rest pay "
+    },
+    {
+      "type": 1,
+      "value": "monthlyNet"
+    },
+    {
+      "type": 0,
+      "value": " a month while they stay ("
+    },
+    {
+      "type": 1,
+      "value": "m6"
+    },
+    {
+      "type": 0,
+      "value": "% still paying after 6 months, "
+    },
+    {
+      "type": 1,
+      "value": "m12"
+    },
+    {
+      "type": 0,
+      "value": "% after 12, from "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " past monthly customers). Yearly renewals ("
+    },
+    {
+      "type": 1,
+      "value": "renewal"
+    },
+    {
+      "type": 0,
+      "value": "%) only come in month 13, so they are not counted."
+    }
+  ],
+  "message.roi-be-ad-retention": [
+    {
+      "type": 0,
+      "value": "Ad-acquired customers ("
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " with 3+ months of history) keep paying like this: "
+    },
+    {
+      "type": 1,
+      "value": "m6"
+    },
+    {
+      "type": 0,
+      "value": "% after 6 months, "
+    },
+    {
+      "type": 1,
+      "value": "m12"
+    },
+    {
+      "type": 0,
+      "value": "% after 12."
+    }
+  ],
+  "message.roi-be-ad-retention-pending": [
+    {
+      "type": 0,
+      "value": "The retention curve is from all past customers, not ad-acquired ones: "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " customers are traced to ads so far, "
+    },
+    {
+      "type": 1,
+      "value": "three"
+    },
+    {
+      "type": 0,
+      "value": " with 3+ months of history; their own curve shows once "
+    },
+    {
+      "type": 1,
+      "value": "min"
+    },
+    {
+      "type": 0,
+      "value": " have."
+    }
+  ],
+  "message.roi-be-costs-included": [
+    {
+      "type": 0,
+      "value": "Break-even includes other costs of "
+    },
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " per paying customer a month."
+    }
+  ],
+  "message.roi-be-costs-excluded": [
+    {
+      "type": 0,
+      "value": "Break-even does not include other costs (none set)."
+    }
+  ],
+  "message.roi-be-paid-visits-how": [
+    {
+      "type": 0,
+      "value": "Paid visits are the first page of a session on the marketing site from a Google ad (gclid, or tagged google / cpc) or a Meta ad (tagged utm_medium=paid from Facebook, Instagram, Audience Network, Threads or Messenger), leaving out bots and logged-in app sessions. Cost per visit is that channel's website-campaign spend over its paid visits; app-install campaigns are left out because their clicks go straight to the stores."
+    }
+  ],
+  "message.roi-proj-paid": [
+    {
+      "type": 0,
+      "value": "At "
+    },
+    {
+      "type": 1,
+      "value": "spend"
+    },
+    {
+      "type": 0,
+      "value": " a month in ads, about "
+    },
+    {
+      "type": 1,
+      "value": "paid"
+    },
+    {
+      "type": 0,
+      "value": " of the "
+    },
+    {
+      "type": 1,
+      "value": "visitors"
+    },
+    {
+      "type": 0,
+      "value": " monthly website visitors would come from ads. Ad visitors become paying customers at about 1 in "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": " (Meta) and 1 in "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": " (Google), "
+    },
+    {
+      "type": 1,
+      "value": "source"
+    },
+    {
+      "type": 0,
+      "value": ", rather than the 1 in "
+    },
+    {
+      "type": 1,
+      "value": "all"
+    },
+    {
+      "type": 0,
+      "value": " of all visitors, so that would be about "
+    },
+    {
+      "type": 1,
+      "value": "customers"
+    },
+    {
+      "type": 0,
+      "value": " new paying customers a month."
+    }
+  ],
+  "message.roi-per-100": [
+    {
+      "type": 0,
+      "value": "Each extra $100 on Meta returns about "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": " within 12 months; on Google about "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-proj-costs": [
+    {
+      "type": 0,
+      "value": "Includes other costs of "
+    },
+    {
+      "type": 1,
+      "value": "perCustomer"
+    },
+    {
+      "type": 0,
+      "value": " per paying customer a month and "
+    },
+    {
+      "type": 1,
+      "value": "fixed"
+    },
+    {
+      "type": 0,
+      "value": " of fixed costs a month."
+    }
+  ],
+  "message.roi-outlook-how-paid": [
+    {
+      "type": 0,
+      "value": "How this works: ad dollars buy paid website visits at what a paid visit cost in "
+    },
+    {
+      "type": 1,
+      "value": "months"
+    },
+    {
+      "type": 0,
+      "value": " (Meta "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": ", Google "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": "), and those visits become paying customers at their channel's rate from the break-even panel. Today's money in, from all your current customers, stays flat. Extra customers keep paying: "
+    },
+    {
+      "type": 1,
+      "value": "yearly"
+    },
+    {
+      "type": 0,
+      "value": "% choose yearly and pay "
+    },
+    {
+      "type": 1,
+      "value": "yearlyPrice"
+    },
+    {
+      "type": 0,
+      "value": " up front; the rest pay "
+    },
+    {
+      "type": 1,
+      "value": "monthly"
+    },
+    {
+      "type": 0,
+      "value": " a month, and like your past monthly customers "
+    },
+    {
+      "type": 1,
+      "value": "m6"
+    },
+    {
+      "type": 0,
+      "value": "% are still paying after 6 months and "
+    },
+    {
+      "type": 1,
+      "value": "m12"
+    },
+    {
+      "type": 0,
+      "value": "% after 12. Yearly renewals fall after month 12 ("
+    },
+    {
+      "type": 1,
+      "value": "renewal"
+    },
+    {
+      "type": 0,
+      "value": "% of "
+    },
+    {
+      "type": 1,
+      "value": "renewalN"
+    },
+    {
+      "type": 0,
+      "value": " past yearly customers renewed)."
+    }
   ]
 }
