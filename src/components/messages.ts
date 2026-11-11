@@ -1,6 +1,11 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiPayoffTitle: { id: 'label.roi-payoff-title', defaultMessage: 'Do ads pay off?' },
+  roiExtraOverYear: {
+    id: 'label.roi-extra-over-year',
+    defaultMessage: 'Extra money over the next 12 months',
+  },
   roiLast30Days: { id: 'label.roi-last-30-days', defaultMessage: 'Last 30 days' },
   roiBlended: { id: 'label.roi-blended', defaultMessage: 'Blended' },
   roiProfitable: { id: 'label.roi-profitable', defaultMessage: 'Profitable' },
@@ -623,6 +628,44 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiPayoffAnswer: {
+    id: 'message.roi-payoff-answer',
+    defaultMessage: 'Every $100 on ads brings back about {amount} within a year.',
+  },
+  roiPayoffPerChannel: {
+    id: 'message.roi-payoff-per-channel',
+    defaultMessage: 'Meta {meta} · Google {google}, per $100',
+  },
+  roiPayoffNoData: {
+    id: 'message.roi-payoff-no-data',
+    defaultMessage: 'Not enough ad traffic in this period to tell yet.',
+  },
+  roiPayoffBreakEven: {
+    id: 'message.roi-payoff-break-even',
+    defaultMessage:
+      "To break even, about 1 in {need} ad visitors needs to become a paying customer. Right now it's about 1 in {have}.",
+  },
+  roiTheLastNMonths: { id: 'message.roi-the-last-n-months', defaultMessage: 'the last {n} months' },
+  roiPayoffHowVisits: {
+    id: 'message.roi-payoff-how-visits',
+    defaultMessage:
+      'Ad money buys website visits at what a visit from each ad cost in {period}: Meta {meta}, Google {google}.',
+  },
+  roiPayoffHowConvert: {
+    id: 'message.roi-payoff-how-convert',
+    defaultMessage:
+      'About 1 in {meta} Meta visitors and 1 in {google} Google visitors become paying customers. That comes from what ad visitors did: signed up on the website, or tapped an App Store or Google Play button (assuming 1 in {taps} of those sign up in the app), times the share of trials that end up paying ({paying}%).',
+  },
+  roiPayoffHowValue: {
+    id: 'message.roi-payoff-how-value',
+    defaultMessage:
+      'A paying customer brings in about {value} in their first year, after fees: {yearly}% pay for a year up front, the rest pay monthly while they stay ({m12}% are still paying after 12 months).',
+  },
+  roiPayoffHowToday: {
+    id: 'message.roi-payoff-how-today',
+    defaultMessage:
+      'The sliders only change new customers from ads; everyone already paying stays as is. Only {n, plural, one {# month has} other {# months have}} had real ad spend so far, so expect these numbers to move.',
+  },
   roiTheLast30Days: { id: 'message.roi-the-last-30-days', defaultMessage: 'the last 30 days' },
   roiBeRollingNote: {
     id: 'message.roi-be-rolling-note',

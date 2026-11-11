@@ -5774,5 +5774,233 @@
       "type": 0,
       "value": "Paid visits, ad spend, store taps and signups cover the last 30 days, so this month counts too. Customer value, trial-to-paying and the \"What if\" baseline (money in, other visitors) only exist per month, so they come from completed months."
     }
+  ],
+  "label.roi-payoff-title": [
+    {
+      "type": 0,
+      "value": "Do ads pay off?"
+    }
+  ],
+  "label.roi-extra-over-year": [
+    {
+      "type": 0,
+      "value": "Extra money over the next 12 months"
+    }
+  ],
+  "message.roi-payoff-answer": [
+    {
+      "type": 0,
+      "value": "Every $100 on ads brings back about "
+    },
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " within a year."
+    }
+  ],
+  "message.roi-payoff-per-channel": [
+    {
+      "type": 0,
+      "value": "Meta "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": " · Google "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": ", per $100"
+    }
+  ],
+  "message.roi-payoff-no-data": [
+    {
+      "type": 0,
+      "value": "Not enough ad traffic in this period to tell yet."
+    }
+  ],
+  "message.roi-payoff-break-even": [
+    {
+      "type": 0,
+      "value": "To break even, about 1 in "
+    },
+    {
+      "type": 1,
+      "value": "need"
+    },
+    {
+      "type": 0,
+      "value": " ad visitors needs to become a paying customer. Right now it's about 1 in "
+    },
+    {
+      "type": 1,
+      "value": "have"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-the-last-n-months": [
+    {
+      "type": 0,
+      "value": "the last "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " months"
+    }
+  ],
+  "message.roi-payoff-how-visits": [
+    {
+      "type": 0,
+      "value": "Ad money buys website visits at what a visit from each ad cost in "
+    },
+    {
+      "type": 1,
+      "value": "period"
+    },
+    {
+      "type": 0,
+      "value": ": Meta "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": ", Google "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-payoff-how-convert": [
+    {
+      "type": 0,
+      "value": "About 1 in "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": " Meta visitors and 1 in "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": " Google visitors become paying customers. That comes from what ad visitors did: signed up on the website, or tapped an App Store or Google Play button (assuming 1 in "
+    },
+    {
+      "type": 1,
+      "value": "taps"
+    },
+    {
+      "type": 0,
+      "value": " of those sign up in the app), times the share of trials that end up paying ("
+    },
+    {
+      "type": 1,
+      "value": "paying"
+    },
+    {
+      "type": 0,
+      "value": "%)."
+    }
+  ],
+  "message.roi-payoff-how-value": [
+    {
+      "type": 0,
+      "value": "A paying customer brings in about "
+    },
+    {
+      "type": 1,
+      "value": "value"
+    },
+    {
+      "type": 0,
+      "value": " in their first year, after fees: "
+    },
+    {
+      "type": 1,
+      "value": "yearly"
+    },
+    {
+      "type": 0,
+      "value": "% pay for a year up front, the rest pay monthly while they stay ("
+    },
+    {
+      "type": 1,
+      "value": "m12"
+    },
+    {
+      "type": 0,
+      "value": "% are still paying after 12 months)."
+    }
+  ],
+  "message.roi-payoff-how-today": [
+    {
+      "type": 0,
+      "value": "The sliders only change new customers from ads; everyone already paying stays as is. Only "
+    },
+    {
+      "type": 6,
+      "value": "n",
+      "options": {
+        "one": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " month has"
+            }
+          ]
+        },
+        "other": {
+          "value": [
+            {
+              "type": 7
+            },
+            {
+              "type": 0,
+              "value": " months have"
+            }
+          ]
+        }
+      },
+      "offset": 0,
+      "pluralType": "cardinal"
+    },
+    {
+      "type": 0,
+      "value": " had real ad spend so far, so expect these numbers to move."
+    }
   ]
 }

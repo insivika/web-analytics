@@ -636,5 +636,16 @@
   "message.roi-outlook-how-paid": "How this works: ad dollars buy paid website visits at what a paid visit cost in {months} (Meta {meta}, Google {google}), and those visits become paying customers at their channel's rate from the break-even panel. Today's money in, from all your current customers, stays flat. Extra customers keep paying: {yearly}% choose yearly and pay {yearlyPrice} up front; the rest pay {monthly} a month, and like your past monthly customers {m6}% are still paying after 6 months and {m12}% after 12. Yearly renewals fall after month 12 ({renewal}% of {renewalN} past yearly customers renewed).",
   "label.roi-last-30-days": "Last 30 days",
   "message.roi-the-last-30-days": "the last 30 days",
-  "message.roi-be-rolling-note": "Paid visits, ad spend, store taps and signups cover the last 30 days, so this month counts too. Customer value, trial-to-paying and the \"What if\" baseline (money in, other visitors) only exist per month, so they come from completed months."
+  "message.roi-be-rolling-note": "Paid visits, ad spend, store taps and signups cover the last 30 days, so this month counts too. Customer value, trial-to-paying and the \"What if\" baseline (money in, other visitors) only exist per month, so they come from completed months.",
+  "label.roi-payoff-title": "Do ads pay off?",
+  "label.roi-extra-over-year": "Extra money over the next 12 months",
+  "message.roi-payoff-answer": "Every $100 on ads brings back about {amount} within a year.",
+  "message.roi-payoff-per-channel": "Meta {meta} · Google {google}, per $100",
+  "message.roi-payoff-no-data": "Not enough ad traffic in this period to tell yet.",
+  "message.roi-payoff-break-even": "To break even, about 1 in {need} ad visitors needs to become a paying customer. Right now it's about 1 in {have}.",
+  "message.roi-the-last-n-months": "the last {n} months",
+  "message.roi-payoff-how-visits": "Ad money buys website visits at what a visit from each ad cost in {period}: Meta {meta}, Google {google}.",
+  "message.roi-payoff-how-convert": "About 1 in {meta} Meta visitors and 1 in {google} Google visitors become paying customers. That comes from what ad visitors did: signed up on the website, or tapped an App Store or Google Play button (assuming 1 in {taps} of those sign up in the app), times the share of trials that end up paying ({paying}%).",
+  "message.roi-payoff-how-value": "A paying customer brings in about {value} in their first year, after fees: {yearly}% pay for a year up front, the rest pay monthly while they stay ({m12}% are still paying after 12 months).",
+  "message.roi-payoff-how-today": "The sliders only change new customers from ads; everyone already paying stays as is. Only {n, plural, one {# month has} other {# months have}} had real ad spend so far, so expect these numbers to move."
 }

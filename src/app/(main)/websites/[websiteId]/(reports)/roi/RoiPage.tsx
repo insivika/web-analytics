@@ -1,6 +1,6 @@
 'use client';
 import { Box, Button, Column, Grid, Row, Text } from '@umami/react-zen';
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { Fragment, type ReactNode, useMemo, useState } from 'react';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { Panel } from '@/components/common/Panel';
 import {
@@ -19,40 +19,9 @@ import {
   type RoiPeriod,
   sumMonths,
 } from '@/lib/roi';
-import {
-  type BreakEvenSettings,
-  buildEconomics,
-  DEFAULT_SETTINGS,
-  type Lookback,
-  type PaybackWindow,
-} from '@/lib/roiBreakEven';
-import { RoiBreakEven } from './RoiBreakEven';
+import { buildEconomics, DEFAULT_SETTINGS, LAST_30_DAYS, type Lookback } from '@/lib/roiBreakEven';
 import { type ChartMonth, FlowsChart, NetChart, ROI_COLORS } from './RoiCharts';
-import { RoiProjection } from './RoiProjection';
-
-const SETTINGS_KEY = 'umami.roi.break-even-settings';
-
-/** Cost settings are a per-viewer convenience: kept in this browser only. */
-function useBreakEvenSettings() {
-  const [settings, setSettings] = useState<BreakEvenSettings>(DEFAULT_SETTINGS);
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
-      if (saved) setSettings({ ...DEFAULT_SETTINGS, ...saved });
-    } catch {
-      // Storage unavailable: start from the defaults.
-    }
-  }, []);
-  const update = (s: BreakEvenSettings) => {
-    setSettings(s);
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-    } catch {
-      // Not saved; it still applies until the page is reloaded.
-    }
-  };
-  return [settings, update] as const;
-}
+import { RoiPayoff } from './RoiPayoff';
 
 const usd = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -164,9 +133,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
   const { data, error, isLoading } = useRoiReportQuery(websiteId);
   const sync = useUpdateQuery(`/websites/${websiteId}/roi/sync`);
   const [syncing, setSyncing] = useState(false);
-  const [lookback, setLookback] = useState<Lookback>(3);
-  const [payback, setPayback] = useState<PaybackWindow>(12);
-  const [settings, setSettings] = useBreakEvenSettings();
+  const [lookback, setLookback] = useState<Lookback>(LAST_30_DAYS);
   const projection = data?.projection;
   const economics = useMemo(
     () =>
@@ -177,10 +144,10 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
             projection.plans,
             projection.retention,
             lookback,
-            settings,
+            DEFAULT_SETTINGS,
           )
         : null,
-    [projection, lookback, settings],
+    [projection, lookback],
   );
 
   const periodLabels: Record<RoiPeriod, string> = {
@@ -372,16 +339,12 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
             </Row>
 
             {economics && (
-              <RoiBreakEven
+              <RoiPayoff
                 economics={economics}
-                channels={projection.channels}
+                plans={projection.plans}
                 retention={projection.retention}
                 lookback={lookback}
                 onLookback={setLookback}
-                payback={payback}
-                onPayback={setPayback}
-                settings={settings}
-                onSettings={setSettings}
               />
             )}
 
@@ -433,17 +396,6 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
                 </Text>
               </Column>
             </Panel>
-
-            {data.projection && (
-              <RoiProjection
-                history={data.projection.history}
-                plans={data.projection.plans}
-                retention={data.projection.retention}
-                economics={economics}
-                lookback={lookback}
-                onLookback={setLookback}
-              />
-            )}
 
             <Panel title={formatMessage(labels.roiFunnelTitle)}>
               <Column gap="3">
