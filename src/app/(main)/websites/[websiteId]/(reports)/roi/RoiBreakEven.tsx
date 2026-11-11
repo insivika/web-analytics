@@ -237,10 +237,10 @@ export function RoiBreakEven({
 
         <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
           <Grid
-            columns="minmax(90px,0.8fr) repeat(8, minmax(96px,1fr))"
+            columns="minmax(80px,0.7fr) repeat(3, minmax(90px,1fr)) minmax(170px,1.6fr) repeat(4, minmax(96px,1fr))"
             gap="3"
             alignItems="start"
-            style={{ minWidth: 960 }}
+            style={{ minWidth: 1100 }}
           >
             {[
               labels.roiBeChannel,
