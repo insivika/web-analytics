@@ -23,9 +23,9 @@ import {
   type BreakEvenSettings,
   buildEconomics,
   DEFAULT_SETTINGS,
+  type Lookback,
   type PaybackWindow,
 } from '@/lib/roiBreakEven';
-import type { ProjectionWindow } from '@/lib/roiProjection';
 import { RoiBreakEven } from './RoiBreakEven';
 import { type ChartMonth, FlowsChart, NetChart, ROI_COLORS } from './RoiCharts';
 import { RoiProjection } from './RoiProjection';
@@ -164,7 +164,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
   const { data, error, isLoading } = useRoiReportQuery(websiteId);
   const sync = useUpdateQuery(`/websites/${websiteId}/roi/sync`);
   const [syncing, setSyncing] = useState(false);
-  const [lookback, setLookback] = useState<ProjectionWindow>(3);
+  const [lookback, setLookback] = useState<Lookback>(3);
   const [payback, setPayback] = useState<PaybackWindow>(12);
   const [settings, setSettings] = useBreakEvenSettings();
   const projection = data?.projection;

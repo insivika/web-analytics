@@ -16,15 +16,26 @@
 import {
   defaultInputs,
   type PlanEconomics,
+  PROJECTION_WINDOWS,
   type ProjectionBase,
   type ProjectionInputs,
   type ProjectionMonth,
+  type ProjectionWindow,
   projectionBase,
   type Retention,
 } from './roiProjection';
 
 export const PAYBACK_WINDOWS = [1, 3, 6, 12] as const;
 export type PaybackWindow = (typeof PAYBACK_WINDOWS)[number];
+
+/** Month key of the rolling window's rows in ChannelData. */
+export const LAST_30_DAYS = 'last30';
+export const ROLLING_DAYS = 30;
+/** How far back the inputs go: completed months, or the rolling last 30 days. */
+export type Lookback = ProjectionWindow | typeof LAST_30_DAYS;
+export const LOOKBACKS: Lookback[] = [LAST_30_DAYS, ...PROJECTION_WINDOWS];
+/** Completed months a lookback draws on (the rolling window uses the last one). */
+export const lookbackMonths = (l: Lookback) => (l === LAST_30_DAYS ? 1 : l);
 
 export const CHANNELS = ['meta', 'google'] as const;
 export type Channel = (typeof CHANNELS)[number];
@@ -74,8 +85,11 @@ export interface AppMonth {
 }
 
 export interface ChannelData {
+  /** Per calendar month, plus rows keyed LAST_30_DAYS for the rolling window. */
   months: ChannelMonth[];
   app: AppMonth[];
+  /** Website-campaign spend over the rolling window. */
+  last30Spend?: { meta: number; google: number };
   /** Paying customers traced to a paid click, all time, and those with 3+ months of history. */
   adCustomers: number;
   adCustomersThreeMonths: number;
@@ -303,6 +317,9 @@ export function sensitivity(
 }
 
 export interface Economics {
+  /** The chosen lookback: completed months, or the rolling last 30 days. */
+  lookback: Lookback;
+  /** Completed months behind money in, visitors and plan economics. */
   months: string[];
   base: ProjectionBase;
   inputs: ProjectionInputs;
@@ -338,20 +355,28 @@ export function buildEconomics(
   data: ChannelData,
   plans: PlanEconomics,
   retention: Retention,
-  lookback: number,
+  lookback: Lookback,
   settings: BreakEvenSettings,
 ): Economics {
-  const base = projectionBase(history, lookback);
+  // The rolling window covers paid traffic and spend; money in, visitors and
+  // plan economics only exist per month, so they come from the last completed one.
+  const rolling = lookback === LAST_30_DAYS;
+  const months = lookbackMonths(lookback);
+  const recentSpend = data.last30Spend ?? { meta: 0, google: 0 };
+  const completed = projectionBase(history, months);
+  const base = rolling
+    ? { ...completed, metaSpend: recentSpend.meta, googleSpend: recentSpend.google }
+    : completed;
   // Trial-to-paying over at least TRIAL_TO_PAYING_MONTHS: a single month's
   // trials haven't all had the chance to pay yet, so a short window swings.
   const trialToPaying = projectionBase(
     history,
-    Math.max(lookback, TRIAL_TO_PAYING_MONTHS),
+    Math.max(months, TRIAL_TO_PAYING_MONTHS),
   ).trialToPaying;
   const inputs = defaultInputs(base, plans);
   const model = valueModel(inputs, retention, settings.otherCostPerCustomerMonth);
   const value = byWindow(n => customerValueWithin(model, n));
-  const inWindow = new Set(base.months);
+  const inWindow = new Set(rolling ? [LAST_30_DAYS] : base.months);
 
   const app = data.app.filter(a => inWindow.has(a.month));
   const appTaps = app.reduce((s, a) => s + a.taps, 0);
@@ -359,11 +384,13 @@ export function buildEconomics(
   const observedCeiling = appTaps > 0 ? Math.min(appSignups / appTaps, 1) : null;
   const tapToSignup = settings.tapToSignup ?? DEFAULT_TAP_TO_SIGNUP;
 
-  const window = history.slice(-lookback);
-  const spend = {
-    meta: window.reduce((s, m) => s + m.metaSpend, 0),
-    google: window.reduce((s, m) => s + m.googleSpend, 0),
-  };
+  const window = history.slice(-months);
+  const spend = rolling
+    ? recentSpend
+    : {
+        meta: window.reduce((s, m) => s + m.metaSpend, 0),
+        google: window.reduce((s, m) => s + m.googleSpend, 0),
+      };
   const totals = Object.fromEntries(
     CHANNELS.map(c => [
       c,
@@ -386,6 +413,7 @@ export function buildEconomics(
     economics(key, t, value, tapToSignup, trialToPaying);
 
   return {
+    lookback,
     months: base.months,
     base,
     inputs,

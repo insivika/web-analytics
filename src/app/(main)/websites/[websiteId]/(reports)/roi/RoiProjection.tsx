@@ -4,15 +4,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { Panel } from '@/components/common/Panel';
 import { useLocale, useMessages } from '@/components/hooks';
 import { formatDate } from '@/lib/date';
-import { type Economics, returnPer100 } from '@/lib/roiBreakEven';
+import {
+  type Economics,
+  LAST_30_DAYS,
+  LOOKBACKS,
+  type Lookback,
+  lookbackMonths,
+  returnPer100,
+} from '@/lib/roiBreakEven';
 import {
   defaultInputs,
   outlook,
   type PlanEconomics,
-  PROJECTION_WINDOWS,
   type ProjectionInputs,
   type ProjectionMonth,
-  type ProjectionWindow,
   project,
   projectionBase,
   type Retention,
@@ -127,19 +132,24 @@ export function RoiProjection({
   plans: PlanEconomics;
   retention: Retention;
   economics: Economics | null;
-  lookback: ProjectionWindow;
-  onLookback: (w: ProjectionWindow) => void;
+  lookback: Lookback;
+  onLookback: (w: Lookback) => void;
 }) {
   const { formatMessage, labels, messages } = useMessages();
   const { locale } = useLocale();
   const meta = economics?.channels.meta;
   const google = economics?.channels.google;
-  const base = useMemo(() => {
-    const b = projectionBase(history, lookback);
-    return meta && google
-      ? withPaidVisits(b, { meta: meta.costPerVisit, google: google.costPerVisit })
-      : b;
-  }, [history, lookback, meta, google]);
+  const months = lookbackMonths(lookback);
+  const base = useMemo(
+    () =>
+      economics
+        ? withPaidVisits(economics.base, {
+            meta: economics.channels.meta.costPerVisit,
+            google: economics.channels.google.costPerVisit,
+          })
+        : projectionBase(history, months),
+    [history, months, economics],
+  );
   const defaults = useMemo<ProjectionInputs>(
     () => ({
       ...defaultInputs(base, plans),
@@ -165,10 +175,12 @@ export function RoiProjection({
     formatMessage(messages.roiVsToday, { delta: signed(n, f) });
   const monthName = (m: string) => formatDate(new Date(`${m}-01T12:00:00`), 'MMM yyyy', locale);
   const monthsLabel =
-    base.months.length > 1
-      ? `${monthName(base.months[0])} – ${monthName(base.months[base.months.length - 1])}`
-      : monthName(base.months[0]);
-  const adMonths = history.slice(-lookback).filter(m => m.metaSpend + m.googleSpend > 0).length;
+    lookback === LAST_30_DAYS
+      ? formatMessage(messages.roiTheLast30Days)
+      : base.months.length > 1
+        ? `${monthName(base.months[0])} – ${monthName(base.months[base.months.length - 1])}`
+        : monthName(base.months[0]);
+  const adMonths = history.slice(-months).filter(m => m.metaSpend + m.googleSpend > 0).length;
   const rate = base.visitorToTrial * base.trialToPaying;
   const oneIn = rate > 0 ? Math.round(1 / rate) : null;
   const paidOneIn = (r: number | null | undefined) => (r && r > 0 ? Math.round(1 / r) : '—');
@@ -187,14 +199,16 @@ export function RoiProjection({
           <Text color="muted" size="2">
             {formatMessage(labels.roiBasedOn)}
           </Text>
-          {PROJECTION_WINDOWS.map(w => (
+          {LOOKBACKS.map(w => (
             <Button
               key={w}
               size="sm"
               variant={w === lookback ? 'primary' : 'outline'}
               onPress={() => onLookback(w)}
             >
-              {formatMessage(messages.roiMonthsN, { n: w })}
+              {w === LAST_30_DAYS
+                ? formatMessage(labels.roiLast30Days)
+                : formatMessage(messages.roiMonthsN, { n: w })}
             </Button>
           ))}
           <Button size="sm" variant="quiet" onPress={() => setInputs(defaults)}>

@@ -5756,5 +5756,23 @@
       "type": 0,
       "value": " past yearly customers renewed)."
     }
+  ],
+  "label.roi-last-30-days": [
+    {
+      "type": 0,
+      "value": "Last 30 days"
+    }
+  ],
+  "message.roi-the-last-30-days": [
+    {
+      "type": 0,
+      "value": "the last 30 days"
+    }
+  ],
+  "message.roi-be-rolling-note": [
+    {
+      "type": 0,
+      "value": "Paid visits, ad spend, store taps and signups cover the last 30 days, so this month counts too. Customer value, trial-to-paying and the \"What if\" baseline (money in, other visitors) only exist per month, so they come from completed months."
+    }
   ]
 }

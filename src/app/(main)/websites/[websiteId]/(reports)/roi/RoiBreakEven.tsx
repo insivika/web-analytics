@@ -11,6 +11,10 @@ import {
   type ChannelEconomics,
   type ChannelKey,
   type Economics,
+  LAST_30_DAYS,
+  LOOKBACKS,
+  type Lookback,
+  lookbackMonths,
   MATURE_DAYS,
   MIN_AD_RETENTION_CUSTOMERS,
   MIN_MEASURED_PAYERS,
@@ -21,7 +25,7 @@ import {
   TRIAL_TO_PAYING_MONTHS,
   valueWithYearlyShare,
 } from '@/lib/roiBreakEven';
-import { PROJECTION_WINDOWS, type ProjectionWindow, type Retention } from '@/lib/roiProjection';
+import type { Retention } from '@/lib/roiProjection';
 import { ROI_COLORS, SensitivityChart } from './RoiCharts';
 
 const pct = (r: number | null | undefined, d = 1) =>
@@ -107,8 +111,8 @@ export function RoiBreakEven({
   economics: Economics;
   channels: ChannelData;
   retention: Retention;
-  lookback: ProjectionWindow;
-  onLookback: (w: ProjectionWindow) => void;
+  lookback: Lookback;
+  onLookback: (w: Lookback) => void;
   payback: PaybackWindow;
   onPayback: (w: PaybackWindow) => void;
   settings: BreakEvenSettings;
@@ -147,7 +151,7 @@ export function RoiBreakEven({
     }),
     formatMessage(messages.roiBeEstimatePaying, {
       rate: pct(c.estimated.trialToPaying),
-      months: Math.max(lookback, TRIAL_TO_PAYING_MONTHS),
+      months: Math.max(lookbackMonths(lookback), TRIAL_TO_PAYING_MONTHS),
     }),
   ];
   const measuredTip = (c: ChannelEconomics) =>
@@ -212,17 +216,24 @@ export function RoiBreakEven({
           <Text color="muted" size="2" style={{ marginLeft: 12 }}>
             {formatMessage(labels.roiBasedOn)}
           </Text>
-          {PROJECTION_WINDOWS.map(w => (
+          {LOOKBACKS.map(w => (
             <Button
               key={w}
               size="sm"
               variant={w === lookback ? 'primary' : 'outline'}
               onPress={() => onLookback(w)}
             >
-              {formatMessage(messages.roiMonthsN, { n: w })}
+              {w === LAST_30_DAYS
+                ? formatMessage(labels.roiLast30Days)
+                : formatMessage(messages.roiMonthsN, { n: w })}
             </Button>
           ))}
         </Row>
+        {lookback === LAST_30_DAYS && (
+          <Text color="muted" size="2">
+            {formatMessage(messages.roiBeRollingNote)}
+          </Text>
+        )}
 
         <Text size="5" weight="bold">
           {blended.breakEven[payback] === null

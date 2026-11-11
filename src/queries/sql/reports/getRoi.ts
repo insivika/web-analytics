@@ -18,8 +18,10 @@ import {
   type Channel,
   type ChannelData,
   type ChannelMonth,
+  LAST_30_DAYS,
   MATURE_DAYS,
   MIN_AD_RETENTION_CUSTOMERS,
+  ROLLING_DAYS,
 } from '@/lib/roiBreakEven';
 import {
   buildRetention,
@@ -519,8 +521,15 @@ async function getChannelData(
   now: Date,
 ): Promise<ChannelData> {
   const matureBefore = new Date(+now - MATURE_DAYS * 86_400_000);
+  // Rows for the rolling window come back under the month key LAST_30_DAYS.
+  const since = new Date(+now - ROLLING_DAYS * 86_400_000);
   const botCountries = getBotCountries().join(',');
-  const [funnel, payers, app] = await Promise.all([
+  const bucket = (col: string) => `
+    cross join lateral (values
+      (to_char(${col} at time zone '${ROI_TIMEZONE}', 'YYYY-MM')),
+      (case when ${col} >= {{since}} then '${LAST_30_DAYS}' end)
+    ) as b(month)`;
+  const [funnel, payers, app, recentSpend] = await Promise.all([
     prisma.rawQuery(
       `
       with fv as (
@@ -547,16 +556,17 @@ async function getChannelData(
         where e.website_id = {{websiteId::uuid}} and e.event_type = 2 and e.created_at >= {{from}}
         group by 1
       )
-      select to_char(p.created_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month, p.channel,
+      select b.month, p.channel,
         count(*)::int as visits,
         count(*) filter (where p.created_at <= {{matureBefore}})::int as "matureVisits",
         count(*) filter (where act.tapped)::int as taps,
         count(*) filter (where act.signed)::int as "webSignups"
       from p left join act on act.session_id = p.session_id
-      where p.channel is not null
+      ${bucket('p.created_at')}
+      where p.channel is not null and b.month is not null
       group by 1, 2
       `,
-      { websiteId, hostname, from, matureBefore, botCountries },
+      { websiteId, hostname, from, matureBefore, botCountries, since },
       'getRoiChannelFunnel',
     ),
     // First-touch: the UTMs a signup recorded (the first landing's), linked to
@@ -609,27 +619,43 @@ async function getChannelData(
       select att.uid, att.channel,
         to_char(att.signup_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month,
         att.signup_at <= {{matureBefore}} as mature,
+        att.signup_at >= {{since}} as recent,
         min(paid.first) as "firstPaid"
       from att join paid on paid.uid = att.uid
       where att.channel is not null
-      group by 1, 2, 3, 4
+      group by 1, 2, 3, 4, 5
       `,
-      { websiteId, from, matureBefore },
+      { websiteId, from, matureBefore, since },
       'getRoiChannelPayers',
     ),
     prisma.rawQuery(
       `
-      select to_char(e.created_at at time zone '${ROI_TIMEZONE}', 'YYYY-MM') as month,
+      select b.month,
         count(distinct e.session_id) filter (where e.event_name in ${STORE_TAPS})::int as taps,
         count(distinct e.event_id) filter (where e.event_name = 'signed_up' and d.string_value in ('ios', 'android'))::int as "appSignups"
       from website_event e
       left join event_data d on d.website_event_id = e.event_id and d.data_key = 'platform'
+      ${bucket('e.created_at')}
       where e.website_id = {{websiteId::uuid}} and e.event_type = 2 and e.created_at >= {{from}}
         and (e.event_name in ${STORE_TAPS} or e.event_name = 'signed_up')
+        and b.month is not null
       group by 1
       `,
-      { websiteId, from },
+      { websiteId, from, since },
       'getRoiAppSignups',
+    ),
+    // Website-campaign spend over the rolling window (app-install campaigns
+    // send clicks to the stores, not the site).
+    prisma.rawQuery(
+      `
+      select channel, sum(spend_usd)::float as usd
+      from ad_spend
+      where website_id = {{websiteId::uuid}} and date >= {{since}}::date
+        and not (coalesce(campaign_name, '') ilike {{install}})
+      group by 1
+      `,
+      { websiteId, since: since.toISOString().slice(0, 10), install: APP_INSTALL_CAMPAIGN },
+      'getRoiRecentSpend',
     ),
   ]);
 
@@ -665,7 +691,13 @@ async function getChannelData(
     adUsers.add(r.uid);
     if (new Date(r.firstPaid) <= threeMonthsAgo) adUsersThreeMonths.add(r.uid);
     if (r.mature) row(r.month, r.channel).payers += 1;
+    if (r.mature && r.recent) row(LAST_30_DAYS, r.channel).payers += 1;
   }
+  const spendRows = recentSpend as any[];
+  const spendOf = (c: Channel) =>
+    spendRows
+      .filter(r => (c === 'google' ? r.channel === 'google' : r.channel !== 'google'))
+      .reduce((s, r) => s + Number(r.usd ?? 0), 0);
 
   return {
     months: [...months.values()],
@@ -674,6 +706,7 @@ async function getChannelData(
       taps: Number(r.taps),
       appSignups: Number(r.appSignups),
     })),
+    last30Spend: { meta: spendOf('meta'), google: spendOf('google') },
     adCustomers: adUsers.size,
     adCustomersThreeMonths: adUsersThreeMonths.size,
     adRetention:

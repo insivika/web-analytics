@@ -1,6 +1,7 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiLast30Days: { id: 'label.roi-last-30-days', defaultMessage: 'Last 30 days' },
   roiBlended: { id: 'label.roi-blended', defaultMessage: 'Blended' },
   roiProfitable: { id: 'label.roi-profitable', defaultMessage: 'Profitable' },
   roiNotYet: { id: 'label.roi-not-yet', defaultMessage: 'Not yet' },
@@ -622,6 +623,12 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiTheLast30Days: { id: 'message.roi-the-last-30-days', defaultMessage: 'the last 30 days' },
+  roiBeRollingNote: {
+    id: 'message.roi-be-rolling-note',
+    defaultMessage:
+      'Paid visits, ad spend, store taps and signups cover the last 30 days, so this month counts too. Customer value, trial-to-paying and the "What if" baseline (money in, other visitors) only exist per month, so they come from completed months.',
+  },
   roiBeHeadline: {
     id: 'message.roi-be-headline',
     defaultMessage:

@@ -270,3 +270,48 @@ describe('simulator with paid conversion', () => {
     expect(p.todayNetIncome - q.todayNetIncome).toBeCloseTo(50, 6);
   });
 });
+
+describe('rolling last 30 days', () => {
+  const rolling: ChannelData = {
+    ...channels,
+    months: [
+      ...channels.months,
+      {
+        month: 'last30',
+        channel: 'meta',
+        visits: 148,
+        matureVisits: 90,
+        taps: 45,
+        webSignups: 7,
+        payers: 0,
+      },
+      {
+        month: 'last30',
+        channel: 'google',
+        visits: 151,
+        matureVisits: 95,
+        taps: 22,
+        webSignups: 5,
+        payers: 0,
+      },
+    ],
+    app: [...channels.app, { month: 'last30', taps: 100, appSignups: 70 }],
+    last30Spend: { meta: 277, google: 159 },
+  };
+  const e = buildEconomics(history, rolling, plans, retention, 'last30', DEFAULT_SETTINGS);
+
+  test('paid traffic and spend come from the rolling rows', () => {
+    expect(e.lookback).toBe('last30');
+    expect(e.channels.meta.visits).toBe(148);
+    expect(e.channels.meta.spend).toBe(277);
+    expect(e.channels.meta.costPerVisit).toBeCloseTo(277 / 148, 6);
+    expect(e.channels.blended.costPerVisit).toBeCloseTo(436 / 299, 6);
+    expect(e.tapToSignup.observedCeiling).toBeCloseTo(0.7, 6);
+  });
+
+  test('money in and the simulator baseline come from the last completed month', () => {
+    expect(e.months).toEqual(['2026-10']);
+    expect(e.base.metaSpend).toBe(277);
+    expect(e.base.googleSpend).toBe(159);
+  });
+});
