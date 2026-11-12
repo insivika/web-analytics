@@ -652,5 +652,7 @@
   "label.roi-needed-to-break-even": "Needed to break even",
   "label.roi-all-ads": "All ads",
   "label.roi-above": "Above",
-  "label.roi-below": "Below"
+  "label.roi-below": "Below",
+  "label.roi-ad-visitors-start-trial": "Ad visitors who start a trial",
+  "label.roi-trials-that-pay": "Trials that become paying"
 }

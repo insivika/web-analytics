@@ -1,6 +1,14 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiAdVisitorsStartTrial: {
+    id: 'label.roi-ad-visitors-start-trial',
+    defaultMessage: 'Ad visitors who start a trial',
+  },
+  roiTrialsThatPay: {
+    id: 'label.roi-trials-that-pay',
+    defaultMessage: 'Trials that become paying',
+  },
   roiAdVisitorsWhoPay: {
     id: 'label.roi-ad-visitors-who-pay',
     defaultMessage: 'Ad visitors who pay',

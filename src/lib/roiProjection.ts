@@ -206,9 +206,14 @@ export interface Projection {
   beyondHistory: boolean;
 }
 
-export function project(base: ProjectionBase, i: ProjectionInputs): Projection {
+/** `baseline` is what "today" means (defaults to `i`); pass the real rates to see a rate change. */
+export function project(
+  base: ProjectionBase,
+  i: ProjectionInputs,
+  baseline: ProjectionInputs = i,
+): Projection {
   const projected = projectFunnel(base, i);
-  const today = projectFunnel(base, i, base.metaSpend, base.googleSpend);
+  const today = projectFunnel(base, baseline, base.metaSpend, base.googleSpend);
   const withoutAds = projectFunnel(base, i, 0, 0);
   const spend = i.metaSpend + i.googleSpend;
   const todaySpend = base.metaSpend + base.googleSpend;
@@ -424,8 +429,13 @@ export interface Outlook {
  * extra customers on top of today's: yearly ones pay up front (renewals fall
  * after month 12), monthly ones keep paying, dropping off along the real curve.
  */
-export function outlook(base: ProjectionBase, i: ProjectionInputs, retention: Retention): Outlook {
-  const p = project(base, i);
+export function outlook(
+  base: ProjectionBase,
+  i: ProjectionInputs,
+  retention: Retention,
+  baseline: ProjectionInputs = i,
+): Outlook {
+  const p = project(base, i, baseline);
   const extra = p.projected.newCustomers - p.today.newCustomers;
   const extraSpend = p.spend - (base.metaSpend + base.googleSpend);
   const yearly = i.yearlyPrice * i.keepRate;

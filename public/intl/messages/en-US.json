@@ -6032,5 +6032,17 @@
       "type": 0,
       "value": "Below"
     }
+  ],
+  "label.roi-ad-visitors-start-trial": [
+    {
+      "type": 0,
+      "value": "Ad visitors who start a trial"
+    }
+  ],
+  "label.roi-trials-that-pay": [
+    {
+      "type": 0,
+      "value": "Trials that become paying"
+    }
   ]
 }

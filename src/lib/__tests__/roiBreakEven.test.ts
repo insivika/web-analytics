@@ -315,3 +315,31 @@ describe('rolling last 30 days', () => {
     expect(e.base.googleSpend).toBe(159);
   });
 });
+
+describe('projection against a baseline', () => {
+  test('a better paid rate at the same spend adds customers against today', () => {
+    const base = withPaidVisits(projectionBase(history, 1), { meta: 2, google: 1 });
+    const today: ProjectionInputs = {
+      metaSpend: 277,
+      googleSpend: 159,
+      visitorToTrial: 0.02,
+      trialToPaying: 0.2,
+      adVisitorQuality: 1,
+      yearlyShare: 0.26,
+      monthlyPrice: 11.62,
+      yearlyPrice: 108.27,
+      monthsKept: 7,
+      keepRate: 1,
+      pricier: 0,
+      metaPaidConversion: 0.01,
+      googlePaidConversion: 0.01,
+    };
+    const better = { ...today, metaPaidConversion: 0.02, googlePaidConversion: 0.02 };
+    expect(
+      project(base, better).projected.newCustomers - project(base, better).today.newCustomers,
+    ).toBeCloseTo(0, 6);
+    const p = project(base, better, today);
+    // 277/2 + 159/1 = 297.5 paid visits, each 1 point likelier to pay.
+    expect(p.projected.newCustomers - p.today.newCustomers).toBeCloseTo(2.975, 6);
+  });
+});

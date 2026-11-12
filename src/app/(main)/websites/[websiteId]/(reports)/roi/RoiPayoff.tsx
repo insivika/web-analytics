@@ -62,6 +62,42 @@ function SpendSlider({
   );
 }
 
+/** A percentage slider (values are shares, 0..1). */
+function RateSlider({
+  label,
+  value,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <Row alignItems="center" gap="4" wrap="wrap">
+      <Text size="3" style={{ minWidth: 180 }}>
+        {label}
+      </Text>
+      <input
+        type="range"
+        aria-label={label}
+        min={0}
+        max={max * 100}
+        step={step * 100}
+        value={value * 100}
+        onChange={e => onChange(Number(e.target.value) / 100)}
+        style={{ flex: '1 1 240px', accentColor: ROI_COLORS.stripe }}
+      />
+      <Text size="5" weight="bold" align="right" style={{ minWidth: 80 }}>
+        {`${(value * 100).toFixed(1)}%`}
+      </Text>
+    </Row>
+  );
+}
+
 function Card({
   label,
   value,
@@ -127,15 +163,49 @@ export function RoiPayoff({
   const [inputs, setInputs] = useState<ProjectionInputs>(defaults);
   useEffect(() => setInputs(defaults), [defaults]);
 
+  // Ad visitor → paying = (ad visitors who start a trial) × (trials that pay).
+  // The two sliders start at today's values and scale every channel's rate.
+  const realConv = useMemo(() => {
+    const paying = e.trialToPaying;
+    const trial = paying > 0 && blended.rate !== null ? blended.rate / paying : 0;
+    return { trial, paying };
+  }, [e, blended]);
+  const [conv, setConv] = useState(realConv);
+  useEffect(() => setConv(realConv), [realConv]);
+  const k =
+    realConv.trial > 0 && realConv.paying > 0
+      ? (conv.trial / realConv.trial) * (conv.paying / realConv.paying)
+      : 1;
+  const rateOf = (r: number | null) => (r === null ? null : r * k);
+  const rates = {
+    meta: rateOf(meta.rate),
+    google: rateOf(google.rate),
+    blended: rateOf(blended.rate),
+  };
+
   const value = e.value[12];
   const per100 = {
-    all: returnPer100(blended.costPerVisit, blended.rate, value),
-    meta: returnPer100(meta.costPerVisit, meta.rate, value),
-    google: returnPer100(google.costPerVisit, google.rate, value),
+    all: returnPer100(blended.costPerVisit, rates.blended, value),
+    meta: returnPer100(meta.costPerVisit, rates.meta, value),
+    google: returnPer100(google.costPerVisit, rates.google, value),
   };
-  const o = outlook(base, inputs, retention);
+  // "Today" keeps the real rates, so changing a rate moves the projection.
+  const o = outlook(
+    base,
+    { ...inputs, metaPaidConversion: rates.meta, googlePaidConversion: rates.google },
+    retention,
+    defaults,
+  );
   const last = o.months[o.months.length - 1];
-  const changed = inputs.metaSpend !== base.metaSpend || inputs.googleSpend !== base.googleSpend;
+  const changed =
+    inputs.metaSpend !== base.metaSpend ||
+    inputs.googleSpend !== base.googleSpend ||
+    conv.trial !== realConv.trial ||
+    conv.paying !== realConv.paying;
+  const reset = () => {
+    setInputs(defaults);
+    setConv(realConv);
+  };
 
   const how = [
     formatMessage(messages.roiPayoffHowVisits, {
@@ -227,17 +297,18 @@ export function RoiPayoff({
               ] as const
             ).map(([key, label]) => {
               const c = e.channels[key];
+              const rate = rates[key];
               const need = c.breakEven[12];
-              const above = c.rate !== null && need !== null && c.rate >= need;
+              const above = rate !== null && need !== null && rate >= need;
               return (
                 <Fragment key={key}>
                   <Text weight="bold">{formatMessage(label)}</Text>
                   <Column alignItems="end">
                     <Text size="4" weight="bold">
-                      {pct(c.rate)}
+                      {pct(rate)}
                     </Text>
                     <Text color="muted" size="1">
-                      {formatMessage(messages.roiOneIn, { n: oneIn(c.rate) })}
+                      {formatMessage(messages.roiOneIn, { n: oneIn(rate) })}
                     </Text>
                   </Column>
                   <Column alignItems="end">
@@ -251,14 +322,14 @@ export function RoiPayoff({
                     weight="bold"
                     style={{
                       color:
-                        c.rate === null || need === null
+                        rate === null || need === null
                           ? undefined
                           : above
                             ? ROI_COLORS.positive
                             : ROI_COLORS.negative,
                     }}
                   >
-                    {c.rate === null || need === null
+                    {rate === null || need === null
                       ? '—'
                       : formatMessage(above ? labels.roiAbove : labels.roiBelow)}
                   </Text>
@@ -281,9 +352,23 @@ export function RoiPayoff({
             color={ROI_COLORS.google}
             onChange={v => setInputs(i => ({ ...i, googleSpend: v }))}
           />
+          <RateSlider
+            label={formatMessage(labels.roiAdVisitorsStartTrial)}
+            value={conv.trial}
+            max={Math.max(0.3, realConv.trial * 2)}
+            step={0.005}
+            onChange={v => setConv(c => ({ ...c, trial: v }))}
+          />
+          <RateSlider
+            label={formatMessage(labels.roiTrialsThatPay)}
+            value={conv.paying}
+            max={Math.max(0.6, realConv.paying * 2)}
+            step={0.01}
+            onChange={v => setConv(c => ({ ...c, paying: v }))}
+          />
           {changed && (
             <Row>
-              <Button size="sm" variant="quiet" onPress={() => setInputs(defaults)}>
+              <Button size="sm" variant="quiet" onPress={reset}>
                 {formatMessage(labels.roiReset)}
               </Button>
             </Row>
