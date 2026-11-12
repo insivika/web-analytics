@@ -654,5 +654,8 @@
   "label.roi-above": "Above",
   "label.roi-below": "Below",
   "label.roi-ad-visitors-start-trial": "Ad visitors who start a trial",
-  "label.roi-trials-that-pay": "Trials that become paying"
+  "label.roi-trials-that-pay": "Trials that become paying",
+  "label.roi-today-line": "Today (current spend and rates)",
+  "label.roi-your-scenario": "Your scenario",
+  "message.roi-today-value": "today {value}"
 }

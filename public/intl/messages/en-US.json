@@ -6044,5 +6044,27 @@
       "type": 0,
       "value": "Trials that become paying"
     }
+  ],
+  "label.roi-today-line": [
+    {
+      "type": 0,
+      "value": "Today (current spend and rates)"
+    }
+  ],
+  "label.roi-your-scenario": [
+    {
+      "type": 0,
+      "value": "Your scenario"
+    }
+  ],
+  "message.roi-today-value": [
+    {
+      "type": 0,
+      "value": "today "
+    },
+    {
+      "type": 1,
+      "value": "value"
+    }
   ]
 }

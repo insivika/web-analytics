@@ -1,6 +1,6 @@
 'use client';
 import { Button, Column, Grid, Row, Text } from '@umami/react-zen';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { InfoTip } from '@/components/common/InfoTip';
 import { Panel } from '@/components/common/Panel';
 import { useMessages } from '@/components/hooks';
@@ -26,20 +26,37 @@ const signedUsd = (n: number) => `${n >= 0 ? '+' : '−'}${usd(Math.abs(n))}`;
 const money = (n: number | null) => (n === null ? '—' : `$${n.toFixed(2)}`);
 const oneIn = (r: number | null) => (r && r > 0 ? Math.round(1 / r).toLocaleString('en-US') : '—');
 const pct = (r: number | null) => (r === null ? '—' : `${(r * 100).toFixed(1)}%`);
+const pctOf = (r: number) => `${(r * 100).toFixed(1)}%`;
 const SPEND_MAX = 3000;
 const LOOKBACK_CHOICES: Lookback[] = [LAST_30_DAYS, 3];
 
-function SpendSlider({
+/**
+ * A slider with its value, today's value under it once they differ, and a
+ * tick on the track where today's value sits.
+ */
+function Slider({
   label,
   value,
+  today,
+  max,
+  step,
   color,
+  format,
+  todayText,
   onChange,
 }: {
   label: string;
   value: number;
+  today: number;
+  max: number;
+  step: number;
   color: string;
+  format: (v: number) => string;
+  todayText: (v: string) => ReactNode;
   onChange: (v: number) => void;
 }) {
+  const id = useId();
+  const differs = Math.abs(value - today) > step / 2;
   return (
     <Row alignItems="center" gap="4" wrap="wrap">
       <Text size="3" style={{ minWidth: 180 }}>
@@ -49,51 +66,24 @@ function SpendSlider({
         type="range"
         aria-label={label}
         min={0}
-        max={SPEND_MAX}
-        step={25}
+        max={max}
+        step={step}
         value={value}
+        list={id}
         onChange={e => onChange(Number(e.target.value))}
         style={{ flex: '1 1 240px', accentColor: color }}
       />
-      <Text size="5" weight="bold" align="right" style={{ minWidth: 80 }}>
-        {usd(value)}
-      </Text>
-    </Row>
-  );
-}
-
-/** A percentage slider (values are shares, 0..1). */
-function RateSlider({
-  label,
-  value,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <Row alignItems="center" gap="4" wrap="wrap">
-      <Text size="3" style={{ minWidth: 180 }}>
-        {label}
-      </Text>
-      <input
-        type="range"
-        aria-label={label}
-        min={0}
-        max={max * 100}
-        step={step * 100}
-        value={value * 100}
-        onChange={e => onChange(Number(e.target.value) / 100)}
-        style={{ flex: '1 1 240px', accentColor: ROI_COLORS.stripe }}
-      />
-      <Text size="5" weight="bold" align="right" style={{ minWidth: 80 }}>
-        {`${(value * 100).toFixed(1)}%`}
-      </Text>
+      <datalist id={id}>
+        <option value={today} />
+      </datalist>
+      <Column alignItems="end" style={{ minWidth: 96 }}>
+        <Text size="5" weight="bold">
+          {format(value)}
+        </Text>
+        <Text color="muted" size="1" style={{ visibility: differs ? 'visible' : 'hidden' }}>
+          {todayText(format(today))}
+        </Text>
+      </Column>
     </Row>
   );
 }
@@ -189,6 +179,9 @@ export function RoiPayoff({
     meta: returnPer100(meta.costPerVisit, rates.meta, value),
     google: returnPer100(google.costPerVisit, rates.google, value),
   };
+  const todayPer100 = returnPer100(blended.costPerVisit, blended.rate, value);
+  const todayText = (v: string) => formatMessage(messages.roiTodayValue, { value: v });
+  const ratesChanged = Math.abs(k - 1) > 1e-9;
   // "Today" keeps the real rates, so changing a rate moves the projection.
   const o = outlook(
     base,
@@ -265,6 +258,12 @@ export function RoiPayoff({
             </Text>
             <Text size="5" weight="bold">
               {formatMessage(messages.roiPayoffAnswer, { amount: usd(per100.all) })}
+              {ratesChanged && todayPer100 !== null && (
+                <Text as="span" color="muted" size="3" weight="regular">
+                  {' '}
+                  ({todayText(usd(todayPer100))})
+                </Text>
+              )}
             </Text>
             <Text color="muted" size="3">
               {formatMessage(messages.roiPayoffPerChannel, {
@@ -308,7 +307,9 @@ export function RoiPayoff({
                       {pct(rate)}
                     </Text>
                     <Text color="muted" size="1">
-                      {formatMessage(messages.roiOneIn, { n: oneIn(rate) })}
+                      {ratesChanged
+                        ? todayText(pct(c.rate))
+                        : formatMessage(messages.roiOneIn, { n: oneIn(rate) })}
                     </Text>
                   </Column>
                   <Column alignItems="end">
@@ -340,30 +341,48 @@ export function RoiPayoff({
         )}
 
         <Column gap="3">
-          <SpendSlider
+          <Slider
             label={formatMessage(labels.roiMetaPerMonth)}
             value={inputs.metaSpend}
+            today={base.metaSpend}
+            max={SPEND_MAX}
+            step={25}
             color={ROI_COLORS.meta}
+            format={usd}
+            todayText={todayText}
             onChange={v => setInputs(i => ({ ...i, metaSpend: v }))}
           />
-          <SpendSlider
+          <Slider
             label={formatMessage(labels.roiGooglePerMonth)}
             value={inputs.googleSpend}
+            today={base.googleSpend}
+            max={SPEND_MAX}
+            step={25}
             color={ROI_COLORS.google}
+            format={usd}
+            todayText={todayText}
             onChange={v => setInputs(i => ({ ...i, googleSpend: v }))}
           />
-          <RateSlider
+          <Slider
             label={formatMessage(labels.roiAdVisitorsStartTrial)}
             value={conv.trial}
+            today={realConv.trial}
             max={Math.max(0.3, realConv.trial * 2)}
             step={0.005}
+            color={ROI_COLORS.stripe}
+            format={pctOf}
+            todayText={todayText}
             onChange={v => setConv(c => ({ ...c, trial: v }))}
           />
-          <RateSlider
+          <Slider
             label={formatMessage(labels.roiTrialsThatPay)}
             value={conv.paying}
+            today={realConv.paying}
             max={Math.max(0.6, realConv.paying * 2)}
             step={0.01}
+            color={ROI_COLORS.stripe}
+            format={pctOf}
+            todayText={todayText}
             onChange={v => setConv(c => ({ ...c, paying: v }))}
           />
           {changed && (
@@ -396,10 +415,8 @@ export function RoiPayoff({
           labels={o.months.map(m => formatMessage(messages.roiMonthN, { n: m.month }))}
           today={o.months.map(m => Math.round(m.today))}
           projected={o.months.map(m => Math.round(m.projected))}
-          todayLabel={formatMessage(labels.roiAtTodaySpend)}
-          projectedLabel={formatMessage(messages.roiAtSpend, {
-            spend: usd(inputs.metaSpend + inputs.googleSpend),
-          })}
+          todayLabel={formatMessage(labels.roiTodayLine)}
+          projectedLabel={formatMessage(labels.roiYourScenario)}
         />
       </Column>
     </Panel>
