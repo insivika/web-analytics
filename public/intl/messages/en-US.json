@@ -6084,5 +6084,73 @@
       "type": 0,
       "value": "today"
     }
+  ],
+  "message.roi-trial-split": [
+    {
+      "type": 0,
+      "value": "Today: "
+    },
+    {
+      "type": 1,
+      "value": "web"
+    },
+    {
+      "type": 0,
+      "value": " sign up on the website (measured) + "
+    },
+    {
+      "type": 1,
+      "value": "app"
+    },
+    {
+      "type": 0,
+      "value": " via the app stores (estimated: "
+    },
+    {
+      "type": 1,
+      "value": "taps"
+    },
+    {
+      "type": 0,
+      "value": " tap a store button, and about 1 in "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " of them is assumed to sign up in the app)."
+    }
+  ],
+  "message.roi-paying-split": [
+    {
+      "type": 0,
+      "value": "Today: of "
+    },
+    {
+      "type": 1,
+      "value": "trials"
+    },
+    {
+      "type": 0,
+      "value": " trials in the last 6 months that are old enough to tell, "
+    },
+    {
+      "type": 1,
+      "value": "paid"
+    },
+    {
+      "type": 0,
+      "value": " paid within "
+    },
+    {
+      "type": 1,
+      "value": "days"
+    },
+    {
+      "type": 0,
+      "value": " days (measured)."
+    }
   ]
 }

@@ -49,6 +49,31 @@ export const MIN_MEASURED_PAYERS = 10;
 export const MIN_PAID_VISITS = 50;
 /** Completed months behind the trial-to-paying rate (at least; more with a longer lookback). */
 export const TRIAL_TO_PAYING_MONTHS = 6;
+/** A trial counts toward trial-to-paying once it's this old (14-day trial + billing). */
+export const TRIAL_MATURE_DAYS = 30;
+/** A trial converted if its user's first payment came within this many days of the start. */
+export const PAID_WITHIN_DAYS = 45;
+
+/** Trials started in a month (old enough to judge) and how many of those users paid. */
+export interface TrialCohort {
+  month: string;
+  trials: number;
+  paid: number;
+}
+
+/**
+ * Trial-to-paying over the cohorts of the given months; null without trials.
+ * Store purchases only carry a user id since Oct 2026, so older app trials
+ * that paid in the store are missed and this reads slightly low.
+ */
+export function cohortTrialToPaying(cohorts: TrialCohort[], months: string[]) {
+  const set = new Set(months);
+  const rows = cohorts.filter(c => set.has(c.month));
+  const trials = rows.reduce((s, c) => s + c.trials, 0);
+  const paid = rows.reduce((s, c) => s + c.paid, 0);
+  return trials > 0 ? { rate: paid / trials, trials, paid } : null;
+}
+
 /** A month counts as having ad spend from this much on. */
 export const MEANINGFUL_SPEND = 50;
 /** Ad-acquired customers needed before their own retention is shown. */
@@ -329,6 +354,8 @@ export interface Economics {
   channels: Record<ChannelKey, ChannelEconomics>;
   tapToSignup: { value: number; assumed: boolean; observedCeiling: number | null };
   trialToPaying: number;
+  /** The trial cohorts behind trialToPaying; null when it fell back to the same-month ratio. */
+  trialCohort: { trials: number; paid: number; months: string[] } | null;
   /** Completed months (all history) with meaningful ad spend. */
   adMonths: number;
   settings: BreakEvenSettings;
@@ -357,6 +384,7 @@ export function buildEconomics(
   retention: Retention,
   lookback: Lookback,
   settings: BreakEvenSettings,
+  trialCohorts: TrialCohort[] = [],
 ): Economics {
   // The rolling window covers paid traffic and spend; money in, visitors and
   // plan economics only exist per month, so they come from the last completed one.
@@ -369,10 +397,10 @@ export function buildEconomics(
     : completed;
   // Trial-to-paying over at least TRIAL_TO_PAYING_MONTHS: a single month's
   // trials haven't all had the chance to pay yet, so a short window swings.
-  const trialToPaying = projectionBase(
-    history,
-    Math.max(months, TRIAL_TO_PAYING_MONTHS),
-  ).trialToPaying;
+  const ttpMonths = history.slice(-Math.max(months, TRIAL_TO_PAYING_MONTHS)).map(m => m.month);
+  const cohort = cohortTrialToPaying(trialCohorts, ttpMonths);
+  const trialToPaying =
+    cohort?.rate ?? projectionBase(history, Math.max(months, TRIAL_TO_PAYING_MONTHS)).trialToPaying;
   const inputs = defaultInputs(base, plans);
   const model = valueModel(inputs, retention, settings.otherCostPerCustomerMonth);
   const value = byWindow(n => customerValueWithin(model, n));
@@ -428,6 +456,7 @@ export function buildEconomics(
     },
     tapToSignup: { value: tapToSignup, assumed: settings.tapToSignup === null, observedCeiling },
     trialToPaying,
+    trialCohort: cohort ? { trials: cohort.trials, paid: cohort.paid, months: ttpMonths } : null,
     adMonths: history.filter(m => m.metaSpend + m.googleSpend + m.otherSpend >= MEANINGFUL_SPEND)
       .length,
     settings,

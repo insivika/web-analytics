@@ -21,7 +21,10 @@ import {
   LAST_30_DAYS,
   MATURE_DAYS,
   MIN_AD_RETENTION_CUSTOMERS,
+  PAID_WITHIN_DAYS,
   ROLLING_DAYS,
+  TRIAL_MATURE_DAYS,
+  type TrialCohort,
 } from '@/lib/roiBreakEven';
 import {
   buildRetention,
@@ -102,11 +105,13 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
       getSyncStatus(websiteId),
       getCustomerValue(websiteId),
     ]);
-  const [plans, retention, channels] = await Promise.all([
+  const [plans, retention, channels, firstPayments] = await Promise.all([
     getPlans(websiteId, now, appStores),
     getRetention(websiteId),
     getChannelData(websiteId, hostname, fromDate, now),
+    getFirstPayments(websiteId),
   ]);
+  const trialCohorts = buildTrialCohorts(trialStarts, firstPayments, now);
 
   const trials = new Map<string, number>();
   for (const start of trialStarts.values()) {
@@ -157,7 +162,14 @@ async function relationalQuery(websiteId: string, trialSettings: TrialSettings) 
     stale: staleSources(sources, now),
     spendFxGaps: spend.fxGaps,
     botCountries: getBotCountries(),
-    projection: { history: projectionHistory, customerValue, plans, retention, channels },
+    projection: {
+      history: projectionHistory,
+      customerValue,
+      plans,
+      retention,
+      channels,
+      trialCohorts,
+    },
     syncErrors: syncStatus
       .filter(s => s.last?.status === 'error')
       .map(s => ({ source: s.source, message: s.last?.message ?? '' })),
@@ -493,6 +505,60 @@ async function getRetention(websiteId: string, userIds?: string[]): Promise<Rete
     'getRoiRetention',
   );
   return buildRetention(rows as any[]);
+}
+
+/**
+ * Each user's first payment: on the web (Stripe) or in the app stores
+ * (subscription_started; store purchases carry a user id since Oct 2026).
+ */
+async function getFirstPayments(websiteId: string): Promise<Map<string, Date>> {
+  const rows = await prisma.rawQuery(
+    `
+    select uid, min(first) as first from (
+      select user_id as uid, min(occurred_at) as first
+      from revenue_txn
+      where website_id = {{websiteId::uuid}} and source = 'stripe' and kind = 'payment'
+        and gross_usd > 0 and user_id is not null
+      group by 1
+      union all
+      select u.string_value, min(e.created_at)
+      from website_event e
+      join event_data u on u.website_event_id = e.event_id and u.data_key = 'user_id'
+      where e.website_id = {{websiteId::uuid}} and e.event_name = 'subscription_started'
+      group by 1
+    ) x
+    group by 1
+    `,
+    { websiteId },
+    'getRoiFirstPayments',
+  );
+  return new Map((rows as any[]).map(r => [r.uid, new Date(r.first)]));
+}
+
+/**
+ * Trial-to-paying by trial cohort: of the trials started each month that are
+ * old enough to have played out, how many users paid within PAID_WITHIN_DAYS.
+ * (Dividing a month's new customers by the same month's trials mixes cohorts.)
+ */
+function buildTrialCohorts(
+  starts: Map<string, Date>,
+  firstPaid: Map<string, Date>,
+  now: Date,
+): TrialCohort[] {
+  const matureBefore = +now - TRIAL_MATURE_DAYS * 86_400_000;
+  const byMonth = new Map<string, TrialCohort>();
+  for (const [uid, start] of starts) {
+    const t = +new Date(start);
+    if (t > matureBefore) continue;
+    const month = monthOf(start);
+    const row = byMonth.get(month) ?? { month, trials: 0, paid: 0 };
+    row.trials += 1;
+    const paid = firstPaid.get(uid);
+    const days = paid ? (+paid - t) / 86_400_000 : null;
+    if (days !== null && days >= -1 && days <= PAID_WITHIN_DAYS) row.paid += 1;
+    byMonth.set(month, row);
+  }
+  return [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month));
 }
 
 // Paid clicks: Google adds a gclid (or the campaign is tagged google / cpc);

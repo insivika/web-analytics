@@ -9,6 +9,7 @@ import {
   type Economics,
   LAST_30_DAYS,
   type Lookback,
+  PAID_WITHIN_DAYS,
   returnPer100,
 } from '@/lib/roiBreakEven';
 import {
@@ -51,6 +52,7 @@ function Slider({
   format,
   todayText,
   todayMarker,
+  note,
   onChange,
 }: {
   label: string;
@@ -62,67 +64,76 @@ function Slider({
   format: (v: number) => string;
   todayText: (v: string) => ReactNode;
   todayMarker: string;
+  /** A short line under the slider explaining where today's value comes from. */
+  note?: string;
   onChange: (v: number) => void;
 }) {
   const differs = Math.abs(value - today) > step / 2;
   const left = trackLeft(today, max);
   return (
-    <Row alignItems="center" gap="4" wrap="wrap">
-      <Text size="3" style={{ minWidth: 180 }}>
-        {label}
-      </Text>
-      <div style={{ position: 'relative', flex: '1 1 240px', paddingTop: 14 }}>
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            top: 0,
-            left,
-            transform: 'translateX(-50%)',
-            fontSize: 10,
-            lineHeight: '12px',
-            color: 'rgba(160,160,160,0.95)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {todayMarker}
-        </span>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="range"
-            aria-label={label}
-            min={0}
-            max={max}
-            step={step}
-            value={value}
-            onChange={e => onChange(Number(e.target.value))}
-            style={{ display: 'block', width: '100%', margin: 0, accentColor: color }}
-          />
+    <Column gap="1">
+      <Row alignItems="center" gap="4" wrap="wrap">
+        <Text size="3" style={{ minWidth: 180 }}>
+          {label}
+        </Text>
+        <div style={{ position: 'relative', flex: '1 1 240px', paddingTop: 14 }}>
           <span
             aria-hidden
             style={{
               position: 'absolute',
-              top: '50%',
+              top: 0,
               left,
-              width: 2,
-              height: 20,
-              borderRadius: 1,
-              background: 'rgba(160,160,160,0.95)',
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
+              transform: 'translateX(-50%)',
+              fontSize: 10,
+              lineHeight: '12px',
+              color: 'rgba(160,160,160,0.95)',
+              whiteSpace: 'nowrap',
             }}
-          />
+          >
+            {todayMarker}
+          </span>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="range"
+              aria-label={label}
+              min={0}
+              max={max}
+              step={step}
+              value={value}
+              onChange={e => onChange(Number(e.target.value))}
+              style={{ display: 'block', width: '100%', margin: 0, accentColor: color }}
+            />
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left,
+                width: 2,
+                height: 20,
+                borderRadius: 1,
+                background: 'rgba(160,160,160,0.95)',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
         </div>
-      </div>
-      <Column alignItems="end" style={{ minWidth: 96 }}>
-        <Text size="5" weight="bold">
-          {format(value)}
+        <Column alignItems="end" style={{ minWidth: 96 }}>
+          <Text size="5" weight="bold">
+            {format(value)}
+          </Text>
+          <Text color="muted" size="1" style={{ visibility: differs ? 'visible' : 'hidden' }}>
+            {todayText(format(today))}
+          </Text>
+        </Column>
+      </Row>
+      {note && (
+        <Text color="muted" size="1" style={{ paddingLeft: 196 }}>
+          {note}
         </Text>
-        <Text color="muted" size="1" style={{ visibility: differs ? 'visible' : 'hidden' }}>
-          {todayText(format(today))}
-        </Text>
-      </Column>
-    </Row>
+      )}
+    </Column>
   );
 }
 
@@ -426,6 +437,12 @@ export function RoiPayoff({
             format={pctOf}
             todayText={todayText}
             todayMarker={formatMessage(labels.roiTodayMarker)}
+            note={formatMessage(messages.roiTrialSplit, {
+              web: pctOf(blended.estimated.webSignupRate),
+              app: pctOf(blended.estimated.tapRate * blended.estimated.tapToSignup),
+              taps: pctOf(blended.estimated.tapRate),
+              n: Math.round(1 / (blended.estimated.tapToSignup || DEFAULT_TAP_TO_SIGNUP)),
+            })}
             onChange={v => setConv(c => ({ ...c, trial: v }))}
           />
           <Slider
@@ -438,6 +455,15 @@ export function RoiPayoff({
             format={pctOf}
             todayText={todayText}
             todayMarker={formatMessage(labels.roiTodayMarker)}
+            note={
+              e.trialCohort
+                ? formatMessage(messages.roiPayingSplit, {
+                    paid: e.trialCohort.paid,
+                    trials: e.trialCohort.trials,
+                    days: PAID_WITHIN_DAYS,
+                  })
+                : undefined
+            }
             onChange={v => setConv(c => ({ ...c, paying: v }))}
           />
           {changed && (

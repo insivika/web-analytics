@@ -660,5 +660,7 @@
   "message.roi-today-value": "today {value}",
   "label.roi-today": "Today",
   "label.roi-same-as-today": "Same as today",
-  "label.roi-today-marker": "today"
+  "label.roi-today-marker": "today",
+  "message.roi-trial-split": "Today: {web} sign up on the website (measured) + {app} via the app stores (estimated: {taps} tap a store button, and about 1 in {n} of them is assumed to sign up in the app).",
+  "message.roi-paying-split": "Today: of {trials} trials in the last 6 months that are old enough to tell, {paid} paid within {days} days (measured)."
 }

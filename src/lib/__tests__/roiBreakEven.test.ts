@@ -2,6 +2,7 @@ import {
   breakEvenRate,
   buildEconomics,
   type ChannelData,
+  cohortTrialToPaying,
   customerValueWithin,
   DEFAULT_SETTINGS,
   DEFAULT_TAP_TO_SIGNUP,
@@ -341,5 +342,29 @@ describe('projection against a baseline', () => {
     const p = project(base, better, today);
     // 277/2 + 159/1 = 297.5 paid visits, each 1 point likelier to pay.
     expect(p.projected.newCustomers - p.today.newCustomers).toBeCloseTo(2.975, 6);
+  });
+});
+
+describe('trial-to-paying by trial cohort', () => {
+  const cohorts = [
+    { month: '2026-08', trials: 39, paid: 10 },
+    { month: '2026-09', trials: 37, paid: 9 },
+    { month: '2026-10', trials: 60, paid: 8 },
+  ];
+
+  test('paid ÷ trials over the chosen months', () => {
+    expect(cohortTrialToPaying(cohorts, ['2026-08', '2026-09'])).toEqual({
+      rate: 19 / 76,
+      trials: 76,
+      paid: 19,
+    });
+    expect(cohortTrialToPaying(cohorts, ['2026-05'])).toBeNull();
+  });
+
+  test('replaces the same-month ratio in the model', () => {
+    const e = buildEconomics(history, channels, plans, retention, 1, DEFAULT_SETTINGS, cohorts);
+    // Last 6 completed months of the history (Aug–Oct here): 27 of 136.
+    expect(e.trialToPaying).toBeCloseTo(27 / 136, 6);
+    expect(e.channels.meta.rate).toBeCloseTo(((7 + 45 * 0.2) / 148) * (27 / 136), 6);
   });
 });

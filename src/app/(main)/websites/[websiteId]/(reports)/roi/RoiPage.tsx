@@ -145,6 +145,7 @@ export function RoiPage({ websiteId }: { websiteId: string }) {
             projection.retention,
             lookback,
             DEFAULT_SETTINGS,
+            projection.trialCohorts ?? [],
           )
         : null,
     [projection, lookback],

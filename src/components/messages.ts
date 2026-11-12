@@ -652,6 +652,16 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiTrialSplit: {
+    id: 'message.roi-trial-split',
+    defaultMessage:
+      'Today: {web} sign up on the website (measured) + {app} via the app stores (estimated: {taps} tap a store button, and about 1 in {n} of them is assumed to sign up in the app).',
+  },
+  roiPayingSplit: {
+    id: 'message.roi-paying-split',
+    defaultMessage:
+      'Today: of {trials} trials in the last 6 months that are old enough to tell, {paid} paid within {days} days (measured).',
+  },
   roiTodayValue: { id: 'message.roi-today-value', defaultMessage: 'today {value}' },
   roiPayoffAnswer: {
     id: 'message.roi-payoff-answer',
