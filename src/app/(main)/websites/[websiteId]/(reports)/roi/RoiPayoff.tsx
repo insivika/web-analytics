@@ -124,7 +124,7 @@ function Slider({
   return (
     <Column gap="1">
       <Row alignItems="center" gap="4" wrap="wrap">
-        <Text size="3" style={{ minWidth: 180, maxWidth: 220 }}>
+        <Text size="3" style={{ width: 180, flex: 'none' }}>
           {label}
         </Text>
         <div style={{ position: 'relative', flex: '1 1 240px', paddingTop: 14 }}>
