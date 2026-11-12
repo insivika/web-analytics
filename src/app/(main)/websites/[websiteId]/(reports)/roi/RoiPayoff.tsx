@@ -1,6 +1,6 @@
 'use client';
 import { Button, Column, Grid, Row, Text } from '@umami/react-zen';
-import { Fragment, type ReactNode, useEffect, useId, useMemo, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { InfoTip } from '@/components/common/InfoTip';
 import { Panel } from '@/components/common/Panel';
 import { useMessages } from '@/components/hooks';
@@ -28,11 +28,18 @@ const oneIn = (r: number | null) => (r && r > 0 ? Math.round(1 / r).toLocaleStri
 const pct = (r: number | null) => (r === null ? '—' : `${(r * 100).toFixed(1)}%`);
 const pctOf = (r: number) => `${(r * 100).toFixed(1)}%`;
 const SPEND_MAX = 3000;
+const MUTED_LINE = 'rgba(128,128,128,0.8)';
 const LOOKBACK_CHOICES: Lookback[] = [LAST_30_DAYS, 3];
 
+/** Where a value sits on a native range track (the thumb is about 16px wide). */
+const trackLeft = (value: number, max: number) => {
+  const p = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
+  return `calc(${p * 100}% + ${(0.5 - p) * 16}px)`;
+};
+
 /**
- * A slider with its value, today's value under it once they differ, and a
- * tick on the track where today's value sits.
+ * A slider with a grey "today" marker on the track, so dragging shows the gap
+ * to today's value; today's value also shows under the number once they differ.
  */
 function Slider({
   label,
@@ -43,6 +50,7 @@ function Slider({
   color,
   format,
   todayText,
+  todayMarker,
   onChange,
 }: {
   label: string;
@@ -53,29 +61,59 @@ function Slider({
   color: string;
   format: (v: number) => string;
   todayText: (v: string) => ReactNode;
+  todayMarker: string;
   onChange: (v: number) => void;
 }) {
-  const id = useId();
   const differs = Math.abs(value - today) > step / 2;
+  const left = trackLeft(today, max);
   return (
     <Row alignItems="center" gap="4" wrap="wrap">
       <Text size="3" style={{ minWidth: 180 }}>
         {label}
       </Text>
-      <input
-        type="range"
-        aria-label={label}
-        min={0}
-        max={max}
-        step={step}
-        value={value}
-        list={id}
-        onChange={e => onChange(Number(e.target.value))}
-        style={{ flex: '1 1 240px', accentColor: color }}
-      />
-      <datalist id={id}>
-        <option value={today} />
-      </datalist>
+      <div style={{ position: 'relative', flex: '1 1 240px', paddingTop: 14 }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0,
+            left,
+            transform: 'translateX(-50%)',
+            fontSize: 10,
+            lineHeight: '12px',
+            color: 'rgba(160,160,160,0.95)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {todayMarker}
+        </span>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="range"
+            aria-label={label}
+            min={0}
+            max={max}
+            step={step}
+            value={value}
+            onChange={e => onChange(Number(e.target.value))}
+            style={{ display: 'block', width: '100%', margin: 0, accentColor: color }}
+          />
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left,
+              width: 2,
+              height: 20,
+              borderRadius: 1,
+              background: 'rgba(160,160,160,0.95)',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+      </div>
       <Column alignItems="end" style={{ minWidth: 96 }}>
         <Text size="5" weight="bold">
           {format(value)}
@@ -85,36 +123,6 @@ function Slider({
         </Text>
       </Column>
     </Row>
-  );
-}
-
-function Card({
-  label,
-  value,
-  sub,
-  good,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  good: boolean;
-}) {
-  return (
-    <Column paddingX="5" paddingY="4" borderRadius="3" border gap="1">
-      <Text color="muted" size="2">
-        {label}
-      </Text>
-      <Text
-        size="7"
-        weight="bold"
-        style={{ color: good ? ROI_COLORS.positive : ROI_COLORS.negative }}
-      >
-        {value}
-      </Text>
-      <Text color="muted" size="1">
-        {sub}
-      </Text>
-    </Column>
   );
 }
 
@@ -246,24 +254,25 @@ export function RoiPayoff({
           <Text size="5">{formatMessage(messages.roiPayoffNoData)}</Text>
         ) : (
           <Column gap="1">
-            <Text
-              size="9"
-              weight="bold"
-              style={{
-                lineHeight: 1,
-                color: per100.all >= 100 ? ROI_COLORS.positive : ROI_COLORS.negative,
-              }}
-            >
-              {usd(per100.all)}
-            </Text>
-            <Text size="5" weight="bold">
-              {formatMessage(messages.roiPayoffAnswer, { amount: usd(per100.all) })}
+            <Row alignItems="baseline" gap="3" wrap="wrap">
               {ratesChanged && todayPer100 !== null && (
-                <Text as="span" color="muted" size="3" weight="regular">
-                  {' '}
-                  ({todayText(usd(todayPer100))})
+                <Text size="7" weight="bold" color="muted" style={{ lineHeight: 1 }}>
+                  {usd(todayPer100)} →
                 </Text>
               )}
+              <Text
+                size="9"
+                weight="bold"
+                style={{
+                  lineHeight: 1,
+                  color: per100.all >= 100 ? ROI_COLORS.positive : ROI_COLORS.negative,
+                }}
+              >
+                {usd(per100.all)}
+              </Text>
+            </Row>
+            <Text size="5" weight="bold">
+              {formatMessage(messages.roiPayoffAnswer, { amount: usd(per100.all) })}
             </Text>
             <Text color="muted" size="3">
               {formatMessage(messages.roiPayoffPerChannel, {
@@ -276,14 +285,25 @@ export function RoiPayoff({
 
         {blended.breakEven[12] !== null && (
           <Grid
-            columns="minmax(80px,1fr) minmax(120px,1.2fr) minmax(120px,1.2fr) minmax(90px,1fr)"
+            columns={
+              ratesChanged
+                ? 'minmax(80px,1fr) repeat(3, minmax(110px,1fr)) minmax(80px,0.8fr)'
+                : 'minmax(80px,1fr) repeat(2, minmax(110px,1fr)) minmax(80px,0.8fr)'
+            }
             gap="3"
             alignItems="center"
           >
-            <Text color="muted" size="2" />
-            <Text color="muted" size="2" align="right">
+            <Text color="muted" size="2">
               {formatMessage(labels.roiAdVisitorsWhoPay)}
             </Text>
+            <Text color="muted" size="2" align="right">
+              {formatMessage(labels.roiToday)}
+            </Text>
+            {ratesChanged && (
+              <Text color="muted" size="2" align="right">
+                {formatMessage(labels.roiYourScenario)}
+              </Text>
+            )}
             <Text color="muted" size="2" align="right">
               {formatMessage(labels.roiNeededToBreakEven)}
             </Text>
@@ -299,25 +319,26 @@ export function RoiPayoff({
               const rate = rates[key];
               const need = c.breakEven[12];
               const above = rate !== null && need !== null && rate >= need;
+              const cell = (r: number | null, strong: boolean, muted: boolean) => (
+                <Column alignItems="end">
+                  <Text
+                    size="4"
+                    weight={strong ? 'bold' : undefined}
+                    color={muted ? 'muted' : undefined}
+                  >
+                    {pct(r)}
+                  </Text>
+                  <Text color="muted" size="1">
+                    {formatMessage(messages.roiOneIn, { n: oneIn(r) })}
+                  </Text>
+                </Column>
+              );
               return (
                 <Fragment key={key}>
                   <Text weight="bold">{formatMessage(label)}</Text>
-                  <Column alignItems="end">
-                    <Text size="4" weight="bold">
-                      {pct(rate)}
-                    </Text>
-                    <Text color="muted" size="1">
-                      {ratesChanged
-                        ? todayText(pct(c.rate))
-                        : formatMessage(messages.roiOneIn, { n: oneIn(rate) })}
-                    </Text>
-                  </Column>
-                  <Column alignItems="end">
-                    <Text size="4">{pct(need)}</Text>
-                    <Text color="muted" size="1">
-                      {formatMessage(messages.roiOneIn, { n: oneIn(need) })}
-                    </Text>
-                  </Column>
+                  {cell(c.rate, !ratesChanged, ratesChanged)}
+                  {ratesChanged && cell(rate, true, false)}
+                  {cell(need, false, false)}
                   <Text
                     align="right"
                     weight="bold"
@@ -350,6 +371,7 @@ export function RoiPayoff({
             color={ROI_COLORS.meta}
             format={usd}
             todayText={todayText}
+            todayMarker={formatMessage(labels.roiTodayMarker)}
             onChange={v => setInputs(i => ({ ...i, metaSpend: v }))}
           />
           <Slider
@@ -361,6 +383,7 @@ export function RoiPayoff({
             color={ROI_COLORS.google}
             format={usd}
             todayText={todayText}
+            todayMarker={formatMessage(labels.roiTodayMarker)}
             onChange={v => setInputs(i => ({ ...i, googleSpend: v }))}
           />
           <Slider
@@ -372,6 +395,7 @@ export function RoiPayoff({
             color={ROI_COLORS.stripe}
             format={pctOf}
             todayText={todayText}
+            todayMarker={formatMessage(labels.roiTodayMarker)}
             onChange={v => setConv(c => ({ ...c, trial: v }))}
           />
           <Slider
@@ -383,6 +407,7 @@ export function RoiPayoff({
             color={ROI_COLORS.stripe}
             format={pctOf}
             todayText={todayText}
+            todayMarker={formatMessage(labels.roiTodayMarker)}
             onChange={v => setConv(c => ({ ...c, paying: v }))}
           />
           {changed && (
@@ -411,13 +436,45 @@ export function RoiPayoff({
           />
         </Grid>
 
-        <OutlookChart
-          labels={o.months.map(m => formatMessage(messages.roiMonthN, { n: m.month }))}
-          today={o.months.map(m => Math.round(m.today))}
-          projected={o.months.map(m => Math.round(m.projected))}
-          todayLabel={formatMessage(labels.roiTodayLine)}
-          projectedLabel={formatMessage(labels.roiYourScenario)}
-        />
+        <Column gap="2">
+          <Row gap="5" wrap="wrap">
+            <Text size="2" color="muted">
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: 16,
+                  borderTop: `2px dashed ${MUTED_LINE}`,
+                  marginRight: 8,
+                  verticalAlign: 'middle',
+                }}
+              />
+              {formatMessage(labels.roiTodayLine)}
+            </Text>
+            <Text size="2">
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: 16,
+                  borderTop: `3px solid ${
+                    last.projected >= last.today ? ROI_COLORS.positive : ROI_COLORS.negative
+                  }`,
+                  marginRight: 8,
+                  verticalAlign: 'middle',
+                }}
+              />
+              {formatMessage(changed ? labels.roiYourScenario : labels.roiSameAsToday)}
+            </Text>
+          </Row>
+          <OutlookChart
+            labels={o.months.map(m => formatMessage(messages.roiMonthN, { n: m.month }))}
+            today={o.months.map(m => Math.round(m.today))}
+            projected={o.months.map(m => Math.round(m.projected))}
+            todayLabel={formatMessage(labels.roiTodayLine)}
+            projectedLabel={formatMessage(changed ? labels.roiYourScenario : labels.roiSameAsToday)}
+          />
+        </Column>
       </Column>
     </Panel>
   );

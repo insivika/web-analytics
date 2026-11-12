@@ -1,6 +1,9 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiToday: { id: 'label.roi-today', defaultMessage: 'Today' },
+  roiSameAsToday: { id: 'label.roi-same-as-today', defaultMessage: 'Same as today' },
+  roiTodayMarker: { id: 'label.roi-today-marker', defaultMessage: 'today' },
   roiTodayLine: { id: 'label.roi-today-line', defaultMessage: 'Today (current spend and rates)' },
   roiYourScenario: { id: 'label.roi-your-scenario', defaultMessage: 'Your scenario' },
   roiAdVisitorsStartTrial: {

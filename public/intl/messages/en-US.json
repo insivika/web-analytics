@@ -6066,5 +6066,23 @@
       "type": 1,
       "value": "value"
     }
+  ],
+  "label.roi-today": [
+    {
+      "type": 0,
+      "value": "Today"
+    }
+  ],
+  "label.roi-same-as-today": [
+    {
+      "type": 0,
+      "value": "Same as today"
+    }
+  ],
+  "label.roi-today-marker": [
+    {
+      "type": 0,
+      "value": "today"
+    }
   ]
 }
