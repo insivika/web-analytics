@@ -126,6 +126,36 @@ function Slider({
   );
 }
 
+function Card({
+  label,
+  value,
+  sub,
+  good,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  good: boolean;
+}) {
+  return (
+    <Column paddingX="5" paddingY="4" borderRadius="3" border gap="1">
+      <Text color="muted" size="2">
+        {label}
+      </Text>
+      <Text
+        size="7"
+        weight="bold"
+        style={{ color: good ? ROI_COLORS.positive : ROI_COLORS.negative }}
+      >
+        {value}
+      </Text>
+      <Text color="muted" size="1">
+        {sub}
+      </Text>
+    </Column>
+  );
+}
+
 /**
  * Do ads pay off? One answer (what $100 of ads brings back within a year),
  * two spend sliders and what they do to the next 12 months, and what it would
