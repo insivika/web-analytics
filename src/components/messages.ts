@@ -1,6 +1,16 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiRateAlongBottom: {
+    id: 'label.roi-rate-along-bottom',
+    defaultMessage: 'Rate along the bottom',
+  },
+  roiChannel: { id: 'label.roi-channel', defaultMessage: 'Channel' },
+  roiSpent100: { id: 'label.roi-spent-100', defaultMessage: '$100 spent' },
+  roiWhenAdsPayOff: {
+    id: 'label.roi-when-ads-pay-off',
+    defaultMessage: 'At what rate do ads pay off?',
+  },
   roiCostPerAdVisitor: {
     id: 'label.roi-cost-per-ad-visitor',
     defaultMessage: 'Cost per ad visitor',
@@ -668,6 +678,41 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiGraphBreakEven: { id: 'message.roi-graph-break-even', defaultMessage: 'Break-even {rate}' },
+  roiGraphBack: { id: 'message.roi-graph-back', defaultMessage: '{amount} back' },
+  roiWhatTrial: { id: 'message.roi-what-trial', defaultMessage: 'of ad visitors start a trial' },
+  roiWhatPaying: { id: 'message.roi-what-paying', defaultMessage: 'of trials become paying' },
+  roiGraphShort: {
+    id: 'message.roi-graph-short',
+    defaultMessage:
+      'Ads pay off once {be} {what}. You are at {lo} to {hi}, so {gap} points short at best.',
+  },
+  roiGraphEdge: {
+    id: 'message.roi-graph-edge',
+    defaultMessage: 'Ads pay off once {be} {what}. You are at {lo} to {hi}, so right on the edge.',
+  },
+  roiGraphAbove: {
+    id: 'message.roi-graph-above',
+    defaultMessage: 'Ads pay off once {be} {what}. You are at {lo} to {hi}, so above it.',
+  },
+  roiGraphNever: {
+    id: 'message.roi-graph-never',
+    defaultMessage: 'Ads cannot pay off on this rate alone. Another lever has to move too.',
+  },
+  roiHereTrial: {
+    id: 'message.roi-here-trial',
+    defaultMessage:
+      'You are here: from measured website signups only, up to including estimated app signups',
+  },
+  roiHerePaying: {
+    id: 'message.roi-here-paying',
+    defaultMessage: 'You are here: the likely range given only {trials} trials to judge from',
+  },
+  roiGraphHint: {
+    id: 'message.roi-graph-hint',
+    defaultMessage:
+      'Red: ads lose money. Green: ads pay for themselves. The levers below move the green line.',
+  },
   roiBreakEvenValue: { id: 'message.roi-break-even-value', defaultMessage: 'break-even {value}' },
   roiGapBelow: {
     id: 'message.roi-gap-below',

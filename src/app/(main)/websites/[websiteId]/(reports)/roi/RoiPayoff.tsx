@@ -13,6 +13,7 @@ import {
   leverBreakEven,
   PAID_WITHIN_DAYS,
   returnPer100,
+  wilsonInterval,
 } from '@/lib/roiBreakEven';
 import {
   defaultInputs,
@@ -22,7 +23,8 @@ import {
   type Retention,
   withPaidVisits,
 } from '@/lib/roiProjection';
-import { OutlookChart, ROI_COLORS } from './RoiCharts';
+import { BreakEvenChart, HERE_COLOR } from './RoiBreakEvenChart';
+import { ROI_COLORS } from './RoiCharts';
 
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 const signedUsd = (n: number) => `${n >= 0 ? '+' : '−'}${usd(Math.abs(n))}`;
@@ -30,7 +32,6 @@ const money = (n: number | null) => (n === null ? '—' : `$${n.toFixed(2)}`);
 const oneIn = (r: number | null) => (r && r > 0 ? Math.round(1 / r).toLocaleString('en-US') : '—');
 const pctOf = (r: number) => `${(r * 100).toFixed(1)}%`;
 const SPEND_MAX = 3000;
-const MUTED_LINE = 'rgba(128,128,128,0.8)';
 const LOOKBACK_CHOICES: Lookback[] = [LAST_30_DAYS, 3];
 
 /** Where a value sits on a native range track (the thumb is about 16px wide). */
@@ -333,6 +334,81 @@ export function RoiPayoff({
   const beMarker = formatMessage(labels.roiBreakEvenMarker);
   const visitors = ready ? 100 / lv.costPerVisit : 0;
 
+  // The graph: dollars back per $100 against one rate, for one channel.
+  const [axis, setAxis] = useState<'trial' | 'paying'>('trial');
+  const [graphChannel, setGraphChannel] = useState<'blended' | 'meta' | 'google'>('blended');
+  const graph = (() => {
+    const c = e.channels[graphChannel];
+    if (!ready || c.costPerVisit === null || c.rate === null) return null;
+    const cost = c.costPerVisit * costX;
+    const trialX = lv.trial / real.trial;
+    // Today's trial rate for this channel: measured website signups only, up
+    // to including the estimated app signups.
+    const trialHi = (c.rate / real.paying) * trialX;
+    const trialLo = Math.min(c.estimated.webSignupRate * trialX, trialHi);
+    if (axis === 'trial') {
+      const breakEven = lv.paying * lv.value > 0 ? cost / (lv.paying * lv.value) : null;
+      return {
+        slope: (100 / cost) * lv.paying * lv.value,
+        breakEven,
+        here: [trialLo, trialHi] as [number, number],
+        xMax: Math.min(1, Math.max(0.2, trialHi * 1.6, (breakEven ?? 0) * 1.3)),
+      };
+    }
+    const ci = e.trialCohort ? wilsonInterval(e.trialCohort.paid, e.trialCohort.trials) : null;
+    const payX = lv.paying / real.paying;
+    const here: [number, number] = ci ? [ci[0] * payX, ci[1] * payX] : [lv.paying, lv.paying];
+    const breakEven = trialHi * lv.value > 0 ? cost / (trialHi * lv.value) : null;
+    return {
+      slope: (100 / cost) * trialHi * lv.value,
+      breakEven,
+      here,
+      xMax: Math.min(1, Math.max(0.4, here[1] * 1.6, (breakEven ?? 0) * 1.3)),
+    };
+  })();
+  const graphSentence = (() => {
+    if (!graph) return null;
+    const { breakEven, here, xMax } = graph;
+    if (breakEven === null || breakEven > xMax)
+      return { text: formatMessage(messages.roiGraphNever), color: ROI_COLORS.negative };
+    const values = {
+      be: pctOf(breakEven),
+      what: formatMessage(axis === 'trial' ? messages.roiWhatTrial : messages.roiWhatPaying),
+      lo: pctOf(here[0]),
+      hi: pctOf(here[1]),
+      gap: ((breakEven - here[1]) * 100).toFixed(1),
+    };
+    if (here[0] >= breakEven)
+      return { text: formatMessage(messages.roiGraphAbove, values), color: ROI_COLORS.positive };
+    if (here[1] >= breakEven)
+      return { text: formatMessage(messages.roiGraphEdge, values), color: ROI_COLORS.google };
+    return { text: formatMessage(messages.roiGraphShort, values), color: ROI_COLORS.negative };
+  })();
+  const choice = <T extends string>(
+    current: T,
+    set: (v: T) => void,
+    options: [T, string][],
+    title: string,
+  ) => (
+    <Column gap="1">
+      <Text color="muted" size="1">
+        {title}
+      </Text>
+      <Row gap="2" wrap="wrap">
+        {options.map(([v, text]) => (
+          <Button
+            key={v}
+            size="sm"
+            variant={v === current ? 'primary' : 'outline'}
+            onPress={() => set(v)}
+          >
+            {text}
+          </Button>
+        ))}
+      </Row>
+    </Column>
+  );
+
   const how = [
     formatMessage(messages.roiPayoffHowVisits, {
       period:
@@ -442,6 +518,70 @@ export function RoiPayoff({
               color={visitors * per * lv.value >= 100 ? ROI_COLORS.positive : ROI_COLORS.negative}
             />
           </Grid>
+        )}
+
+        {graph && graphSentence && (
+          <Column gap="3">
+            <Text size="4" weight="bold">
+              {formatMessage(labels.roiWhenAdsPayOff)}
+            </Text>
+            <Row gap="6" wrap="wrap">
+              {choice(
+                axis,
+                setAxis,
+                [
+                  ['trial', formatMessage(labels.roiAdVisitorsStartTrial)],
+                  ['paying', formatMessage(labels.roiTrialsThatPay)],
+                ],
+                formatMessage(labels.roiRateAlongBottom),
+              )}
+              {choice(
+                graphChannel,
+                setGraphChannel,
+                [
+                  ['blended', formatMessage(labels.roiAllAds)],
+                  ['meta', formatMessage(labels.roiMeta)],
+                  ['google', formatMessage(labels.roiGoogle)],
+                ],
+                formatMessage(labels.roiChannel),
+              )}
+            </Row>
+            <Text size="4" weight="bold" style={{ color: graphSentence.color }}>
+              {graphSentence.text}
+            </Text>
+            <BreakEvenChart
+              slope={graph.slope}
+              breakEven={graph.breakEven}
+              here={graph.here}
+              xMax={graph.xMax}
+              xLabel={formatMessage(
+                axis === 'trial' ? labels.roiAdVisitorsStartTrial : labels.roiTrialsThatPay,
+              )}
+              spentLabel={formatMessage(labels.roiSpent100)}
+              breakEvenLabel={rate => formatMessage(messages.roiGraphBreakEven, { rate })}
+              backLabel={amount => formatMessage(messages.roiGraphBack, { amount })}
+            />
+            <Text size="2" color="muted">
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: 18,
+                  height: 6,
+                  borderRadius: 3,
+                  background: HERE_COLOR,
+                  marginRight: 8,
+                  verticalAlign: 'middle',
+                }}
+              />
+              {axis === 'trial'
+                ? formatMessage(messages.roiHereTrial)
+                : formatMessage(messages.roiHerePaying, { trials: e.trialCohort?.trials ?? 0 })}
+            </Text>
+            <Text size="2" color="muted">
+              {formatMessage(messages.roiGraphHint)}
+            </Text>
+          </Column>
         )}
 
         {ready && (
@@ -595,46 +735,6 @@ export function RoiPayoff({
             good={o.extraNetIncome >= 0}
           />
         </Grid>
-
-        <Column gap="2">
-          <Row gap="5" wrap="wrap">
-            <Text size="2" color="muted">
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-block',
-                  width: 16,
-                  borderTop: `2px dashed ${MUTED_LINE}`,
-                  marginRight: 8,
-                  verticalAlign: 'middle',
-                }}
-              />
-              {formatMessage(labels.roiTodayLine)}
-            </Text>
-            <Text size="2">
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-block',
-                  width: 16,
-                  borderTop: `3px solid ${
-                    last.projected >= last.today ? ROI_COLORS.positive : ROI_COLORS.negative
-                  }`,
-                  marginRight: 8,
-                  verticalAlign: 'middle',
-                }}
-              />
-              {formatMessage(changed ? labels.roiYourScenario : labels.roiSameAsToday)}
-            </Text>
-          </Row>
-          <OutlookChart
-            labels={o.months.map(m => formatMessage(messages.roiMonthN, { n: m.month }))}
-            today={o.months.map(m => Math.round(m.today))}
-            projected={o.months.map(m => Math.round(m.projected))}
-            todayLabel={formatMessage(labels.roiTodayLine)}
-            projectedLabel={formatMessage(changed ? labels.roiYourScenario : labels.roiSameAsToday)}
-          />
-        </Column>
       </Column>
     </Panel>
   );

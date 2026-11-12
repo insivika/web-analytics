@@ -14,6 +14,7 @@ import {
   sensitivity,
   valueModel,
   valueWithYearlyShare,
+  wilsonInterval,
 } from '../roiBreakEven';
 import {
   type PlanEconomics,
@@ -385,5 +386,18 @@ describe('leverBreakEven', () => {
     expect(
       leverBreakEven({ trial: 0, paying: 0.15, costPerVisit: 0.8, value: 50 }).paying,
     ).toBeNull();
+  });
+});
+
+describe('wilsonInterval', () => {
+  it('brackets the observed share', () => {
+    const [lo, hi] = wilsonInterval(37, 187) as [number, number];
+    expect(lo).toBeGreaterThan(0.14);
+    expect(lo).toBeLessThan(0.198);
+    expect(hi).toBeGreaterThan(0.198);
+    expect(hi).toBeLessThan(0.27);
+  });
+  it('is null without a sample', () => {
+    expect(wilsonInterval(0, 0)).toBeNull();
   });
 });

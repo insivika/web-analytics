@@ -678,5 +678,20 @@
   "message.roi-gap-above": "{per} of every 100 ad visitors become paying customers. Break-even is {need}, so ads pay for themselves.",
   "message.roi-lever-legend": "Grey mark: today. Green mark: where that lever has to be to break even, if the others stay where they are.",
   "message.roi-spend-note": "Spending more grows the result. It does not change whether each $100 pays off.",
-  "message.roi-payoff-per-channel-gap": "Meta: {meta} back, {metaPer} of 100 pay, need {metaNeed}. Google: {google} back, {googlePer} of 100 pay, need {googleNeed}."
+  "message.roi-payoff-per-channel-gap": "Meta: {meta} back, {metaPer} of 100 pay, need {metaNeed}. Google: {google} back, {googlePer} of 100 pay, need {googleNeed}.",
+  "label.roi-rate-along-bottom": "Rate along the bottom",
+  "label.roi-channel": "Channel",
+  "label.roi-spent-100": "$100 spent",
+  "label.roi-when-ads-pay-off": "At what rate do ads pay off?",
+  "message.roi-graph-break-even": "Break-even {rate}",
+  "message.roi-graph-back": "{amount} back",
+  "message.roi-what-trial": "of ad visitors start a trial",
+  "message.roi-what-paying": "of trials become paying",
+  "message.roi-graph-short": "Ads pay off once {be} {what}. You are at {lo} to {hi}, so {gap} points short at best.",
+  "message.roi-graph-edge": "Ads pay off once {be} {what}. You are at {lo} to {hi}, so right on the edge.",
+  "message.roi-graph-above": "Ads pay off once {be} {what}. You are at {lo} to {hi}, so above it.",
+  "message.roi-graph-never": "Ads cannot pay off on this rate alone. Another lever has to move too.",
+  "message.roi-here-trial": "You are here: from measured website signups only, up to including estimated app signups",
+  "message.roi-here-paying": "You are here: the likely range given only {trials} trials to judge from",
+  "message.roi-graph-hint": "Red: ads lose money. Green: ads pay for themselves. The levers below move the green line."
 }

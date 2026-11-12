@@ -6332,5 +6332,215 @@
       "type": 0,
       "value": "."
     }
+  ],
+  "label.roi-rate-along-bottom": [
+    {
+      "type": 0,
+      "value": "Rate along the bottom"
+    }
+  ],
+  "label.roi-channel": [
+    {
+      "type": 0,
+      "value": "Channel"
+    }
+  ],
+  "label.roi-spent-100": [
+    {
+      "type": 0,
+      "value": "$100 spent"
+    }
+  ],
+  "label.roi-when-ads-pay-off": [
+    {
+      "type": 0,
+      "value": "At what rate do ads pay off?"
+    }
+  ],
+  "message.roi-graph-break-even": [
+    {
+      "type": 0,
+      "value": "Break-even "
+    },
+    {
+      "type": 1,
+      "value": "rate"
+    }
+  ],
+  "message.roi-graph-back": [
+    {
+      "type": 1,
+      "value": "amount"
+    },
+    {
+      "type": 0,
+      "value": " back"
+    }
+  ],
+  "message.roi-what-trial": [
+    {
+      "type": 0,
+      "value": "of ad visitors start a trial"
+    }
+  ],
+  "message.roi-what-paying": [
+    {
+      "type": 0,
+      "value": "of trials become paying"
+    }
+  ],
+  "message.roi-graph-short": [
+    {
+      "type": 0,
+      "value": "Ads pay off once "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": " "
+    },
+    {
+      "type": 1,
+      "value": "what"
+    },
+    {
+      "type": 0,
+      "value": ". You are at "
+    },
+    {
+      "type": 1,
+      "value": "lo"
+    },
+    {
+      "type": 0,
+      "value": " to "
+    },
+    {
+      "type": 1,
+      "value": "hi"
+    },
+    {
+      "type": 0,
+      "value": ", so "
+    },
+    {
+      "type": 1,
+      "value": "gap"
+    },
+    {
+      "type": 0,
+      "value": " points short at best."
+    }
+  ],
+  "message.roi-graph-edge": [
+    {
+      "type": 0,
+      "value": "Ads pay off once "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": " "
+    },
+    {
+      "type": 1,
+      "value": "what"
+    },
+    {
+      "type": 0,
+      "value": ". You are at "
+    },
+    {
+      "type": 1,
+      "value": "lo"
+    },
+    {
+      "type": 0,
+      "value": " to "
+    },
+    {
+      "type": 1,
+      "value": "hi"
+    },
+    {
+      "type": 0,
+      "value": ", so right on the edge."
+    }
+  ],
+  "message.roi-graph-above": [
+    {
+      "type": 0,
+      "value": "Ads pay off once "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": " "
+    },
+    {
+      "type": 1,
+      "value": "what"
+    },
+    {
+      "type": 0,
+      "value": ". You are at "
+    },
+    {
+      "type": 1,
+      "value": "lo"
+    },
+    {
+      "type": 0,
+      "value": " to "
+    },
+    {
+      "type": 1,
+      "value": "hi"
+    },
+    {
+      "type": 0,
+      "value": ", so above it."
+    }
+  ],
+  "message.roi-graph-never": [
+    {
+      "type": 0,
+      "value": "Ads cannot pay off on this rate alone. Another lever has to move too."
+    }
+  ],
+  "message.roi-here-trial": [
+    {
+      "type": 0,
+      "value": "You are here: from measured website signups only, up to including estimated app signups"
+    }
+  ],
+  "message.roi-here-paying": [
+    {
+      "type": 0,
+      "value": "You are here: the likely range given only "
+    },
+    {
+      "type": 1,
+      "value": "trials"
+    },
+    {
+      "type": 0,
+      "value": " trials to judge from"
+    }
+  ],
+  "message.roi-graph-hint": [
+    {
+      "type": 0,
+      "value": "Red: ads lose money. Green: ads pay for themselves. The levers below move the green line."
+    }
   ]
 }

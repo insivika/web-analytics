@@ -495,3 +495,14 @@ export function leverBreakEven(l: Levers): Record<keyof Levers, number | null> {
     value: ok(costPerVisit / (trial * paying)),
   };
 }
+
+/** 95% Wilson interval for a share (k of n); null without a sample. */
+export function wilsonInterval(k: number, n: number): [number, number] | null {
+  if (n <= 0) return null;
+  const z = 1.96;
+  const p = k / n;
+  const d = 1 + (z * z) / n;
+  const mid = (p + (z * z) / (2 * n)) / d;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
+  return [Math.max(0, mid - half), Math.min(1, mid + half)];
+}
