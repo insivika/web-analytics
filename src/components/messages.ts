@@ -1,6 +1,22 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiCostPerAdVisitor: {
+    id: 'label.roi-cost-per-ad-visitor',
+    defaultMessage: 'Cost per ad visitor',
+  },
+  roiCustomerValue12: {
+    id: 'label.roi-customer-value-12',
+    defaultMessage: 'What a new customer brings in 12 months',
+  },
+  roiBreakEvenMarker: { id: 'label.roi-break-even-marker', defaultMessage: 'break-even' },
+  roiFunnelSpend: { id: 'label.roi-funnel-spend', defaultMessage: 'Ad spend' },
+  roiFunnelVisitors: { id: 'label.roi-funnel-visitors', defaultMessage: 'Visitors' },
+  roiFunnelTrials: { id: 'label.roi-funnel-trials', defaultMessage: 'Trials' },
+  roiFunnelPaying: { id: 'label.roi-funnel-paying', defaultMessage: 'Paying' },
+  roiFunnelEarned: { id: 'label.roi-funnel-earned', defaultMessage: 'Earned in 12 months' },
+  roiWhatItTakes: { id: 'label.roi-what-it-takes', defaultMessage: 'What it takes to break even' },
+  roiHowMuchToSpend: { id: 'label.roi-how-much-to-spend', defaultMessage: 'How much to spend' },
   roiToday: { id: 'label.roi-today', defaultMessage: 'Today' },
   roiSameAsToday: { id: 'label.roi-same-as-today', defaultMessage: 'Same as today' },
   roiTodayMarker: { id: 'label.roi-today-marker', defaultMessage: 'today' },
@@ -652,6 +668,32 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiBreakEvenValue: { id: 'message.roi-break-even-value', defaultMessage: 'break-even {value}' },
+  roiGapBelow: {
+    id: 'message.roi-gap-below',
+    defaultMessage:
+      '{per} of every 100 ad visitors become paying customers. You need {need}, so {x}× better across these levers combined.',
+  },
+  roiGapAbove: {
+    id: 'message.roi-gap-above',
+    defaultMessage:
+      '{per} of every 100 ad visitors become paying customers. Break-even is {need}, so ads pay for themselves.',
+  },
+  roiLeverLegend: {
+    id: 'message.roi-lever-legend',
+    defaultMessage:
+      'Grey mark: today. Green mark: where that lever has to be to break even, if the others stay where they are.',
+  },
+  roiSpendNote: {
+    id: 'message.roi-spend-note',
+    defaultMessage:
+      'Spending more grows the result. It does not change whether each $100 pays off.',
+  },
+  roiPayoffPerChannelGap: {
+    id: 'message.roi-payoff-per-channel-gap',
+    defaultMessage:
+      'Meta: {meta} back, {metaPer} of 100 pay, need {metaNeed}. Google: {google} back, {googlePer} of 100 pay, need {googleNeed}.',
+  },
   roiTrialSplit: {
     id: 'message.roi-trial-split',
     defaultMessage:

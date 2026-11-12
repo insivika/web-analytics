@@ -7,6 +7,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_TAP_TO_SIGNUP,
   estimatedPaidConversion,
+  leverBreakEven,
   measuredConversion,
   netPer100,
   returnPer100,
@@ -366,5 +367,23 @@ describe('trial-to-paying by trial cohort', () => {
     // Last 6 completed months of the history (Aug–Oct here): 27 of 136.
     expect(e.trialToPaying).toBeCloseTo(27 / 136, 6);
     expect(e.channels.meta.rate).toBeCloseTo(((7 + 45 * 0.2) / 148) * (27 / 136), 6);
+  });
+});
+
+describe('leverBreakEven', () => {
+  it('finds where each lever alone breaks even', () => {
+    const l = { trial: 0.08, paying: 0.15, costPerVisit: 0.8, value: 50 };
+    const b = leverBreakEven(l);
+    expect(b.trial).toBeCloseTo(0.8 / (0.15 * 50));
+    expect(b.paying).toBeCloseTo(0.8 / (0.08 * 50));
+    expect(b.costPerVisit).toBeCloseTo(0.6);
+    expect(b.value).toBeCloseTo(0.8 / 0.012);
+    expect(returnPer100(l.costPerVisit, (b.trial as number) * l.paying, l.value)).toBeCloseTo(100);
+  });
+
+  it('returns null when a lever cannot fix it', () => {
+    expect(
+      leverBreakEven({ trial: 0, paying: 0.15, costPerVisit: 0.8, value: 50 }).paying,
+    ).toBeNull();
   });
 });

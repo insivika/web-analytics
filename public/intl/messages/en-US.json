@@ -6152,5 +6152,185 @@
       "type": 0,
       "value": " days (measured)."
     }
+  ],
+  "label.roi-cost-per-ad-visitor": [
+    {
+      "type": 0,
+      "value": "Cost per ad visitor"
+    }
+  ],
+  "label.roi-customer-value-12": [
+    {
+      "type": 0,
+      "value": "What a new customer brings in 12 months"
+    }
+  ],
+  "label.roi-break-even-marker": [
+    {
+      "type": 0,
+      "value": "break-even"
+    }
+  ],
+  "label.roi-funnel-spend": [
+    {
+      "type": 0,
+      "value": "Ad spend"
+    }
+  ],
+  "label.roi-funnel-visitors": [
+    {
+      "type": 0,
+      "value": "Visitors"
+    }
+  ],
+  "label.roi-funnel-trials": [
+    {
+      "type": 0,
+      "value": "Trials"
+    }
+  ],
+  "label.roi-funnel-paying": [
+    {
+      "type": 0,
+      "value": "Paying"
+    }
+  ],
+  "label.roi-funnel-earned": [
+    {
+      "type": 0,
+      "value": "Earned in 12 months"
+    }
+  ],
+  "label.roi-what-it-takes": [
+    {
+      "type": 0,
+      "value": "What it takes to break even"
+    }
+  ],
+  "label.roi-how-much-to-spend": [
+    {
+      "type": 0,
+      "value": "How much to spend"
+    }
+  ],
+  "message.roi-break-even-value": [
+    {
+      "type": 0,
+      "value": "break-even "
+    },
+    {
+      "type": 1,
+      "value": "value"
+    }
+  ],
+  "message.roi-gap-below": [
+    {
+      "type": 1,
+      "value": "per"
+    },
+    {
+      "type": 0,
+      "value": " of every 100 ad visitors become paying customers. You need "
+    },
+    {
+      "type": 1,
+      "value": "need"
+    },
+    {
+      "type": 0,
+      "value": ", so "
+    },
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": "× better across these levers combined."
+    }
+  ],
+  "message.roi-gap-above": [
+    {
+      "type": 1,
+      "value": "per"
+    },
+    {
+      "type": 0,
+      "value": " of every 100 ad visitors become paying customers. Break-even is "
+    },
+    {
+      "type": 1,
+      "value": "need"
+    },
+    {
+      "type": 0,
+      "value": ", so ads pay for themselves."
+    }
+  ],
+  "message.roi-lever-legend": [
+    {
+      "type": 0,
+      "value": "Grey mark: today. Green mark: where that lever has to be to break even, if the others stay where they are."
+    }
+  ],
+  "message.roi-spend-note": [
+    {
+      "type": 0,
+      "value": "Spending more grows the result. It does not change whether each $100 pays off."
+    }
+  ],
+  "message.roi-payoff-per-channel-gap": [
+    {
+      "type": 0,
+      "value": "Meta: "
+    },
+    {
+      "type": 1,
+      "value": "meta"
+    },
+    {
+      "type": 0,
+      "value": " back, "
+    },
+    {
+      "type": 1,
+      "value": "metaPer"
+    },
+    {
+      "type": 0,
+      "value": " of 100 pay, need "
+    },
+    {
+      "type": 1,
+      "value": "metaNeed"
+    },
+    {
+      "type": 0,
+      "value": ". Google: "
+    },
+    {
+      "type": 1,
+      "value": "google"
+    },
+    {
+      "type": 0,
+      "value": " back, "
+    },
+    {
+      "type": 1,
+      "value": "googlePer"
+    },
+    {
+      "type": 0,
+      "value": " of 100 pay, need "
+    },
+    {
+      "type": 1,
+      "value": "googleNeed"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
   ]
 }

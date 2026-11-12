@@ -472,3 +472,26 @@ export function breakEvenAtCost(costPerVisit: number, value: number) {
 export function valueWithYearlyShare(m: ValueModel, yearlyShare: number, months: number) {
   return customerValueWithin({ ...m, yearlyShare }, months);
 }
+
+/** The four levers behind "does $100 of ads pay off": visitor → trial, trial → paying, cost per visitor, customer value. */
+export interface Levers {
+  trial: number;
+  paying: number;
+  costPerVisit: number;
+  value: number;
+}
+
+/**
+ * Where each lever has to be for $100 of ads to bring back $100, with the
+ * other three left where they are. Null when the others make it impossible.
+ */
+export function leverBreakEven(l: Levers): Record<keyof Levers, number | null> {
+  const { trial, paying, costPerVisit, value } = l;
+  const ok = (n: number) => (Number.isFinite(n) && n > 0 ? n : null);
+  return {
+    trial: ok(costPerVisit / (paying * value)),
+    paying: ok(costPerVisit / (trial * value)),
+    costPerVisit: ok(trial * paying * value),
+    value: ok(costPerVisit / (trial * paying)),
+  };
+}
