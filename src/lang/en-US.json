@@ -693,5 +693,12 @@
   "message.roi-graph-never": "Ads cannot pay off on this rate alone. Another lever has to move too.",
   "message.roi-here-trial": "You are here: from measured website signups only, up to including estimated app signups",
   "message.roi-here-paying": "You are here: the likely range given only {trials} trials to judge from",
-  "message.roi-graph-hint": "Red: ads lose money. Green: ads pay for themselves. The levers below move the green line."
+  "message.roi-graph-hint": "Red: ads lose money. Green: ads pay for themselves. The levers below move the green line.",
+  "message.roi-gauge-green": "In the green. Break-even is {be}.",
+  "message.roi-gauge-alone": "This lever cannot do it alone. It would need {be}.",
+  "message.roi-gauge-drop": "Needs to drop to {be}. That is {gap} cheaper.",
+  "message.roi-gauge-value": "Needs to reach {be}. That is {gap} more per customer.",
+  "message.roi-gauge-points": "Needs to reach {be}. That is {gap} points more.",
+  "message.roi-gauge-proven": "proven {value}",
+  "message.roi-gauge-legend": "Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green."
 }

@@ -678,6 +678,32 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiGaugeGreen: {
+    id: 'message.roi-gauge-green',
+    defaultMessage: 'In the green. Break-even is {be}.',
+  },
+  roiGaugeAlone: {
+    id: 'message.roi-gauge-alone',
+    defaultMessage: 'This lever cannot do it alone. It would need {be}.',
+  },
+  roiGaugeDrop: {
+    id: 'message.roi-gauge-drop',
+    defaultMessage: 'Needs to drop to {be}. That is {gap} cheaper.',
+  },
+  roiGaugeValue: {
+    id: 'message.roi-gauge-value',
+    defaultMessage: 'Needs to reach {be}. That is {gap} more per customer.',
+  },
+  roiGaugePoints: {
+    id: 'message.roi-gauge-points',
+    defaultMessage: 'Needs to reach {be}. That is {gap} points more.',
+  },
+  roiGaugeProven: { id: 'message.roi-gauge-proven', defaultMessage: 'proven {value}' },
+  roiGaugeLegend: {
+    id: 'message.roi-gauge-legend',
+    defaultMessage:
+      'Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green.',
+  },
   roiGraphBreakEven: { id: 'message.roi-graph-break-even', defaultMessage: 'Break-even {rate}' },
   roiGraphBack: { id: 'message.roi-graph-back', defaultMessage: '{amount} back' },
   roiWhatTrial: { id: 'message.roi-what-trial', defaultMessage: 'of ad visitors start a trial' },

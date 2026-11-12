@@ -6542,5 +6542,115 @@
       "type": 0,
       "value": "Red: ads lose money. Green: ads pay for themselves. The levers below move the green line."
     }
+  ],
+  "message.roi-gauge-green": [
+    {
+      "type": 0,
+      "value": "In the green. Break-even is "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-gauge-alone": [
+    {
+      "type": 0,
+      "value": "This lever cannot do it alone. It would need "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": "."
+    }
+  ],
+  "message.roi-gauge-drop": [
+    {
+      "type": 0,
+      "value": "Needs to drop to "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": ". That is "
+    },
+    {
+      "type": 1,
+      "value": "gap"
+    },
+    {
+      "type": 0,
+      "value": " cheaper."
+    }
+  ],
+  "message.roi-gauge-value": [
+    {
+      "type": 0,
+      "value": "Needs to reach "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": ". That is "
+    },
+    {
+      "type": 1,
+      "value": "gap"
+    },
+    {
+      "type": 0,
+      "value": " more per customer."
+    }
+  ],
+  "message.roi-gauge-points": [
+    {
+      "type": 0,
+      "value": "Needs to reach "
+    },
+    {
+      "type": 1,
+      "value": "be"
+    },
+    {
+      "type": 0,
+      "value": ". That is "
+    },
+    {
+      "type": 1,
+      "value": "gap"
+    },
+    {
+      "type": 0,
+      "value": " points more."
+    }
+  ],
+  "message.roi-gauge-proven": [
+    {
+      "type": 0,
+      "value": "proven "
+    },
+    {
+      "type": 1,
+      "value": "value"
+    }
+  ],
+  "message.roi-gauge-legend": [
+    {
+      "type": 0,
+      "value": "Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green."
+    }
   ]
 }

@@ -11,9 +11,7 @@ import {
   type Levers,
   type Lookback,
   leverBreakEven,
-  PAID_WITHIN_DAYS,
   returnPer100,
-  wilsonInterval,
 } from '@/lib/roiBreakEven';
 import {
   defaultInputs,
@@ -23,7 +21,6 @@ import {
   type Retention,
   withPaidVisits,
 } from '@/lib/roiProjection';
-import { BreakEvenChart, HERE_COLOR } from './RoiBreakEvenChart';
 import { ROI_COLORS } from './RoiCharts';
 
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
@@ -181,6 +178,151 @@ function Slider({
   );
 }
 
+const GAUGE_THUMB = 10;
+const GAUGE_RED = 'rgba(214,69,61,0.30)';
+const GAUGE_GREEN = 'rgba(46,155,95,0.34)';
+const GAUGE_CSS = `
+.roi-gauge input{position:absolute;inset:0;width:100%;height:28px;margin:0;-webkit-appearance:none;appearance:none;background:transparent;border:none;outline-offset:2px;color:inherit;cursor:grab}
+.roi-gauge input::-webkit-slider-runnable-track{background:transparent;height:28px;border:none}
+.roi-gauge input::-moz-range-track{background:transparent;height:28px;border:none}
+.roi-gauge input::-webkit-slider-thumb{-webkit-appearance:none;width:${GAUGE_THUMB}px;height:28px;border-radius:3px;background:currentColor;border:2px solid rgba(128,128,128,0.7);box-sizing:border-box}
+.roi-gauge input::-moz-range-thumb{width:${GAUGE_THUMB}px;height:28px;border-radius:3px;background:currentColor;border:2px solid rgba(128,128,128,0.7);box-sizing:border-box}
+`;
+const gaugeLeft = (value: number, min: number, max: number) => {
+  const p = max > min ? Math.min(Math.max((value - min) / (max - min), 0), 1) : 0;
+  return `calc(${p * 100}% + ${(0.5 - p) * GAUGE_THUMB}px)`;
+};
+
+function GaugeTick({ left, label }: { left: string; label: string }) {
+  return (
+    <span
+      style={{
+        position: 'absolute',
+        top: 0,
+        left,
+        transform: 'translateX(-50%)',
+        fontSize: 11,
+        lineHeight: '14px',
+        paddingTop: 7,
+        color: TODAY_MARK,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          width: 1,
+          height: 6,
+          background: TODAY_MARK,
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+/**
+ * One lever as a gauge: red where ads lose money, green where they pay off
+ * (the others left where they are), and a draggable marker for its value.
+ */
+function Gauge({
+  label,
+  value,
+  today,
+  min = 0,
+  max,
+  step,
+  format,
+  breakEven,
+  lowerIsBetter,
+  good,
+  say,
+  todayLabel,
+  proven,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  today: number;
+  min?: number;
+  max: number;
+  step: number;
+  format: (v: number) => string;
+  breakEven: number | null;
+  lowerIsBetter?: boolean;
+  good: boolean;
+  say: string;
+  todayLabel: string;
+  /** A second tick, for the part of today's value that is measured. */
+  proven?: { value: number; label: string };
+  onChange: (v: number) => void;
+}) {
+  // Without a break-even the whole bar is red.
+  const edge = breakEven === null ? (lowerIsBetter ? min : max) : breakEven;
+  const split = gaugeLeft(edge, min, max);
+  const moved = Math.abs(value - today) > step / 2;
+  const zone = { position: 'absolute', top: 5, height: 18 } as const;
+  return (
+    <Column gap="1">
+      <Row justifyContent="space-between" alignItems="baseline" gap="3">
+        <Text size="3" weight="bold">
+          {label}
+        </Text>
+        <Text
+          size="5"
+          weight="bold"
+          style={{ color: good ? ROI_COLORS.positive : ROI_COLORS.negative }}
+        >
+          {format(value)}
+        </Text>
+      </Row>
+      <div className="roi-gauge" style={{ position: 'relative', height: 28 }}>
+        <div
+          style={{
+            ...zone,
+            left: 0,
+            width: split,
+            borderRadius: '6px 0 0 6px',
+            background: lowerIsBetter ? GAUGE_GREEN : GAUGE_RED,
+          }}
+        />
+        <div
+          style={{
+            ...zone,
+            left: split,
+            right: 0,
+            borderRadius: '0 6px 6px 0',
+            background: lowerIsBetter ? GAUGE_RED : GAUGE_GREEN,
+          }}
+        />
+        <input
+          type="range"
+          aria-label={label}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+        />
+      </div>
+      <div style={{ position: 'relative', height: 22 }}>
+        {moved && <GaugeTick left={gaugeLeft(today, min, max)} label={todayLabel} />}
+        {proven && <GaugeTick left={gaugeLeft(proven.value, min, max)} label={proven.label} />}
+      </div>
+      <Text
+        size="2"
+        color={good ? undefined : 'muted'}
+        style={good ? { color: ROI_COLORS.positive } : undefined}
+      >
+        {say}
+      </Text>
+    </Column>
+  );
+}
+
 function Step({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <Column
@@ -303,7 +445,6 @@ export function RoiPayoff({
   const be = leverBreakEven(lv);
   const realBe = leverBreakEven(real);
   const todayText = (v: string) => formatMessage(messages.roiTodayValue, { value: v });
-  const breakEvenText = (v: string) => formatMessage(messages.roiBreakEvenValue, { value: v });
   const leversChanged = (Object.keys(real) as (keyof Levers)[]).some(
     key => Math.abs(lv[key] - real[key]) > 1e-9,
   );
@@ -331,83 +472,49 @@ export function RoiPayoff({
   };
   const of100 = (r: number | null) => (r === null ? '—' : (r * 100).toFixed(1));
   const marker = formatMessage(labels.roiTodayMarker);
-  const beMarker = formatMessage(labels.roiBreakEvenMarker);
-  const visitors = ready ? 100 / lv.costPerVisit : 0;
-
-  // The graph: dollars back per $100 against one rate, for one channel.
-  const [axis, setAxis] = useState<'trial' | 'paying'>('trial');
-  const [graphChannel, setGraphChannel] = useState<'blended' | 'meta' | 'google'>('blended');
-  const graph = (() => {
-    const c = e.channels[graphChannel];
-    if (!ready || c.costPerVisit === null || c.rate === null) return null;
-    const cost = c.costPerVisit * costX;
-    const trialX = lv.trial / real.trial;
-    // Today's trial rate for this channel: measured website signups only, up
-    // to including the estimated app signups.
-    const trialHi = (c.rate / real.paying) * trialX;
-    const trialLo = Math.min(c.estimated.webSignupRate * trialX, trialHi);
-    if (axis === 'trial') {
-      const breakEven = lv.paying * lv.value > 0 ? cost / (lv.paying * lv.value) : null;
+  const gaugeSay = (key: keyof Levers, lo: number, hi: number, format: (v: number) => string) => {
+    const b = be[key];
+    const lower = key === 'costPerVisit';
+    const good = b !== null && (lower ? lv[key] <= b + 1e-9 : lv[key] >= b - 1e-9);
+    if (b !== null && good)
+      return { good, text: formatMessage(messages.roiGaugeGreen, { be: format(b) }) };
+    if (b === null || b < lo || b > hi)
       return {
-        slope: (100 / cost) * lv.paying * lv.value,
-        breakEven,
-        here: [trialLo, trialHi] as [number, number],
-        xMax: Math.min(1, Math.max(0.2, trialHi * 1.6, (breakEven ?? 0) * 1.3)),
+        good: false,
+        text: formatMessage(messages.roiGaugeAlone, { be: b === null ? '—' : format(b) }),
       };
-    }
-    const ci = e.trialCohort ? wilsonInterval(e.trialCohort.paid, e.trialCohort.trials) : null;
-    const payX = lv.paying / real.paying;
-    const here: [number, number] = ci ? [ci[0] * payX, ci[1] * payX] : [lv.paying, lv.paying];
-    const breakEven = trialHi * lv.value > 0 ? cost / (trialHi * lv.value) : null;
+    if (lower)
+      return {
+        good,
+        text: formatMessage(messages.roiGaugeDrop, { be: format(b), gap: format(lv[key] - b) }),
+      };
+    if (key === 'value')
+      return {
+        good,
+        text: formatMessage(messages.roiGaugeValue, { be: format(b), gap: format(b - lv[key]) }),
+      };
     return {
-      slope: (100 / cost) * trialHi * lv.value,
-      breakEven,
-      here,
-      xMax: Math.min(1, Math.max(0.4, here[1] * 1.6, (breakEven ?? 0) * 1.3)),
+      good,
+      text: formatMessage(messages.roiGaugePoints, {
+        be: format(b),
+        gap: ((b - lv[key]) * 100).toFixed(1),
+      }),
+    };
+  };
+  const cents = (v: number) => `$${v.toFixed(2)}`;
+  const gauges = (() => {
+    const trialMax = Math.min(1, Math.max(0.2, real.trial * 2, (realBe.trial ?? 0) * 1.3));
+    const payingMax = Math.min(1, Math.max(0.5, real.paying * 2, (realBe.paying ?? 0) * 1.3));
+    const costMax = Math.max(1, real.costPerVisit * 2);
+    const valueMax = Math.max(100, Math.ceil(real.value * 2), Math.ceil((realBe.value ?? 0) * 1.3));
+    return {
+      trial: { max: trialMax, ...gaugeSay('trial', 0, trialMax, pctOf) },
+      paying: { max: payingMax, ...gaugeSay('paying', 0, payingMax, pctOf) },
+      costPerVisit: { max: costMax, ...gaugeSay('costPerVisit', 0.01, costMax, cents) },
+      value: { max: valueMax, ...gaugeSay('value', 0, valueMax, usd) },
     };
   })();
-  const graphSentence = (() => {
-    if (!graph) return null;
-    const { breakEven, here, xMax } = graph;
-    if (breakEven === null || breakEven > xMax)
-      return { text: formatMessage(messages.roiGraphNever), color: ROI_COLORS.negative };
-    const values = {
-      be: pctOf(breakEven),
-      what: formatMessage(axis === 'trial' ? messages.roiWhatTrial : messages.roiWhatPaying),
-      lo: pctOf(here[0]),
-      hi: pctOf(here[1]),
-      gap: ((breakEven - here[1]) * 100).toFixed(1),
-    };
-    if (here[0] >= breakEven)
-      return { text: formatMessage(messages.roiGraphAbove, values), color: ROI_COLORS.positive };
-    if (here[1] >= breakEven)
-      return { text: formatMessage(messages.roiGraphEdge, values), color: ROI_COLORS.google };
-    return { text: formatMessage(messages.roiGraphShort, values), color: ROI_COLORS.negative };
-  })();
-  const choice = <T extends string>(
-    current: T,
-    set: (v: T) => void,
-    options: [T, string][],
-    title: string,
-  ) => (
-    <Column gap="1">
-      <Text color="muted" size="1">
-        {title}
-      </Text>
-      <Row gap="2" wrap="wrap">
-        {options.map(([v, text]) => (
-          <Button
-            key={v}
-            size="sm"
-            variant={v === current ? 'primary' : 'outline'}
-            onPress={() => set(v)}
-          >
-            {text}
-          </Button>
-        ))}
-      </Row>
-    </Column>
-  );
+  const visitors = ready ? 100 / lv.costPerVisit : 0;
 
   const how = [
     formatMessage(messages.roiPayoffHowVisits, {
@@ -520,158 +627,80 @@ export function RoiPayoff({
           </Grid>
         )}
 
-        {graph && graphSentence && (
-          <Column gap="3">
-            <Text size="4" weight="bold">
-              {formatMessage(labels.roiWhenAdsPayOff)}
-            </Text>
-            <Row gap="6" wrap="wrap">
-              {choice(
-                axis,
-                setAxis,
-                [
-                  ['trial', formatMessage(labels.roiAdVisitorsStartTrial)],
-                  ['paying', formatMessage(labels.roiTrialsThatPay)],
-                ],
-                formatMessage(labels.roiRateAlongBottom),
-              )}
-              {choice(
-                graphChannel,
-                setGraphChannel,
-                [
-                  ['blended', formatMessage(labels.roiAllAds)],
-                  ['meta', formatMessage(labels.roiMeta)],
-                  ['google', formatMessage(labels.roiGoogle)],
-                ],
-                formatMessage(labels.roiChannel),
-              )}
-            </Row>
-            <Text size="4" weight="bold" style={{ color: graphSentence.color }}>
-              {graphSentence.text}
-            </Text>
-            <BreakEvenChart
-              slope={graph.slope}
-              breakEven={graph.breakEven}
-              here={graph.here}
-              xMax={graph.xMax}
-              xLabel={formatMessage(
-                axis === 'trial' ? labels.roiAdVisitorsStartTrial : labels.roiTrialsThatPay,
-              )}
-              spentLabel={formatMessage(labels.roiSpent100)}
-              breakEvenLabel={rate => formatMessage(messages.roiGraphBreakEven, { rate })}
-              backLabel={amount => formatMessage(messages.roiGraphBack, { amount })}
-            />
-            <Text size="2" color="muted">
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-block',
-                  width: 18,
-                  height: 6,
-                  borderRadius: 3,
-                  background: HERE_COLOR,
-                  marginRight: 8,
-                  verticalAlign: 'middle',
-                }}
-              />
-              {axis === 'trial'
-                ? formatMessage(messages.roiHereTrial)
-                : formatMessage(messages.roiHerePaying, { trials: e.trialCohort?.trials ?? 0 })}
-            </Text>
-            <Text size="2" color="muted">
-              {formatMessage(messages.roiGraphHint)}
-            </Text>
-          </Column>
-        )}
-
         {ready && (
-          <Column gap="3">
+          <Column gap="5">
+            <style>{GAUGE_CSS}</style>
             <Column gap="1">
               <Text size="4" weight="bold">
                 {formatMessage(labels.roiWhatItTakes)}
               </Text>
               <Text color="muted" size="2">
-                {formatMessage(messages.roiLeverLegend)}
+                {formatMessage(messages.roiGaugeLegend)}
               </Text>
             </Column>
-            <Slider
+            <Gauge
               label={formatMessage(labels.roiAdVisitorsStartTrial)}
               value={lv.trial}
               today={real.trial}
-              max={Math.min(1, Math.max(0.2, real.trial * 2, (realBe.trial ?? 0) * 1.3))}
+              max={gauges.trial.max}
               step={0.001}
-              color={ROI_COLORS.stripe}
               format={pctOf}
-              todayText={todayText}
-              todayMarker={marker}
               breakEven={be.trial}
-              breakEvenMarker={beMarker}
-              breakEvenText={breakEvenText}
-              good={be.trial !== null && lv.trial >= be.trial - 1e-9}
-              note={formatMessage(messages.roiTrialSplit, {
-                web: pctOf(blended.estimated.webSignupRate),
-                app: pctOf(blended.estimated.tapRate * blended.estimated.tapToSignup),
-                taps: pctOf(blended.estimated.tapRate),
-                n: Math.round(1 / (blended.estimated.tapToSignup || DEFAULT_TAP_TO_SIGNUP)),
-              })}
+              good={gauges.trial.good}
+              say={gauges.trial.text}
+              todayLabel={marker}
+              proven={
+                blended.estimated.webSignupRate > 0 &&
+                blended.estimated.webSignupRate < real.trial * 0.9
+                  ? {
+                      value: blended.estimated.webSignupRate,
+                      label: formatMessage(messages.roiGaugeProven, {
+                        value: pctOf(blended.estimated.webSignupRate),
+                      }),
+                    }
+                  : undefined
+              }
               onChange={v => setLv(l => ({ ...l, trial: v }))}
             />
-            <Slider
+            <Gauge
               label={formatMessage(labels.roiTrialsThatPay)}
               value={lv.paying}
               today={real.paying}
-              max={Math.min(1, Math.max(0.5, real.paying * 2, (realBe.paying ?? 0) * 1.3))}
+              max={gauges.paying.max}
               step={0.005}
-              color={ROI_COLORS.stripe}
               format={pctOf}
-              todayText={todayText}
-              todayMarker={marker}
               breakEven={be.paying}
-              breakEvenMarker={beMarker}
-              breakEvenText={breakEvenText}
-              good={be.paying !== null && lv.paying >= be.paying - 1e-9}
-              note={
-                e.trialCohort
-                  ? formatMessage(messages.roiPayingSplit, {
-                      paid: e.trialCohort.paid,
-                      trials: e.trialCohort.trials,
-                      days: PAID_WITHIN_DAYS,
-                    })
-                  : undefined
-              }
+              good={gauges.paying.good}
+              say={gauges.paying.text}
+              todayLabel={marker}
               onChange={v => setLv(l => ({ ...l, paying: v }))}
             />
-            <Slider
+            <Gauge
               label={formatMessage(labels.roiCostPerAdVisitor)}
               value={lv.costPerVisit}
               today={real.costPerVisit}
               min={0.01}
-              max={Math.max(1, real.costPerVisit * 2)}
+              max={gauges.costPerVisit.max}
               step={0.01}
-              color={ROI_COLORS.stripe}
-              format={v => `$${v.toFixed(2)}`}
-              todayText={todayText}
-              todayMarker={marker}
+              format={cents}
               breakEven={be.costPerVisit}
-              breakEvenMarker={beMarker}
-              breakEvenText={breakEvenText}
-              good={be.costPerVisit !== null && lv.costPerVisit <= be.costPerVisit + 1e-9}
+              lowerIsBetter
+              good={gauges.costPerVisit.good}
+              say={gauges.costPerVisit.text}
+              todayLabel={marker}
               onChange={v => setLv(l => ({ ...l, costPerVisit: v }))}
             />
-            <Slider
+            <Gauge
               label={formatMessage(labels.roiCustomerValue12)}
               value={lv.value}
               today={real.value}
-              max={Math.max(100, Math.ceil(real.value * 2), Math.ceil((realBe.value ?? 0) * 1.3))}
+              max={gauges.value.max}
               step={1}
-              color={ROI_COLORS.stripe}
               format={usd}
-              todayText={todayText}
-              todayMarker={marker}
               breakEven={be.value}
-              breakEvenMarker={beMarker}
-              breakEvenText={breakEvenText}
-              good={be.value !== null && lv.value >= be.value - 1e-9}
+              good={gauges.value.good}
+              say={gauges.value.text}
+              todayLabel={marker}
               onChange={v => setLv(l => ({ ...l, value: v }))}
             />
           </Column>
