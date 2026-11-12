@@ -6652,5 +6652,35 @@
       "type": 0,
       "value": "Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green."
     }
+  ],
+  "message.roi-paying-since": [
+    {
+      "type": 0,
+      "value": "Today: "
+    },
+    {
+      "type": 1,
+      "value": "paid"
+    },
+    {
+      "type": 0,
+      "value": " of "
+    },
+    {
+      "type": 1,
+      "value": "trials"
+    },
+    {
+      "type": 0,
+      "value": " trials started since "
+    },
+    {
+      "type": 1,
+      "value": "since"
+    },
+    {
+      "type": 0,
+      "value": " became paying. That is when app store purchases could first be matched to a trial. A small sample, so expect it to move."
+    }
   ]
 }

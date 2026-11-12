@@ -50,7 +50,13 @@ export const MIN_PAID_VISITS = 50;
 /** Completed months behind the trial-to-paying rate (at least; more with a longer lookback). */
 export const TRIAL_TO_PAYING_MONTHS = 6;
 /** A trial counts toward trial-to-paying once it's this old (14-day trial + billing). */
-export const TRIAL_MATURE_DAYS = 30;
+export const TRIAL_MATURE_DAYS = 17;
+/**
+ * App Store and Google Play purchases carry a user id from this day on. Trials
+ * started earlier can't be matched to a store purchase, so trial-to-paying
+ * only counts trials from here.
+ */
+export const STORE_PURCHASES_LINKED_SINCE = '2026-10-08';
 /** A trial converted if its user's first payment came within this many days of the start. */
 export const PAID_WITHIN_DAYS = 45;
 

@@ -678,6 +678,11 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiPayingSince: {
+    id: 'message.roi-paying-since',
+    defaultMessage:
+      'Today: {paid} of {trials} trials started since {since} became paying. That is when app store purchases could first be matched to a trial. A small sample, so expect it to move.',
+  },
   roiGaugeGreen: {
     id: 'message.roi-gauge-green',
     defaultMessage: 'In the green. Break-even is {be}.',

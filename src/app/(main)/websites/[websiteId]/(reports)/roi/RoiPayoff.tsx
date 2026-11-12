@@ -12,6 +12,7 @@ import {
   type Lookback,
   leverBreakEven,
   returnPer100,
+  STORE_PURCHASES_LINKED_SINCE,
 } from '@/lib/roiBreakEven';
 import {
   defaultInputs,
@@ -242,6 +243,7 @@ function Gauge({
   say,
   todayLabel,
   proven,
+  note,
   onChange,
 }: {
   label: string;
@@ -258,6 +260,8 @@ function Gauge({
   todayLabel: string;
   /** A second tick, for the part of today's value that is measured. */
   proven?: { value: number; label: string };
+  /** Where today's value comes from. */
+  note?: string;
   onChange: (v: number) => void;
 }) {
   // Without a break-even the whole bar is red.
@@ -319,6 +323,11 @@ function Gauge({
       >
         {say}
       </Text>
+      {note && (
+        <Text size="1" color="muted">
+          {note}
+        </Text>
+      )}
     </Column>
   );
 }
@@ -673,6 +682,21 @@ export function RoiPayoff({
               good={gauges.paying.good}
               say={gauges.paying.text}
               todayLabel={marker}
+              note={
+                e.trialCohort
+                  ? formatMessage(messages.roiPayingSince, {
+                      paid: e.trialCohort.paid,
+                      trials: e.trialCohort.trials,
+                      since: new Date(
+                        `${STORE_PURCHASES_LINKED_SINCE}T00:00:00Z`,
+                      ).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: 'UTC',
+                      }),
+                    })
+                  : undefined
+              }
               onChange={v => setLv(l => ({ ...l, paying: v }))}
             />
             <Gauge

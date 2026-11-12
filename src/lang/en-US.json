@@ -700,5 +700,6 @@
   "message.roi-gauge-value": "Needs to reach {be}. That is {gap} more per customer.",
   "message.roi-gauge-points": "Needs to reach {be}. That is {gap} points more.",
   "message.roi-gauge-proven": "proven {value}",
-  "message.roi-gauge-legend": "Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green."
+  "message.roi-gauge-legend": "Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green.",
+  "message.roi-paying-since": "Today: {paid} of {trials} trials started since {since} became paying. That is when app store purchases could first be matched to a trial. A small sample, so expect it to move."
 }

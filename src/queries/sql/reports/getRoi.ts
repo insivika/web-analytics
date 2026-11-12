@@ -23,6 +23,7 @@ import {
   MIN_AD_RETENTION_CUSTOMERS,
   PAID_WITHIN_DAYS,
   ROLLING_DAYS,
+  STORE_PURCHASES_LINKED_SINCE,
   TRIAL_MATURE_DAYS,
   type TrialCohort,
 } from '@/lib/roiBreakEven';
@@ -546,10 +547,11 @@ function buildTrialCohorts(
   now: Date,
 ): TrialCohort[] {
   const matureBefore = +now - TRIAL_MATURE_DAYS * 86_400_000;
+  const linkedSince = +new Date(`${STORE_PURCHASES_LINKED_SINCE}T00:00:00Z`);
   const byMonth = new Map<string, TrialCohort>();
   for (const [uid, start] of starts) {
     const t = +new Date(start);
-    if (t > matureBefore) continue;
+    if (t > matureBefore || t < linkedSince) continue;
     const month = monthOf(start);
     const row = byMonth.get(month) ?? { month, trials: 0, paid: 0 };
     row.trials += 1;
