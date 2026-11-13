@@ -690,6 +690,8 @@ export type RiskFlag = 'expired' | 'lowEngagement' | 'notActivated';
 
 export interface ForecastRow {
   userId: string;
+  /** From the app's profiles (read-only view), attached by the API route. */
+  email?: string | null;
   platform: string | null;
   plan: string | null;
   isInternal: boolean;

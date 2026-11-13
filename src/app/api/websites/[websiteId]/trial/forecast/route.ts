@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
+import { loadUserEmails } from '@/lib/revenue/userMap';
 import { normalizeTrialSettings, TRIAL_SETTINGS_KEY } from '@/lib/trial';
 import { canUpdateWebsite, canViewWebsite } from '@/permissions';
 import { getWebsiteSetting } from '@/queries/prisma';
@@ -34,12 +35,18 @@ export async function GET(
   const setting = await getWebsiteSetting(websiteId, TRIAL_SETTINGS_KEY);
   const settings = normalizeTrialSettings(setting?.value as any);
 
-  return json(
-    await getTrialForecast(websiteId, {
-      platform: query.platform,
-      excludeInternal: query.internal ? query.internal === 'exclude' : settings.excludeInternal,
-    }),
-  );
+  const forecast = await getTrialForecast(websiteId, {
+    platform: query.platform,
+    excludeInternal: query.internal ? query.internal === 'exclude' : settings.excludeInternal,
+  });
+
+  // Emails for the trials table, so people can be recognised and contacted.
+  if (forecast.available && forecast.rows.length) {
+    const emails = await loadUserEmails(forecast.rows.map(r => r.userId));
+    for (const row of forecast.rows) row.email = emails.get(row.userId) ?? null;
+  }
+
+  return json(forecast);
 }
 
 /** "Snapshot now": stores today's forecast and resolves outcomes (same as the cron). */

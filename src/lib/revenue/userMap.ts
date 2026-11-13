@@ -1,6 +1,7 @@
 // Maps provider ids to the Supabase profile user_id (the id Umami events carry as
 // user_id). Read from a read-only Supabase view (roi.user_map) that exposes only
-// user_id, firebase_user_id and stripe_customer_id.
+// user_id, firebase_user_id, stripe_customer_id and email (the email only for
+// the trials table; see loadUserEmails).
 
 export interface UserMapRow {
   user_id: string;
@@ -67,4 +68,34 @@ export async function loadUserMap(connectionString = process.env.SUPABASE_READON
   } finally {
     await client.end().catch(() => {});
   }
+}
+
+/**
+ * Emails for the given Supabase user_ids, for the trials table only. Never
+ * throws: without the read-only connection, or before the email column is
+ * added to roi.user_map (scripts/supabase/roi-readonly.sql), it answers an
+ * empty map and the table falls back to the user id.
+ */
+export async function loadUserEmails(
+  userIds: string[],
+  connectionString = process.env.SUPABASE_READONLY_DATABASE_URL,
+): Promise<Map<string, string>> {
+  const emails = new Map<string, string>();
+  if (!connectionString || userIds.length === 0) return emails;
+  const { Client } = await import('pg');
+  const ca = process.env.SUPABASE_CA_CERT?.replace(/\\n/g, '\n');
+  const client = new Client({ connectionString, ...(ca ? { ssl: { ca } } : {}) });
+  try {
+    await client.connect();
+    const { rows } = (await client.query(
+      'select user_id::text as user_id, email from roi.user_map where user_id::text = any($1::text[])',
+      [userIds],
+    )) as { rows: { user_id: string; email: string | null }[] };
+    for (const row of rows) if (row.email) emails.set(row.user_id, row.email);
+  } catch (error) {
+    console.warn('[trial] emails not loaded', (error as Error)?.message);
+  } finally {
+    await client.end().catch(() => {});
+  }
+  return emails;
 }

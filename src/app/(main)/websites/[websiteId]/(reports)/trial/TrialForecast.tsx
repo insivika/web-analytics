@@ -52,6 +52,7 @@ type SortKey =
 
 const sortValue = (r: ForecastRow, key: SortKey) => {
   if (key === 'flags') return r.flags.length;
+  if (key === 'userId') return (r.email ?? r.userId).toLowerCase();
   const v = r[key];
   if (typeof v === 'boolean') return v ? 1 : 0;
   return v ?? '';
@@ -237,6 +238,7 @@ export function TrialForecast({
   const csv = useMemo(
     () =>
       sorted.map(r => ({
+        email: r.email ?? '',
         user_id: r.userId,
         platform: r.platform ?? '',
         plan: r.plan ?? '',
@@ -342,14 +344,20 @@ export function TrialForecast({
                       >
                         <DataColumn
                           id="userId"
-                          label={header('userId', formatMessage(labels.userId))}
-                          width="130px"
+                          label={header('userId', formatMessage(labels.email))}
+                          width="240px"
                         >
-                          {(r: ForecastRow) => (
-                            <Text title={r.userId} style={{ fontFamily: 'monospace' }}>
-                              {`${r.userId.slice(0, 8)}…`}
-                            </Text>
-                          )}
+                          {(r: ForecastRow) =>
+                            r.email ? (
+                              <Text title={r.email} truncate style={{ maxWidth: 230 }}>
+                                {r.email}
+                              </Text>
+                            ) : (
+                              <Text title={r.userId} style={{ fontFamily: 'monospace' }}>
+                                {`${r.userId.slice(0, 8)}…`}
+                              </Text>
+                            )
+                          }
                         </DataColumn>
                         <DataColumn
                           id="platform"

@@ -1,6 +1,7 @@
 -- Read-only access for the Umami ROI report (run once in Supabase → SQL editor).
--- The role can read exactly three id columns through roi.user_map and nothing
--- else: no emails, names, onboarding data, or any other table.
+-- The role can read three id columns and the email through roi.user_map and
+-- nothing else: no names, onboarding data, or any other table. The email is
+-- shown in the trial page's "Trials ending soon" table.
 --
 -- Before running: replace CHANGE_ME with a long random password (e.g. from your
 -- password manager). Don't commit the real password.
@@ -18,7 +19,7 @@ revoke all on schema roi from public;
 -- The view runs with its owner's rights, so roi_reader needs no access to
 -- public.profiles itself.
 create or replace view roi.user_map as
-  select user_id, firebase_user_id, stripe_customer_id
+  select user_id, firebase_user_id, stripe_customer_id, email
   from public.profiles;
 
 revoke all on roi.user_map from public, anon, authenticated;
@@ -28,5 +29,5 @@ grant select on roi.user_map to roi_reader;
 -- Check (should return a count, and the second statement should fail):
 --   set role roi_reader;
 --   select count(*) from roi.user_map;
---   select email from public.profiles limit 1;   -- permission denied
+--   select onboarding_data from public.profiles limit 1;   -- permission denied
 --   reset role;
