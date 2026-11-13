@@ -502,7 +502,7 @@
   "label.next-x-days": "Next {x} days",
   "label.not-activated": "Not activated",
   "label.plan": "Plan",
-  "label.probability-14": "P (14 days)",
+  "label.probability-14": "Chance to buy (next 14 days)",
   "label.projected-conversions": "Projected conversions",
   "label.risk": "Risk",
   "label.saving": "Saving…",

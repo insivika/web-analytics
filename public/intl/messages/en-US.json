@@ -3748,7 +3748,7 @@
   "label.probability-14": [
     {
       "type": 0,
-      "value": "P (14 days)"
+      "value": "Chance to buy (next 14 days)"
     }
   ],
   "label.projected-conversions": [

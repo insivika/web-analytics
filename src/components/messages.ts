@@ -652,7 +652,7 @@ export const labels = defineMessages({
   },
   trialsEndingSoon: { id: 'label.trials-ending-soon', defaultMessage: 'Trials ending soon' },
   trialStatus: { id: 'label.trial-status', defaultMessage: 'Status' },
-  probability14: { id: 'label.probability-14', defaultMessage: 'P (14 days)' },
+  probability14: { id: 'label.probability-14', defaultMessage: 'Chance to buy (next 14 days)' },
   eventually: { id: 'label.eventually', defaultMessage: 'eventually' },
   whatPredictsConversion: {
     id: 'label.what-predicts-conversion',
