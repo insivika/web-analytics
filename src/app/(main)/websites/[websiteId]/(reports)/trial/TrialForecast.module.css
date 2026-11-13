@@ -1,0 +1,10 @@
+/*
+ * react-zen's Accordion caps an open panel at max-height: 500px (with
+ * overflow: hidden) for its open/close animation. The trials table is far
+ * taller, so rows past the 7th and its pager were cut off. Let an open panel
+ * grow to fit its content. Attribute selectors are left unhashed by CSS
+ * modules, so they match react-zen's own class names.
+ */
+.accordion [class*="Accordion_panel"][class*="Accordion_expanded"] {
+  max-height: none;
+}

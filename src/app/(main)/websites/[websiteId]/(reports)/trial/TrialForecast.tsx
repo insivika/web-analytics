@@ -29,6 +29,7 @@ import type {
   SimulationRange,
   TrialForecastReport,
 } from '@/lib/trialForecast';
+import styles from './TrialForecast.module.css';
 
 const PAGE_SIZE = 25;
 
@@ -327,7 +328,7 @@ export function TrialForecast({
           {data?.available && (
             <Column gap="6" style={{ opacity: isFetching ? 0.6 : 1, minWidth: 0 }}>
               <ForecastBody data={data} locale={locale} saving={saving} onSnapshot={runSnapshot} />
-              <Accordion type="multiple">
+              <Accordion type="multiple" className={styles.accordion}>
                 <AccordionItem>
                   {formatMessage(labels.trialsEndingSoonCount, { n: sorted.length })}
                   <Column gap="3" paddingTop="2">
