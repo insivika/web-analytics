@@ -115,6 +115,37 @@ export interface AppMonth {
   appSignups: number;
 }
 
+/**
+ * App Store (Apple Ads) installs, from the API's apple_ads_attributed event
+ * (RevenueCat's AdServices attribution, cfc-app 1.23.0+). There is no website
+ * visit behind these, so they sit beside the paid-click channels rather than
+ * in them. Bucketed by signup month, plus rows keyed LAST_30_DAYS.
+ */
+export interface AppleAdsMonth {
+  month: string;
+  /** Users attributed to an Apple Ads campaign (each starts the app trial). */
+  users: number;
+  /** Of those, how many have paid. */
+  payers: number;
+}
+
+export interface AppleAdsTotals {
+  users: number;
+  payers: number;
+}
+
+export function appleAdsTotals(rows: AppleAdsMonth[], months: Set<string>): AppleAdsTotals {
+  return rows
+    .filter(r => months.has(r.month))
+    .reduce(
+      (t, r) => ({
+        users: t.users + r.users,
+        payers: t.payers + r.payers,
+      }),
+      { users: 0, payers: 0 },
+    );
+}
+
 export interface ChannelData {
   /** Per calendar month, plus rows keyed LAST_30_DAYS for the rolling window. */
   months: ChannelMonth[];
@@ -126,6 +157,8 @@ export interface ChannelData {
   adCustomersThreeMonths: number;
   /** Retention of ad-acquired customers, once there are enough of them. */
   adRetention: Retention | null;
+  /** Apple Ads (App Store) installs; absent before the query existed. */
+  appleAds?: AppleAdsMonth[];
 }
 
 export interface BreakEvenSettings {
@@ -364,6 +397,8 @@ export interface Economics {
   trialCohort: { trials: number; paid: number; months: string[] } | null;
   /** Completed months (all history) with meaningful ad spend. */
   adMonths: number;
+  /** Apple Ads installs in the lookback (no spend yet, so no return figure). */
+  appleAds: AppleAdsTotals;
   settings: BreakEvenSettings;
 }
 
@@ -465,6 +500,7 @@ export function buildEconomics(
     trialCohort: cohort ? { trials: cohort.trials, paid: cohort.paid, months: ttpMonths } : null,
     adMonths: history.filter(m => m.metaSpend + m.googleSpend + m.otherSpend >= MEANINGFUL_SPEND)
       .length,
+    appleAds: appleAdsTotals(data.appleAds ?? [], inWindow),
     settings,
   };
 }

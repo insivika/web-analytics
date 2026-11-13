@@ -1,6 +1,9 @@
 import { defineMessages } from 'react-intl';
 
 export const labels = defineMessages({
+  roiAppleAds: { id: 'label.roi-apple-ads', defaultMessage: 'Apple Ads (App Store)' },
+  roiAppleInstalls: { id: 'label.roi-apple-installs', defaultMessage: 'Signed up' },
+  roiApplePaying: { id: 'label.roi-apple-paying', defaultMessage: 'Paying' },
   roiRateAlongBottom: {
     id: 'label.roi-rate-along-bottom',
     defaultMessage: 'Rate along the bottom',
@@ -678,6 +681,16 @@ export const labels = defineMessages({
 });
 
 export const messages = defineMessages({
+  roiAppleAdsNote: {
+    id: 'message.roi-apple-ads-note',
+    defaultMessage:
+      'People who installed from an Apple ad, matched by Apple through RevenueCat, from app 1.23.0 on. Return per $100 shows once Apple Ads spend is connected.',
+  },
+  roiAppleAdsNone: {
+    id: 'message.roi-apple-ads-none',
+    defaultMessage:
+      'No Apple Ads installs matched yet. Matching starts with app 1.23.0; new signups appear within about an hour.',
+  },
   roiPayingSince: {
     id: 'message.roi-paying-since',
     defaultMessage:

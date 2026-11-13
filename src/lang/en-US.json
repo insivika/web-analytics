@@ -701,5 +701,10 @@
   "message.roi-gauge-points": "Needs to reach {be}. That is {gap} points more.",
   "message.roi-gauge-proven": "proven {value}",
   "message.roi-gauge-legend": "Red: ads lose money. Green: ads pay for themselves. Drag a marker to see what it takes to get every bar into the green.",
-  "message.roi-paying-since": "Today: {paid} of {trials} trials started since {since} became paying. That is when app store purchases could first be matched to a trial. A small sample, so expect it to move."
+  "message.roi-paying-since": "Today: {paid} of {trials} trials started since {since} became paying. That is when app store purchases could first be matched to a trial. A small sample, so expect it to move.",
+  "label.roi-apple-ads": "Apple Ads (App Store)",
+  "label.roi-apple-installs": "Signed up",
+  "label.roi-apple-paying": "Paying",
+  "message.roi-apple-ads-note": "People who installed from an Apple ad, matched by Apple through RevenueCat, from app 1.23.0 on. Return per $100 shows once Apple Ads spend is connected.",
+  "message.roi-apple-ads-none": "No Apple Ads installs matched yet. Matching starts with app 1.23.0; new signups appear within about an hour."
 }

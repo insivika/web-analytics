@@ -1,4 +1,5 @@
 import {
+  appleAdsTotals,
   breakEvenRate,
   buildEconomics,
   type ChannelData,
@@ -399,5 +400,24 @@ describe('wilsonInterval', () => {
   });
   it('is null without a sample', () => {
     expect(wilsonInterval(0, 0)).toBeNull();
+  });
+});
+
+describe('appleAdsTotals', () => {
+  const rows = [
+    { month: '2026-11', users: 3, payers: 1 },
+    { month: '2026-10', users: 1, payers: 0 },
+    { month: 'last30', users: 2, payers: 1 },
+  ];
+
+  it('sums the months in the window', () => {
+    expect(appleAdsTotals(rows, new Set(['2026-10', '2026-11']))).toEqual({
+      users: 4,
+      payers: 1,
+    });
+  });
+
+  it('is zero with no rows', () => {
+    expect(appleAdsTotals([], new Set(['last30']))).toEqual({ users: 0, payers: 0 });
   });
 });

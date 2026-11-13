@@ -597,7 +597,7 @@ async function getChannelData(
       (to_char(${col} at time zone '${ROI_TIMEZONE}', 'YYYY-MM')),
       (case when ${col} >= {{since}} then '${LAST_30_DAYS}' end)
     ) as b(month)`;
-  const [funnel, payers, app, recentSpend] = await Promise.all([
+  const [funnel, payers, app, recentSpend, appleAds] = await Promise.all([
     prisma.rawQuery(
       `
       with fv as (
@@ -725,6 +725,52 @@ async function getChannelData(
       { websiteId, since: since.toISOString().slice(0, 10), install: APP_INSTALL_CAMPAIGN },
       'getRoiRecentSpend',
     ),
+    // Apple Ads (App Store) installs: users the API tagged from RevenueCat's
+    // AdServices attribution (apple_ads_attributed, once per user), bucketed
+    // by their signup, and whether they have paid.
+    prisma.rawQuery(
+      `
+      with internal as (
+        select website_event_id from event_data
+        where data_key = 'is_internal' and string_value = 'true'
+      ),
+      a as (
+        select u.string_value as uid, min(e.created_at) as attributed_at
+        from website_event e
+        join event_data u on u.website_event_id = e.event_id and u.data_key = 'user_id'
+        where e.website_id = {{websiteId::uuid}} and e.event_name = 'apple_ads_attributed'
+          and e.created_at >= {{from}}
+          and e.event_id not in (select website_event_id from internal)
+        group by 1
+      ),
+      ev as (
+        select u.string_value as uid,
+          min(e.created_at) filter (where e.event_name = 'signed_up') as signup_at,
+          bool_or(e.event_name = 'subscription_started') as paid
+        from website_event e
+        join event_data u on u.website_event_id = e.event_id and u.data_key = 'user_id'
+        where e.website_id = {{websiteId::uuid}}
+          and e.event_name in ('signed_up', 'subscription_started')
+          and u.string_value in (select uid from a)
+          and e.event_id not in (select website_event_id from internal)
+        group by 1
+      ),
+      j as (
+        select a.uid, coalesce(ev.signup_at, a.attributed_at) as at,
+          coalesce(ev.paid, false) as paid
+        from a left join ev on ev.uid = a.uid
+      )
+      select b.month,
+        count(*)::int as users,
+        count(*) filter (where j.paid)::int as payers
+      from j
+      ${bucket('j.at')}
+      where b.month is not null
+      group by 1
+      `,
+      { websiteId, from, since },
+      'getRoiAppleAds',
+    ),
   ]);
 
   const months = new Map<string, ChannelMonth>();
@@ -775,6 +821,11 @@ async function getChannelData(
       appSignups: Number(r.appSignups),
     })),
     last30Spend: { meta: spendOf('meta'), google: spendOf('google') },
+    appleAds: (appleAds as any[]).map(r => ({
+      month: r.month,
+      users: Number(r.users),
+      payers: Number(r.payers),
+    })),
     adCustomers: adUsers.size,
     adCustomersThreeMonths: adUsersThreeMonths.size,
     adRetention:

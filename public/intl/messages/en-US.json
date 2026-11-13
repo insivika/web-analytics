@@ -6682,5 +6682,35 @@
       "type": 0,
       "value": " became paying. That is when app store purchases could first be matched to a trial. A small sample, so expect it to move."
     }
+  ],
+  "label.roi-apple-ads": [
+    {
+      "type": 0,
+      "value": "Apple Ads (App Store)"
+    }
+  ],
+  "label.roi-apple-installs": [
+    {
+      "type": 0,
+      "value": "Signed up"
+    }
+  ],
+  "label.roi-apple-paying": [
+    {
+      "type": 0,
+      "value": "Paying"
+    }
+  ],
+  "message.roi-apple-ads-note": [
+    {
+      "type": 0,
+      "value": "People who installed from an Apple ad, matched by Apple through RevenueCat, from app 1.23.0 on. Return per $100 shows once Apple Ads spend is connected."
+    }
+  ],
+  "message.roi-apple-ads-none": [
+    {
+      "type": 0,
+      "value": "No Apple Ads installs matched yet. Matching starts with app 1.23.0; new signups appear within about an hour."
+    }
   ]
 }

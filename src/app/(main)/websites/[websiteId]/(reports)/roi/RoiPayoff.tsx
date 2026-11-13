@@ -733,6 +733,31 @@ export function RoiPayoff({
         <Column gap="3">
           <Column gap="1">
             <Text size="4" weight="bold">
+              {formatMessage(labels.roiAppleAds)}
+            </Text>
+            <Text color="muted" size="2">
+              {formatMessage(
+                e.appleAds.users > 0 ? messages.roiAppleAdsNote : messages.roiAppleAdsNone,
+              )}
+            </Text>
+          </Column>
+          {e.appleAds.users > 0 && (
+            <Grid columns="repeat(2, minmax(0, 1fr))" gap="2">
+              <Step
+                label={formatMessage(labels.roiAppleInstalls)}
+                value={String(e.appleAds.users)}
+              />
+              <Step
+                label={formatMessage(labels.roiApplePaying)}
+                value={String(e.appleAds.payers)}
+              />
+            </Grid>
+          )}
+        </Column>
+
+        <Column gap="3">
+          <Column gap="1">
+            <Text size="4" weight="bold">
               {formatMessage(labels.roiHowMuchToSpend)}
             </Text>
             <Text color="muted" size="2">
