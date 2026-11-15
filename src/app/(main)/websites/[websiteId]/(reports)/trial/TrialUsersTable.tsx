@@ -41,6 +41,7 @@ const sortValue = (user: TrialUser, key: SortKey) => {
   if (key === 'pushOptIn') {
     return !user.pushEligible ? -1 : user.pushOptIn ? 2 : user.pushPromptShown ? 1 : 0;
   }
+  if (key === 'userId') return (user.email ?? user.userId).toLowerCase();
   if (typeof value === 'boolean') return value ? 1 : 0;
   return value ?? '';
 };
@@ -71,6 +72,7 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
     () =>
       sorted.map(u => ({
         user_id: u.userId,
+        email: u.email ?? '',
         trial_start: u.trialStart,
         start_source: u.startSource,
         observed_during_trial: u.observedDuringTrial,
@@ -125,14 +127,20 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
           <DataTable data={rows} style={{ minWidth: 1100 }}>
             <DataColumn
               id="userId"
-              label={header('userId', formatMessage(labels.userId))}
-              width="130px"
+              label={header('userId', formatMessage(labels.email))}
+              width="240px"
             >
               {(row: TrialUser) => (
                 <Button variant="quiet" size="sm" onPress={() => setSelected(row)}>
-                  <Text title={row.userId} style={{ fontFamily: 'monospace' }}>
-                    {`${row.userId.slice(0, 8)}…`}
-                  </Text>
+                  {row.email ? (
+                    <Text title={row.email} truncate style={{ maxWidth: 220 }}>
+                      {row.email}
+                    </Text>
+                  ) : (
+                    <Text title={row.userId} style={{ fontFamily: 'monospace' }}>
+                      {`${row.userId.slice(0, 8)}…`}
+                    </Text>
+                  )}
                 </Button>
               )}
             </DataColumn>
@@ -210,7 +218,10 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
       </Column>
       {selected && (
         <Modal isOpen={true} isDismissable onOpenChange={open => !open && setSelected(null)}>
-          <Dialog title={selected.userId} style={{ width: 900, maxWidth: '100vw', padding: 32 }}>
+          <Dialog
+            title={selected.email ?? selected.userId}
+            style={{ width: 900, maxWidth: '100vw', padding: 32 }}
+          >
             <TrialUserTimeline websiteId={websiteId} user={selected} />
           </Dialog>
         </Modal>

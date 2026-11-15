@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { badRequest, json, unauthorized } from '@/lib/response';
+import { loadUserEmails } from '@/lib/revenue/userMap';
 import { timezoneParam } from '@/lib/schema';
 import { normalizeTrialSettings, TRIAL_SETTINGS_KEY } from '@/lib/trial';
 import { canViewWebsite } from '@/permissions';
@@ -52,6 +53,12 @@ export async function GET(
     },
     timezone,
   });
+
+  // Emails for the users table, so people can be recognised and contacted.
+  if (report.users?.length) {
+    const emails = await loadUserEmails(report.users.map(u => u.userId));
+    for (const user of report.users) user.email = emails.get(user.userId) ?? null;
+  }
 
   return json(report);
 }

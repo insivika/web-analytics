@@ -456,6 +456,8 @@ export interface TrialEventStat {
 
 export interface TrialUser {
   userId: string;
+  /** From the app database (roi.user_map), attached by the API route. */
+  email?: string | null;
   trialStart: string;
   startSource: TrialStartSource;
   /** False when the user was first seen only after the trial ended. */
