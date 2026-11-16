@@ -4531,6 +4531,24 @@
       "value": "More information"
     }
   ],
+  "message.forecast-similar-bought": [
+    {
+      "type": 1,
+      "value": "x"
+    },
+    {
+      "type": 0,
+      "value": " of "
+    },
+    {
+      "type": 1,
+      "value": "n"
+    },
+    {
+      "type": 0,
+      "value": " like them bought"
+    }
+  ],
   "message.forecast-p-detail": [
     {
       "type": 0,

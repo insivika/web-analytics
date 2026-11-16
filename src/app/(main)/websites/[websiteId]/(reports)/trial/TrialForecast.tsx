@@ -220,6 +220,12 @@ export function TrialForecast({
     return sort.desc ? rows.reverse() : rows;
   }, [data?.rows, sort]);
 
+  // Past trials in the same behavior group, e.g. 4 of 15 bought.
+  const segmentOutcome = (segment: string) => {
+    const s = data?.model?.segments.find(g => g.segment === segment);
+    return s ? { x: s.conversions, n: s.n } : null;
+  };
+
   // "2|activated" → "2 active days in the first 3 · Activated"
   const segmentName = (segment: string) => {
     const [days, activated] = segment.split('|');
@@ -415,17 +421,26 @@ export function TrialForecast({
                           )}
                         >
                           {(r: ForecastRow) => (
-                            <InfoTip
-                              strong
-                              content={formatMessage(messages.forecastPDetail, {
-                                p7: pct(r.p7),
-                                p14: pct(r.p14),
-                                total: pct(r.pTotal),
-                                segment: segmentName(r.segment),
-                              })}
-                            >
-                              {pct(r.p14)}
-                            </InfoTip>
+                            <Column gap="0">
+                              <InfoTip
+                                strong
+                                content={formatMessage(messages.forecastPDetail, {
+                                  p7: pct(r.p7),
+                                  p14: pct(r.p14),
+                                  total: pct(r.pTotal),
+                                  segment: segmentName(r.segment),
+                                })}
+                              >
+                                {pct(r.p14)}
+                              </InfoTip>
+                              {segmentOutcome(r.segment) && (
+                                <Text color="muted" size="1" wrap="nowrap">
+                                  {formatMessage(messages.forecastSimilarBought, {
+                                    ...segmentOutcome(r.segment),
+                                  })}
+                                </Text>
+                              )}
+                            </Column>
                           )}
                         </DataColumn>
                         <DataColumn

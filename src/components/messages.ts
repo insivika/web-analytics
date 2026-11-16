@@ -1510,4 +1510,8 @@ export const messages = defineMessages({
     defaultMessage:
       'Next 7 days: {p7} · next 14 days: {p14} · buys at all: {total}. Behavior group: {segment}.',
   },
+  forecastSimilarBought: {
+    id: 'message.forecast-similar-bought',
+    defaultMessage: '{x} of {n} like them bought',
+  },
 });
