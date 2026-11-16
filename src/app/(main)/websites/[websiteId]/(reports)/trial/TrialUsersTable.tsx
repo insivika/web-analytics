@@ -18,7 +18,7 @@ import { useLocale, useMessages, useTrialUserEventsQuery } from '@/components/ho
 import { ArrowDown, ArrowUp, Check } from '@/components/icons';
 import { DownloadButton } from '@/components/input/DownloadButton';
 import { formatDate } from '@/lib/date';
-import type { TrialReport, TrialUser } from '@/lib/trial';
+import { milestoneName, type TrialReport, type TrialUser } from '@/lib/trial';
 
 const PAGE_SIZE = 25;
 
@@ -55,7 +55,7 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
   });
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<TrialUser | null>(null);
-  const { milestones } = report.settings;
+  const { milestones, engagementEvents } = report.settings;
 
   const sorted = useMemo(() => {
     const rows = [...report.users].sort((a, b) => {
@@ -93,8 +93,9 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
     [sorted, milestones],
   );
 
-  const header = (key: SortKey, label: string) => (
+  const header = (key: SortKey, label: string, title?: string) => (
     <Row
+      title={title}
       alignItems="center"
       gap="1"
       style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -124,7 +125,7 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
           <DownloadButton filename="trial-users" data={csv} />
         </Row>
         <Box overflowX="auto" style={{ width: 0, minWidth: '100%' }}>
-          <DataTable data={rows} style={{ minWidth: 1100 }}>
+          <DataTable data={rows} style={{ minWidth: 1400 }}>
             <DataColumn
               id="userId"
               label={header('userId', formatMessage(labels.email))}
@@ -168,7 +169,11 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
             </DataColumn>
             <DataColumn
               id="engagementCount"
-              label={header('engagementCount', formatMessage(labels.engagement))}
+              label={header(
+                'engagementCount',
+                formatMessage(labels.engagement),
+                engagementEvents.join(', '),
+              )}
             >
               {(row: TrialUser) => row.engagementCount}
             </DataColumn>
@@ -176,8 +181,8 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
               <DataColumn
                 key={step.join('|')}
                 id={`milestone${index}`}
-                label={<Text title={step.join(' / ')}>{`M${index + 1}`}</Text>}
-                width="50px"
+                label={<Text title={step.join(' / ')}>{milestoneName(step)}</Text>}
+                width="90px"
               >
                 {(row: TrialUser) => check(row.milestones[index])}
               </DataColumn>
@@ -211,9 +216,6 @@ export function TrialUsersTable({ websiteId, report }: { websiteId: string; repo
             </DataColumn>
           </DataTable>
         </Box>
-        <Text color="muted" size="1">
-          {milestones.map((step, i) => `M${i + 1} = ${step.join(' / ')}`).join(' · ')}
-        </Text>
         <Pager page={page} pageSize={PAGE_SIZE} count={sorted.length} onPageChange={setPage} />
       </Column>
       {selected && (

@@ -538,7 +538,7 @@ export const labels = defineMessages({
   userId: { id: 'label.user-id', defaultMessage: 'User ID' },
   trialStart: { id: 'label.trial-start', defaultMessage: 'Trial start' },
   ended: { id: 'label.ended', defaultMessage: 'Ended' },
-  engagement: { id: 'label.engagement', defaultMessage: 'Engagement' },
+  engagement: { id: 'label.engagement', defaultMessage: 'Actions' },
   subscription: { id: 'label.subscription', defaultMessage: 'Subscription' },
   trialSettings: { id: 'label.trial-settings', defaultMessage: 'Trial settings' },
   trialStartEvent: { id: 'label.trial-start-event', defaultMessage: 'Trial start event' },

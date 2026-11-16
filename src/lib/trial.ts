@@ -454,6 +454,28 @@ export interface TrialEventStat {
   periodCount: number;
 }
 
+/** Plain-word names for the default milestone steps, keyed by the step's first event. */
+const MILESTONE_NAMES: Record<string, string> = {
+  first_calendar_opened: 'Opened calendar',
+  first_recurring_event_created: 'Added recurring item',
+  first_category_created: 'Made a category',
+  activation_complete: 'Activated',
+  paywall_shown: 'Saw paywall',
+  paywall_purchased: 'Paid',
+  subscription_started: 'Paid',
+};
+
+/** A short header for a milestone step; unknown events become readable words. */
+export function milestoneName(step: string[]): string {
+  const event = step[0] ?? '';
+  if (MILESTONE_NAMES[event]) return MILESTONE_NAMES[event];
+  const words = event
+    .replace(/^first_/, '')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  return words ? words[0].toUpperCase() + words.slice(1) : event;
+}
+
 export interface TrialUser {
   userId: string;
   /** From the app database (roi.user_map), attached by the API route. */
