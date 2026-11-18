@@ -397,7 +397,10 @@ export function TrialDailyActive({ report }: { report: TrialReport }) {
           value: point.pct,
           max: 100,
           text: point.eligible ? formatPct(point.pct) : '—',
-          caption: `n=${point.eligible}`,
+          caption: formatMessage(messages.activeOfEligibleShort, {
+            active: point.active,
+            eligible: point.eligible,
+          }),
           muted: point.lowSample,
           title: formatMessage(messages.activeOfEligible, {
             active: point.active,

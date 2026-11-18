@@ -361,6 +361,7 @@
   "label.yesterday": "Yesterday",
   "message.action-confirmation": "Type {confirmation} in the box below to confirm.",
   "message.active-of-eligible": "{active} of {eligible} users whose trial reached this day",
+  "message.active-of-eligible-short": "{active} of {eligible}",
   "message.active-users": "{x} current {x, plural, one {visitor} other {visitors}}",
   "message.bad-request": "Bad request",
   "message.change-vs-previous": "vs. previous {x} days",

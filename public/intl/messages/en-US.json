@@ -2281,6 +2281,20 @@
       "value": " users whose trial reached this day"
     }
   ],
+  "message.active-of-eligible-short": [
+    {
+      "type": 1,
+      "value": "active"
+    },
+    {
+      "type": 0,
+      "value": " of "
+    },
+    {
+      "type": 1,
+      "value": "eligible"
+    }
+  ],
   "message.active-users": [
     {
       "type": 1,

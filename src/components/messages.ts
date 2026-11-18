@@ -1227,6 +1227,10 @@ export const messages = defineMessages({
     id: 'message.users-with-no-active-day',
     defaultMessage: '{x} users had no active day',
   },
+  activeOfEligibleShort: {
+    id: 'message.active-of-eligible-short',
+    defaultMessage: '{active} of {eligible}',
+  },
   activeOfEligible: {
     id: 'message.active-of-eligible',
     defaultMessage: '{active} of {eligible} users whose trial reached this day',
