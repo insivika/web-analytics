@@ -446,7 +446,13 @@
   "label.daily-active": [
     {
       "type": 0,
-      "value": "Daily active"
+      "value": "Share of users active on each trial day"
+    }
+  ],
+  "label.days-active-per-user": [
+    {
+      "type": 0,
+      "value": "How many days each user was active"
     }
   ],
   "label.dashboard": [

@@ -528,7 +528,14 @@ export const labels = defineMessages({
   trialJourney: { id: 'label.trial-journey', defaultMessage: 'Trial journey' },
   milestone: { id: 'label.milestone', defaultMessage: 'Milestone' },
   reached: { id: 'label.reached', defaultMessage: 'Reached' },
-  dailyActive: { id: 'label.daily-active', defaultMessage: 'Daily active' },
+  dailyActive: {
+    id: 'label.daily-active',
+    defaultMessage: 'Share of users active on each trial day',
+  },
+  daysActivePerUser: {
+    id: 'label.days-active-per-user',
+    defaultMessage: 'How many days each user was active',
+  },
   trialDay: { id: 'label.trial-day', defaultMessage: 'Trial day' },
   activeDays: { id: 'label.active-days', defaultMessage: 'Active days' },
   weeklyCohorts: { id: 'label.weekly-cohorts', defaultMessage: 'Weekly cohorts' },

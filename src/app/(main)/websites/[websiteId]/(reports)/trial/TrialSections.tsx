@@ -386,9 +386,7 @@ export function TrialDailyActive({ report }: { report: TrialReport }) {
   const trackingText = useTrackingText(report);
 
   return (
-    <Section
-      title={`${formatMessage(labels.dailyActive)} (${formatMessage(labels.trialDay)} 1–${report.settings.trialLengthDays})`}
-    >
+    <Section title={formatMessage(labels.dailyActive)}>
       <Text color="muted" size="1">
         {trackingText(report.activeDays.since, report.activeDays.n)}
       </Text>
@@ -421,7 +419,7 @@ export function TrialActiveDaysHistogram({ report }: { report: TrialReport }) {
   const max = Math.max(...buckets.map(b => b.users), 0);
 
   return (
-    <Section title={formatMessage(labels.activeDays)}>
+    <Section title={formatMessage(labels.daysActivePerUser)}>
       <Text color="muted" size="1">
         {trackingText(report.activeDays.since, report.activeDays.n)}
       </Text>

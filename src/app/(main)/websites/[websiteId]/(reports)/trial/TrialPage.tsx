@@ -45,8 +45,8 @@ export function TrialPage({ websiteId }: { websiteId: string }) {
             <TrialKpis report={data} />
             <TrialForecast websiteId={websiteId} platform={platform} internal={internal} />
             <TrialFunnel report={data} />
-            <TrialDailyActive report={data} />
             <TrialActiveDaysHistogram report={data} />
+            <TrialDailyActive report={data} />
             <TrialCohorts report={data} />
             <TrialUsersTable websiteId={websiteId} report={data} />
           </Column>
