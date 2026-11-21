@@ -96,6 +96,7 @@ export const DEFAULT_TRIAL_SETTINGS: TrialSettings = {
   activationEvent: 'activation_complete',
   milestones: [
     ['first_calendar_opened'],
+    ['bank_linked'],
     ['first_recurring_event_created'],
     ['first_category_created'],
     ['activation_complete'],
@@ -457,6 +458,7 @@ export interface TrialEventStat {
 /** Plain-word names for the default milestone steps, keyed by the step's first event. */
 const MILESTONE_NAMES: Record<string, string> = {
   first_calendar_opened: 'Opened calendar',
+  bank_linked: 'Connected bank',
   first_recurring_event_created: 'Added recurring item',
   first_category_created: 'Made a category',
   activation_complete: 'Activated',

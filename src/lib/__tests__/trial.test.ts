@@ -242,7 +242,7 @@ describe('buildTrialUsers', () => {
 
     expect(user.activeDays).toBe(2);
     expect(user.engagementCount).toBe(5);
-    expect(user.milestones).toEqual([true, false, false, false, false, false]);
+    expect(user.milestones).toEqual([true, false, false, false, false, false, false]);
     expect(user.milestoneHours[0]).toBeCloseTo(2);
     expect(user.currentTrialDay).toBeNull();
   });
@@ -272,8 +272,9 @@ describe('computeFunnel', () => {
 
     expect(funnel[0]).toMatchObject({ reached: 2, medianHours: 3 });
     expect(funnel[0].pct).toBeCloseTo(66.67, 1);
-    expect(funnel[1]).toMatchObject({ reached: 1, medianHours: 50 });
-    expect(funnel[2]).toMatchObject({ reached: 0, medianHours: null });
+    expect(funnel[1]).toMatchObject({ reached: 0, medianHours: null }); // bank linked
+    expect(funnel[2]).toMatchObject({ reached: 1, medianHours: 50 });
+    expect(funnel[3]).toMatchObject({ reached: 0, medianHours: null });
   });
 });
 
@@ -776,7 +777,7 @@ describe('tracking dates for starts and sections', () => {
     const stepSince = getMilestoneTrackingSince(settings, stats, trackingSince);
 
     expect(stepSince[0]).toBe(daysAgo(4).toISOString());
-    expect(stepSince[5]).toBe(daysAgo(50).toISOString()); // conversion step
+    expect(stepSince[6]).toBe(daysAgo(50).toISOString()); // conversion step
 
     const users = build(
       new Map([
